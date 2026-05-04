@@ -1,0 +1,57 @@
+name: 💡 Proposition de feature
+description: Une idée d'évolution. L'esprit "Football Manager pour la politique" est bienvenu !
+title: "[Feature] "
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci pour ta proposition ! Avant d'ouvrir, jette un œil à [`NEXT_STEPS.md`](https://github.com/IMhide/hemicycle-manager/blob/main/NEXT_STEPS.md) — c'est peut-être déjà dans la roadmap.
+
+        💡 La direction technique reste centralisée : toute proposition est étudiée mais pas garantie d'être acceptée.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Quel besoin / problème ?
+      description: Décris l'intention avant la solution. Quel comportement utilisateur veux-tu améliorer ?
+      placeholder: "En tant qu'utilisateur, je voudrais pouvoir comparer 2 députés côte à côte parce que…"
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposition concrète
+      description: À quoi ressemblerait la feature ? UI, données, comportement.
+      placeholder: |
+        - Page /comparer/?a=X&b=Y
+        - Deux cartes FIFA côte à côte
+        - Liste des votes divergents
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives envisagées
+      description: Y a-t-il une autre façon d'atteindre le même objectif ? Pourquoi tu préfères ta proposition ?
+    validations:
+      required: false
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Ampleur estimée
+      options:
+        - Petit (< 1 jour)
+        - Moyen (1 à 3 jours)
+        - Grand (> 3 jours, refonte partielle)
+        - Je ne sais pas
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Avant d'ouvrir
+      options:
+        - label: J'ai vérifié [`NEXT_STEPS.md`](https://github.com/IMhide/hemicycle-manager/blob/main/NEXT_STEPS.md) et cette idée n'y est pas (ou je propose de l'enrichir)
+          required: true
+        - label: J'ai cherché les issues existantes et il n'y a pas déjà une proposition similaire
+          required: true

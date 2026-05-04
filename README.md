@@ -2,7 +2,14 @@
 
 > Visualisez les votes de l'Assemblée nationale française comme dans un jeu de gestion.
 
+[![CI](https://github.com/IMhide/hemicycle-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/IMhide/hemicycle-manager/actions/workflows/ci.yml)
+[![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Code of Conduct](https://img.shields.io/badge/code%20of%20conduct-Contributor%20Covenant%202.1-purple.svg)](CODE_OF_CONDUCT.md)
+
 Un projet libre qui transforme l'open data parlementaire en expérience visuelle façon **Football Manager** : hémicycle interactif, fiches députés style carte FIFA, classements, comparaisons par groupe, frondeurs, et plus encore.
+
+🌍 **App en ligne** : https://hemicycle.baijobu.net
 
 ## ✨ Fonctionnalités
 
@@ -201,13 +208,25 @@ Toutes les définitions sont également affichées en tooltip dans l'app.
 
 ## 🤝 Contribuer
 
-Le projet est dans le **domaine public** (Unlicense). Forks, modifications, déploiements personnels, tout est encouragé.
+Le projet est **ouvert aux contributions** mais **piloté par [@IMhide](https://github.com/IMhide)** (direction technique centralisée pour préserver la cohérence éditoriale).
 
-Pour contribuer :
-1. Fork le repo
-2. Crée une branche (`git checkout -b feature/ma-feature`)
-3. Commit (`git commit -am 'Ajout de ma feature'`)
-4. Push et ouvre une Pull Request
+📖 **Lis [CONTRIBUTING.md](CONTRIBUTING.md)** avant d'ouvrir une issue ou une PR.
+
+### Workflow
+
+- 🐛 **Bug** → [ouvrir une issue](https://github.com/IMhide/hemicycle-manager/issues/new?template=bug_report.yml)
+- 💡 **Proposition de feature** → [ouvrir une issue](https://github.com/IMhide/hemicycle-manager/issues/new?template=feature_request.yml) (à valider avant de coder)
+- 📊 **Correction de données** → [ouvrir une issue](https://github.com/IMhide/hemicycle-manager/issues/new?template=data_correction.yml) avec source vérifiable
+- 🔒 **Vulnérabilité de sécurité** → voir [SECURITY.md](SECURITY.md)
+
+### Règles essentielles
+
+- Toute modification passe par une **Pull Request** (personne ne push sur `main`, y compris le mainteneur)
+- La PR doit être **approuvée par le mainteneur** et faire passer la **CI** (build + type-check)
+- Les contributions sont placées sous [Unlicense](LICENSE) (domaine public)
+- Le projet adhère au [Contributor Covenant](CODE_OF_CONDUCT.md)
+
+Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour le détail (setup local, conventions de code, ADR…).
 
 ## 📜 Licence
 

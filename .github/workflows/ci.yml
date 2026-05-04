@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build-and-check:
+    name: Build & type-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      # The data pipeline isn't required for type-check or build, but the
+      # routes import generated/seats.json. We mock minimal static/data so
+      # the build doesn't fail on missing files.
+      - name: Generate placeholder static data
+        run: |
+          mkdir -p static/data/scrutins static/data/historique
+          echo '[]' > static/data/deputes.json
+          echo '[]' > static/data/groupes.json
+          echo '[]' > static/data/scrutins-index.json
+          echo '[]' > static/data/stats-deputes.json
+          echo '[]' > static/data/stats-groupes.json
+          echo '{"generatedAt":"1970-01-01T00:00:00Z","legislature":17,"counts":{"deputes":0,"groupes":0,"scrutins":0,"historiques":0},"sources":{}}' > static/data/meta.json
+
+      - name: Sync SvelteKit
+        run: npx svelte-kit sync
+
+      - name: Type-check
+        run: npm run check
+
+      - name: Build
+        run: npm run build

@@ -1,0 +1,9 @@
+# Code Owners — Hémicycle Manager
+#
+# Toute modification du repo nécessite l'approbation du mainteneur principal.
+# La direction technique du projet est centralisée pour préserver la cohérence
+# éditoriale (cf. CONTRIBUTING.md et decisions/).
+#
+# Documentation : https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+* @IMhide
