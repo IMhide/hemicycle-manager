@@ -19,11 +19,11 @@ Deux extrêmes à éviter :
 
 - **Personne ne push directement sur `main`**, y compris le mainteneur. Tout passe par Pull Request.
 - **Toute PR doit faire passer la CI** (build + type-check Node 22).
-- **Asymétrie volontaire sur les approvals** :
-  - **Contributeurs externes** : PR + **review du Code Owner** (`@IMhide`) obligatoire avant merge.
-  - **Mainteneur** : PR obligatoire + CI verte. GitHub interdit qu'un auteur approuve sa propre PR ; un mainteneur solo n'a personne d'autre pour approuver. Le mainteneur peut donc merger ses propres PR sans approval, mais a quand même fait la PR (pour la traçabilité et la CI).
-  - Implémentation : `required_approving_review_count: 0` + `require_code_owner_reviews: true`. La review du Code Owner reste forcée pour les PR externes (l'auteur ne peut pas se compter lui-même), tandis qu'elle est implicitement satisfaite pour les PR du mainteneur.
-- Branch protection rules GitHub configurées en **strict** (`enforce_admins: true`), pas d'override admin sur les autres règles (force-push, suppression, linear history, status checks).
+- **Règles strictes pour les contributeurs externes** :
+  - PR obligatoire + **review du Code Owner** (`@IMhide`) requise avant merge (`required_approving_review_count: 1` + `require_code_owner_reviews: true`)
+  - Pas de force-push, pas de suppression de branche, historique linéaire imposé
+  - CI verte obligatoire (`Build & type-check`)
+- **Override admin permis pour le mainteneur** (`enforce_admins: false`). Le mainteneur ne peut pas s'auto-approuver (limitation GitHub) et un mainteneur solo n'a personne d'autre. Il peut donc utiliser le bouton "Merge without waiting for requirements" pour merger ses propres PRs. Les autres règles strictes (force-push, suppression, linear history) restent en place pour tout le monde.
 - **Les issues passent par des templates** (bug, feature, data correction) pour cadrer la qualité des remontées.
 - **Le mainteneur est seul juge** des features acceptées : ouverture aux propositions oui, garantie d'acceptation non.
 - **CODEOWNERS** : `* @IMhide` → toute PR auto-assigne le mainteneur en reviewer.
@@ -39,12 +39,13 @@ Deux extrêmes à éviter :
 ## Conséquences
 
 - **Le mainteneur ne peut plus push directement même pour une typo** → léger surcoût mais bénéfice de discipline + traçabilité de chaque change via PR.
-- **Les PR du mainteneur ne sont pas auto-reviewées** : seule la CI les valide. C'est un compromis assumé pour un mainteneur solo. Si un co-mainteneur rejoint le projet plus tard, on basculera à `required_approving_review_count: 1` pour avoir du peer review systématique.
+- **Les PR du mainteneur ne sont pas auto-reviewées** : seule la CI les valide. Le mainteneur utilise le bouton "Merge without waiting for requirements" (admin override) pour merger ses propres PRs. C'est un compromis assumé pour un mainteneur solo, et c'est le pattern utilisé sur de nombreux projets pilotés par un seul mainteneur (Linus Torvalds sur Linux, etc.).
 - Les contributions externes seront probablement filtrées (la plupart refusées), il faut être prêt à expliquer pourquoi de manière constructive.
 - La CI doit rester **rapide** (sous 5 min) pour ne pas bloquer le flux de PR.
 - Les **droits d'admin** restent uniquement sur le mainteneur ; pas de co-mainteneur pour l'instant.
+- **Discipline volontaire requise** : le mainteneur peut techniquement merger sans review, mais doit garder le réflexe d'ouvrir des PRs pour la traçabilité.
 - Si le projet grossit beaucoup, on pourra :
-  - Ajouter des **mainteneurs secondaires** par domaine (ex: data quality, UI, infra) → bascule à `required_approving_review_count: 1`
+  - Ajouter des **mainteneurs secondaires** par domaine (ex: data quality, UI, infra) → activer `enforce_admins: true` pour avoir du peer review systématique
   - Activer un **stale bot** pour gérer le volume d'issues
   - Mettre en place **Dependabot** pour les MAJ de dépendances
 - Adopter le **Contributor Covenant 2.1** comme code de conduite (standard universel).
