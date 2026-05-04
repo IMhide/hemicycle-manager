@@ -1,7 +1,7 @@
 # ── Stage 1 : build the SvelteKit static site ─────────────────────────────
 # The data files are not committed (see .gitignore) — we fetch them fresh at
 # build time so each deployment ships the latest scrutins and deputies.
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # unzip is needed by the data-fetch pipeline
 RUN apk add --no-cache unzip
