@@ -34,8 +34,9 @@ COPY --from=builder /app/build /usr/share/nginx/html
 
 EXPOSE 80
 
-# Healthcheck for Coolify / orchestrators.
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-	CMD wget -q -O /dev/null http://localhost/ || exit 1
+# No HEALTHCHECK directive — Coolify (and most orchestrators) handle this
+# at the platform level via Traefik / probes. Leaving the Docker-level
+# HEALTHCHECK in caused Coolify rolling updates to spuriously roll back
+# even when nginx was up and serving correctly.
 
 CMD ["nginx", "-g", "daemon off;"]
