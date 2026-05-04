@@ -34,9 +34,12 @@ COPY --from=builder /app/build /usr/share/nginx/html
 
 EXPOSE 80
 
-# No HEALTHCHECK directive — Coolify (and most orchestrators) handle this
-# at the platform level via Traefik / probes. Leaving the Docker-level
-# HEALTHCHECK in caused Coolify rolling updates to spuriously roll back
-# even when nginx was up and serving correctly.
+# Healthcheck for Coolify / orchestrators.
+# Use 127.0.0.1 (not localhost) — nginx 'listen 80' on Alpine only binds
+# IPv4 by default, and BusyBox wget can resolve 'localhost' to ::1 first.
+# Generous start-period covers the few seconds nginx takes to bind on
+# slow hosts; without it Coolify's rolling-update probe races nginx.
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
+	CMD wget -q -O /dev/null http://127.0.0.1/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
