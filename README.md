@@ -84,9 +84,70 @@ docker run -p 8080:80 hemicycle-manager
 
 Le build prend environ 1–2 minutes (surtout le `npm install` et le téléchargement des data).
 
-### Mise à jour des données
+### 🔄 Mise à jour des données du site
 
-Les données sont **fetchées à chaque build Docker**. Il suffit donc de redéployer pour avoir les votes les plus récents — Coolify peut être configuré pour redéployer automatiquement à chaque push, ou tu peux déclencher un rebuild manuel quotidien/hebdomadaire selon ton besoin.
+Les données sont **fetchées à chaque build Docker** (jamais commitées dans le repo, voir [ADR 0003](decisions/0003-donnees-fetched-au-build-gitignored.md)). Pour avoir les votes les plus récents en production, il suffit de **déclencher un redéploiement** :
+
+#### Option 1 — Redéploiement manuel (le plus simple)
+
+Si l'instance Coolify est pilotée via le CLI dédié dans `~/Agents/coolify_control/` :
+
+```bash
+cd ~/Agents/coolify_control
+./scripts/coolify deploy b08c444o48gwg0w4wswcc0cc
+```
+
+(L'UUID `b08c444o48gwg0w4wswcc0cc` est l'ID de l'application `hemicycle-manager` sur Coolify ; à adapter pour une autre instance.)
+
+Le rebuild prend ~1–2 min. Il fait automatiquement :
+1. `npm ci`
+2. `npm run data:fetch` → télécharge le dernier dump de l'open data AN (~25 Mo) et regénère les 6287+ fichiers JSON
+3. `npm run build` → build SvelteKit
+4. Bascule du conteneur Nginx (rolling update, zéro downtime)
+
+#### Option 2 — Cron de rebuild quotidien
+
+Pour un site toujours frais sans intervention manuelle, configure dans Coolify un **Scheduled Task** qui déclenche un redeploy quotidien (ex: tous les jours à 8h du matin). C'est l'approche recommandée.
+
+#### Option 3 — Auto-deploy au push GitHub
+
+⚠️ **Pas activable via l'API publique de Coolify** au moment où ce projet a été déployé. Pour l'activer :
+- soit configurer une **GitHub App Coolify** via l'UI Coolify puis migrer l'app dessus,
+- soit poser un **webhook GitHub manuel** (Settings > Webhooks du repo) pointant vers l'URL webhook Coolify (configurable via l'UI Coolify).
+
+#### En local (développement)
+
+Régénère les données quand tu veux les rafraîchir :
+
+```bash
+npm run data:fetch
+```
+
+Le pipeline met les ZIP en cache dans `$TMPDIR/hemicycle-manager-cache/` ; supprime ce dossier pour forcer un re-téléchargement complet.
+
+## 📜 Décisions du projet & mémoire continue
+
+Toutes les **décisions structurantes** (sémantique des métriques, choix techniques, sources de données, contraintes infrastructure) sont consignées dans le dossier [`decisions/`](decisions/) au format [Architecture Decision Records (ADR)](https://adr.github.io).
+
+🗂️ **Index** : voir [`decisions/README.md`](decisions/README.md) — auto-généré, recense toutes les ADR avec statut, tags et résumés.
+
+### Pourquoi ?
+
+- **Mémoire pérenne** : les choix sont expliqués (le « pourquoi », pas seulement le « quoi »), survivent aux changements d'équipe ou de mainteneur
+- **Onboarding rapide** : un nouveau contributeur lit `decisions/README.md` et comprend en 5 minutes le périmètre éditorial
+- **Traçabilité** : si une décision change, on déprécie l'ancienne et on en crée une nouvelle (avec lien)
+- Aussi exploité par **[CLAUDE.md](CLAUDE.md)** pour donner du contexte automatique à Claude Code à chaque session
+
+### Ajouter une nouvelle décision
+
+1. Copier [`decisions/TEMPLATE.md`](decisions/TEMPLATE.md) en `decisions/NNNN-slug.md` (NNNN = prochain numéro libre, voir l'index)
+2. Remplir : Contexte, Décision, Pourquoi, Conséquences, Liens
+3. Lancer `npm run decisions:index` (le `README.md` est régénéré automatiquement)
+4. Commit le tout
+
+### Roadmap
+
+Voir [`NEXT_STEPS.md`](NEXT_STEPS.md) pour les évolutions envisagées (animations, comparateur 1v1, mode "Devine le vote", heatmap de cohésion, etc.).
 
 ## 📂 Structure du projet
 
@@ -109,8 +170,15 @@ src/
 scripts/
   fetch-data.ts        # pipeline Open Data → JSON statique + stats + rangs
   extract-seats.ts     # extrait les positions de sièges officielles
+  decisions-index.ts   # regen decisions/README.md
 deploy/
   nginx.conf           # config Nginx pour le container Docker
+decisions/             # ADR (Architecture Decision Records) — voir section dédiée
+  README.md            # index auto-généré (npm run decisions:index)
+  TEMPLATE.md          # trame pour nouvelles décisions
+  NNNN-slug.md         # une décision par fichier
+CLAUDE.md              # guide pour Claude Code (chargé auto à chaque session)
+NEXT_STEPS.md          # roadmap & backlog vivant
 Dockerfile             # build multi-stage : node + nginx
 ```
 

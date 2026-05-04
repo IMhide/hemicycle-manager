@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "data:fetch": "node --experimental-strip-types scripts/fetch-data.ts"
+    "data:fetch": "node --experimental-strip-types scripts/fetch-data.ts",
+    "decisions:index": "node --experimental-strip-types scripts/decisions-index.ts"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.6",
