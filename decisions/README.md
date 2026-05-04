@@ -102,6 +102,6 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 
 ### 0013 — Gouvernance ouverte avec direction technique centralisée
 
-> Gouvernance ouverte avec direction technique centralisée.
+> Gouvernance ouverte avec direction technique centralisée, calibrée pour un mainteneur solo.
 
 📄 [Lire la décision complète](0013-gouvernance-ouverte-direction-centralisee.md)

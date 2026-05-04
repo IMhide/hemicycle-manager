@@ -15,11 +15,15 @@ Deux extrêmes à éviter :
 
 ## Décision
 
-**Gouvernance ouverte avec direction technique centralisée.**
+**Gouvernance ouverte avec direction technique centralisée**, calibrée pour un mainteneur solo.
 
 - **Personne ne push directement sur `main`**, y compris le mainteneur. Tout passe par Pull Request.
-- **Toute PR doit être approuvée par [@IMhide](https://github.com/IMhide)** (mainteneur principal) et passer la CI (build + type-check) avant merge.
-- Branch protection rules GitHub configurées en **strict** (pas d'override admin), ce qui force le mainteneur à passer par le même workflow que les contributeurs externes.
+- **Toute PR doit faire passer la CI** (build + type-check Node 22).
+- **Asymétrie volontaire sur les approvals** :
+  - **Contributeurs externes** : PR + **review du Code Owner** (`@IMhide`) obligatoire avant merge.
+  - **Mainteneur** : PR obligatoire + CI verte. GitHub interdit qu'un auteur approuve sa propre PR ; un mainteneur solo n'a personne d'autre pour approuver. Le mainteneur peut donc merger ses propres PR sans approval, mais a quand même fait la PR (pour la traçabilité et la CI).
+  - Implémentation : `required_approving_review_count: 0` + `require_code_owner_reviews: true`. La review du Code Owner reste forcée pour les PR externes (l'auteur ne peut pas se compter lui-même), tandis qu'elle est implicitement satisfaite pour les PR du mainteneur.
+- Branch protection rules GitHub configurées en **strict** (`enforce_admins: true`), pas d'override admin sur les autres règles (force-push, suppression, linear history, status checks).
 - **Les issues passent par des templates** (bug, feature, data correction) pour cadrer la qualité des remontées.
 - **Le mainteneur est seul juge** des features acceptées : ouverture aux propositions oui, garantie d'acceptation non.
 - **CODEOWNERS** : `* @IMhide` → toute PR auto-assigne le mainteneur en reviewer.
@@ -34,12 +38,13 @@ Deux extrêmes à éviter :
 
 ## Conséquences
 
-- **Le mainteneur ne peut plus push directement même pour une typo** → léger surcoût mais bénéfice de discipline.
+- **Le mainteneur ne peut plus push directement même pour une typo** → léger surcoût mais bénéfice de discipline + traçabilité de chaque change via PR.
+- **Les PR du mainteneur ne sont pas auto-reviewées** : seule la CI les valide. C'est un compromis assumé pour un mainteneur solo. Si un co-mainteneur rejoint le projet plus tard, on basculera à `required_approving_review_count: 1` pour avoir du peer review systématique.
 - Les contributions externes seront probablement filtrées (la plupart refusées), il faut être prêt à expliquer pourquoi de manière constructive.
 - La CI doit rester **rapide** (sous 5 min) pour ne pas bloquer le flux de PR.
 - Les **droits d'admin** restent uniquement sur le mainteneur ; pas de co-mainteneur pour l'instant.
 - Si le projet grossit beaucoup, on pourra :
-  - Ajouter des **mainteneurs secondaires** par domaine (ex: data quality, UI, infra)
+  - Ajouter des **mainteneurs secondaires** par domaine (ex: data quality, UI, infra) → bascule à `required_approving_review_count: 1`
   - Activer un **stale bot** pour gérer le volume d'issues
   - Mettre en place **Dependabot** pour les MAJ de dépendances
 - Adopter le **Contributor Covenant 2.1** comme code de conduite (standard universel).
