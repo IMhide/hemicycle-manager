@@ -1,0 +1,45 @@
+name: 📊 Correction de données ou de calcul
+description: Un chiffre, un classement, une attribution semble incorrect ou mal sourcé.
+title: "[Data] "
+labels: ["data-quality"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de remonter ce souci de qualité. Ce projet attache une grande importance au sourçage rigoureux — vois les [décisions ADR](https://github.com/IMhide/hemicycle-manager/blob/main/decisions/README.md) pour la méthodo.
+  - type: textarea
+    id: where
+    attributes:
+      label: Où as-tu vu le problème ?
+      description: URL exacte de la page, et ce que tu y vois.
+      placeholder: |
+        Sur https://hemicycle.baijobu.net/deputes/PA1008/, le taux de présence affiche 7%, ce qui me semble bas.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Quel chiffre / classement / attribution attendais-tu ?
+      placeholder: Selon NosDéputés, le taux est de…
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Source vérifiable
+      description: |
+        ⚠️ Important : pour qu'une correction soit étudiée, il faut une **source vérifiable**.
+
+        Sources acceptées : Open Data AN, papers académiques, institutions de recherche (Sciences Po, Cairn), datasets publics (CHES, MARPOR, Regards Citoyens).
+
+        Sources NON acceptées comme preuves canoniques : presse généraliste, déclarations politiques.
+      placeholder: URL ou référence précise (ex. CHES 2024, Datan CSV de tel mois, page AN PA1008…)
+    validations:
+      required: true
+  - type: textarea
+    id: methodo
+    attributes:
+      label: Hypothèse sur la cause
+      description: Si tu as une intuition (bug de calcul, source obsolète, mauvaise méthodo), partage-la.
+    validations:
+      required: false

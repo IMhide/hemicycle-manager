@@ -4,9 +4,9 @@
 
 Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque décision est un fichier dédié au format [ADR](https://adr.github.io). Pour ajouter une décision : créer `decisions/NNNN-slug.md` avec la trame de `TEMPLATE.md`, puis lancer `npm run decisions:index`.
 
-**12 décisions** consignées.
+**13 décisions** consignées.
 
-**Tags** : `déploiement`(3) · `métriques`(3) · `data`(2) · `pipeline-data`(2) · `sémantique`(2) · `sourcing`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `ux`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `hémicycle`(1) · `layout`(1) · `licence`(1) · `gouvernance`(1) · `runtime`(1) · `build`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1)
+**Tags** : `déploiement`(3) · `métriques`(3) · `data`(2) · `pipeline-data`(2) · `sémantique`(2) · `sourcing`(2) · `gouvernance`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `ux`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `hémicycle`(1) · `layout`(1) · `licence`(1) · `runtime`(1) · `build`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1)
 
 ## Index chronologique
 
@@ -24,6 +24,7 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 | 0010 | [Node 22 obligatoire (`--experimental-strip-types` requis par le pipeline data)](0010-node-22-pour-experimental-strip-types.md) | ✅ accepté | `runtime` `build` `dépendances` | 2026-05-04 |
 | 0011 | [Healthcheck Docker sur `127.0.0.1` avec `start-period: 30s`](0011-healthcheck-ipv4-start-period.md) | ✅ accepté | `déploiement` `docker` `debug` | 2026-05-04 |
 | 0012 | [Format compact en tuple pour les historiques de vote](0012-historiques-format-tuple-compact.md) | ✅ accepté | `data` `perf` `format` | 2026-05-04 |
+| 0013 | [Gouvernance ouverte avec direction technique centralisée](0013-gouvernance-ouverte-direction-centralisee.md) | ✅ accepté | `gouvernance` `open-source` `processus` | 2026-05-04 |
 
 ## Résumés
 
@@ -98,3 +99,9 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 > Format tuple compact : `[scrutinUid, position, isFronde]` avec `position` ∈ `'pour' | 'contre' | 'abstention' | 'nonVotant'` et `isFronde` ∈ `0 | 1`.
 
 📄 [Lire la décision complète](0012-historiques-format-tuple-compact.md)
+
+### 0013 — Gouvernance ouverte avec direction technique centralisée
+
+> Gouvernance ouverte avec direction technique centralisée, calibrée pour un mainteneur solo.
+
+📄 [Lire la décision complète](0013-gouvernance-ouverte-direction-centralisee.md)

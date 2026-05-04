@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussion ouverte
+    url: https://github.com/IMhide/hemicycle-manager/discussions
+    about: Pour les questions, idées exploratoires ou échanges qui ne rentrent pas dans un template précis.

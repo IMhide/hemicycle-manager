@@ -1,0 +1,57 @@
+name: 🐛 Bug
+description: Quelque chose ne marche pas comme prévu sur l'app ou sur le pipeline data.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de signaler ce bug ! Plus tu donnes de contexte, plus le fix sera rapide.
+  - type: input
+    id: url
+    attributes:
+      label: URL concernée
+      description: Si le bug est visible sur l'app en ligne, mets l'URL exacte.
+      placeholder: https://hemicycle.baijobu.net/deputes/PA1008/
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: Étapes pour reproduire
+      description: Liste numérotée des actions qui mènent au bug.
+      placeholder: |
+        1. Aller sur la page X
+        2. Cliquer sur Y
+        3. Observer Z
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportement attendu
+      placeholder: Ce qui aurait dû se passer.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Comportement observé
+      placeholder: Ce qui se passe réellement (avec capture si possible).
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Navigateur / OS
+      placeholder: ex. Firefox 130 sur macOS 14
+    validations:
+      required: false
+  - type: textarea
+    id: console
+    attributes:
+      label: Erreurs console (si applicable)
+      description: Ouvrir DevTools (F12) → onglet Console et coller les erreurs.
+      render: shell
+    validations:
+      required: false
