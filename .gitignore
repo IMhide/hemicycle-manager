@@ -1,0 +1,24 @@
+# Dependencies and build artefacts
+node_modules
+.svelte-kit
+build
+
+# Environment files (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# Generated data — regenerable via `npm run data:fetch`
+# Heavy (~75 MB) and always-fresh-from-source, so we don't track it.
+static/data/
+
+# Editor / OS
+.DS_Store
+.idea
+.vscode
+*.log
+
+# Misc
+.vercel
+.cache
+.coolify

@@ -1,0 +1,14 @@
+node_modules
+.svelte-kit
+build
+.git
+.gitignore
+.DS_Store
+*.log
+.env
+.env.*
+README.md
+.vscode
+.idea
+.vercel
+.cache
