@@ -1,13 +1,22 @@
 /**
- * Fetch and transform Open Data from the French National Assembly
- * into compact JSON files consumed by the SvelteKit front-end.
+ * PolitiDex — pipeline data multi-législature.
  *
- * Outputs (under static/data/):
- *  - deputes.json       : array of 577 deputies (compact)
- *  - groupes.json       : array of political groups with colors
- *  - scrutins-index.json: lightweight list of all scrutins (no per-vote detail)
- *  - scrutins/{uid}.json: per-scrutin file with full nominative votes
- *  - meta.json          : build metadata (date, counts, source URLs)
+ * Source unique pour les acteurs et leurs mandats : AMO30 historique
+ * (`tous_acteurs_tous_mandats_tous_organes_historique`) — cf ADR 0018.
+ * Source pour les scrutins : un export par législature.
+ *
+ * Outputs (sous static/data/) — modèle Personne unique cross-législature (cf ADR 0015) :
+ *  - personnes.json              : Personne[] avec mandats[] + carriere agrégée
+ *  - groupes/{leg}.json          : Groupe[] scopés par législature (cf ADR 0016)
+ *  - legislatures.json           : LegislatureMeta[]
+ *  - scrutins-index.json         : ScrutinIndex[] cross-législature (avec champ legislature)
+ *  - scrutins/{uid}.json         : ScrutinDetail
+ *  - stats-personnes.json        : pour debug/inspection — stats par mandat sont déjà dans personnes.json
+ *  - historique/{paId}.json      : VoteHistoryItem[] tous mandats confondus
+ *  - meta.json                   : build metadata
+ *
+ * Le tableau LEGISLATURES contrôle la couverture. Phase 1 = [16, 17].
+ * Pour étendre Phase 2, ajouter 15 ; Phase 3 ajoute le sénat (modèle à généraliser).
  */
 
 import { mkdir, writeFile, readFile, rm } from 'node:fs/promises';
@@ -18,143 +27,146 @@ import { tmpdir } from 'node:os';
 import { execFile as execFileCb } from 'node:child_process';
 import { promisify } from 'node:util';
 
+import type {
+	Personne,
+	Mandat,
+	AppartenanceGroupe,
+	MandatStats,
+	MandatRangs,
+	CarriereAggregee,
+	BadgeCarriere,
+	BadgeMandat,
+	Groupe,
+	LegislatureMeta,
+	ScrutinIndex,
+	ScrutinDetail,
+	VotePosition,
+	VoteHistoryItem,
+	BuildMeta
+} from '../src/lib/types.ts';
+
 const execFile = promisify(execFileCb);
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'static', 'data');
-const CACHE_DIR = join(tmpdir(), 'hemicycle-manager-cache');
+const CACHE_DIR = join(tmpdir(), 'politidex-cache');
 
-const SOURCES = {
-	deputes: 'https://data.assemblee-nationale.fr/static/openData/repository/17/amo/deputes_actifs_mandats_actifs_organes/AMO10_deputes_actifs_mandats_actifs_organes.json.zip',
-	scrutins: 'https://data.assemblee-nationale.fr/static/openData/repository/17/loi/scrutins/Scrutins.json.zip'
-};
+/** Législatures couvertes. Phase 1 = [16, 17]. Étendre pour Phase 2/3. */
+const LEGISLATURES: number[] = [16, 17];
 
-// ────────────────────────────────────────────────────────────────────────────
-// Types — shape of the trimmed data we ship to the front-end
-// ────────────────────────────────────────────────────────────────────────────
+/** Source historique unique des acteurs/organes (cf ADR 0018). */
+const SOURCE_ACTEURS =
+	'https://data.assemblee-nationale.fr/static/openData/repository/17/amo/tous_acteurs_mandats_organes_xi_legislature/AMO30_tous_acteurs_tous_mandats_tous_organes_historique.json.zip';
 
-export interface Depute {
-	id: string;            // PA{n}
-	prenom: string;
-	nom: string;
-	civ: string;
-	groupeId: string | null;
-	circo: { dep: string; depNum: string; num: string; region: string } | null;
-	place: number | null;  // siège dans l'hémicycle 1..650
-	dateNaissance: string | null;
-	profession: string | null;
-	photoUrl: string;
-	datePriseFonction: string | null; // YYYY-MM-DD; used to filter eligible scrutins
-	premiereElection: boolean;
-}
+// ⚠️  L'archive Scrutins.json.zip de la 17ᵉ législature est servie extrêmement
+//     lentement par le CDN AN (POP 46.105.202.26 / Rouen) : ~25-30 KB/s, identique
+//     en navigateur. Un fresh download peut prendre 10-12 minutes pour ~20 MB.
+//     Le cache `politidex-cache/` dans tmpdir est notre garde-fou : NE PAS le purger
+//     entre deux runs si tu n'as pas explicitement besoin de re-fetch.
+//     Côté Coolify : prévoir un build timeout ≥ 15 min.
 
-export interface Groupe {
-	id: string;            // PO{n}
-	libelle: string;
-	libelleAbrege: string;
-	couleur: string;       // hex
-	effectif: number;      // computed from deputes
-	preseance: number;
-	presidentId: string | null; // deputy id, set by parseDeputesAndGroupes
-}
+const sourceScrutins = (leg: number) =>
+	`https://data.assemblee-nationale.fr/static/openData/repository/${leg}/loi/scrutins/Scrutins.json.zip`;
 
-export type VotePosition = 'pour' | 'contre' | 'abstention' | 'nonVotant' | 'absent';
-
-export interface ScrutinIndex {
-	uid: string;
-	numero: number;
-	date: string;
-	titre: string;
-	sort: 'adopté' | 'rejeté' | string;
-	pour: number;
-	contre: number;
-	abstention: number;
-	demandeur: string | null;
-}
-
-export interface ScrutinDetail extends ScrutinIndex {
-	objet: string;
-	typeVote: string;
-	votes: Record<string, VotePosition>;  // deputeId -> position
-	groupes: Array<{
-		id: string;
-		effectif: number;
-		positionMajoritaire: 'pour' | 'contre' | 'abstention' | string;
-		decompte: { pour: number; contre: number; abstention: number; nonVotant: number };
-	}>;
-	frondeurs: string[]; // deputeId list — voted opposite to their group's majoritaire
-}
-
-export interface DeputeStats {
-	id: string;
-	scrutinsEligibles: number;     // scrutins post-datePriseFonction
-	pour: number;
-	contre: number;
-	abstention: number;
-	nonVotant: number;
-	absent: number;                // scrutinsEligibles - sum(others)
-	frondes: number;               // votes exprimés contre majorité du groupe
-	tauxPresence: number;          // (pour+contre+abst+nonVotant) / eligibles
-	tauxParticipation: number;     // (pour+contre+abst) / eligibles
-	tauxLoyaute: number | null;    // votes alignés avec majorité / votes exprimés où groupe a majorité
-	activite: number;              // (pour+contre+abst), abs raw count
-	// Ranks (1 = best). Computed after all stats are filled. Total = 577.
-	rangs: {
-		presence: number;
-		participation: number;
-		loyaute: number | null;    // null if tauxLoyaute is null
-		frondes: number;            // higher frondes = lower rank (rank 1 = most frondes)
-		activite: number;
-	};
-}
-
-export interface GroupeStats {
-	id: string;
-	cohesion: number | null;       // moyenne des taux de cohésion par scrutin
-	scrutinsConsideres: number;
-	tauxPresenceMoyen: number;
-	frondesTotales: number;
-	topLoyalistes: Array<{ id: string; tauxLoyaute: number }>;
-	topFrondeurs: Array<{ id: string; frondes: number }>;
-	// Ranks among groups (1 = best). Total = 12 (or fewer if NI excluded).
-	rangs: {
-		cohesion: number | null;
-		presence: number;
-		frondes: number;
-	};
-}
-
-/**
- * Compact per-deputy history entry. We only store the scrutin uid + the
- * deputy's position + a fronde flag. The front-end joins with
- * scrutins-index.json to get titre/date/sort. Saves ~80% of disk space.
- */
-export type VoteHistoryItem = [uid: string, position: VotePosition, isFronde: 0 | 1];
+/** Seuil pour identifier le NI-bridge transitoire (en jours). */
+const NI_BRIDGE_MAX_DURATION_DAYS = 7;
 
 // ────────────────────────────────────────────────────────────────────────────
-// Utilities
+// Utilitaires
 // ────────────────────────────────────────────────────────────────────────────
 
 async function ensureDir(path: string) {
 	await mkdir(path, { recursive: true });
 }
 
+/**
+ * Télécharge un ZIP via `curl` avec progression et reprise automatique.
+ *
+ * Stratégie de robustesse face au CDN Etalab très lent (cf commentaire SOURCE_ACTEURS) :
+ * - Détection du Content-Length serveur ; si le fichier local existe et a la même
+ *   taille → cache hit complet, on saute.
+ * - Sinon, on appelle `curl -C -` qui reprend depuis l'offset existant.
+ * - `--max-time` = 30 min par tentative (le 17ᵉ scrutins peut prendre ~12 min en fresh,
+ *   on garde de la marge pour les CDN extra-lents).
+ * - `--retry 5 --retry-delay 5` : 5 tentatives, 5s d'attente.
+ * - Boucle externe : si curl plante quand même (ex: code 92 stream error), on relance
+ *   jusqu'à 3 fois — la reprise repartira d'où on s'est arrêté.
+ */
 async function downloadZip(url: string, target: string): Promise<void> {
+	const expected = await remoteContentLength(url);
 	if (existsSync(target)) {
-		console.log(`  ↻ cache hit: ${target}`);
-		return;
+		const localSize = (await import('node:fs')).statSync(target).size;
+		if (expected !== null && localSize === expected) {
+			console.log(`  ↻ cache hit: ${target} (${(localSize / 1024 / 1024).toFixed(1)} MB)`);
+			return;
+		}
+		if (expected !== null) {
+			console.log(
+				`  ⏯ reprise: ${(localSize / 1024 / 1024).toFixed(1)} / ${(expected / 1024 / 1024).toFixed(1)} MB`
+			);
+		}
 	}
-	console.log(`  ⬇ downloading ${url}`);
-	const res = await fetch(url);
-	if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-	const buf = Buffer.from(await res.arrayBuffer());
-	await writeFile(target, buf);
-	console.log(`  ✓ ${(buf.length / 1024 / 1024).toFixed(1)} MB → ${target}`);
+	console.log(`  ⬇ ${url}`);
+
+	const { spawn } = await import('node:child_process');
+	const MAX_OUTER_RETRIES = 3;
+	for (let attempt = 1; attempt <= MAX_OUTER_RETRIES; attempt++) {
+		try {
+			await new Promise<void>((resolve, reject) => {
+				const c = spawn(
+					'curl',
+					[
+						'-L',
+						'-C',
+						'-',
+						'--retry',
+						'5',
+						'--retry-delay',
+						'5',
+						'--max-time',
+						'1800',
+						'--progress-bar',
+						'-o',
+						target,
+						url
+					],
+					{ stdio: ['ignore', 'inherit', 'inherit'] }
+				);
+				c.on('error', reject);
+				c.on('exit', (code) => {
+					if (code === 0) resolve();
+					else reject(new Error(`curl exited ${code}`));
+				});
+			});
+			break; // success
+		} catch (err) {
+			if (attempt === MAX_OUTER_RETRIES) {
+				throw new Error(`curl failed ${attempt}× for ${url}: ${(err as Error).message}`);
+			}
+			console.log(`  ⚠ tentative ${attempt}/${MAX_OUTER_RETRIES} échouée, reprise…`);
+			await new Promise((r) => setTimeout(r, 5000));
+		}
+	}
+
+	const stats = await import('node:fs').then((m) => m.statSync(target));
+	console.log(`  ✓ ${(stats.size / 1024 / 1024).toFixed(1)} MB → ${target}`);
+}
+
+/** Récupère le Content-Length d'un fichier distant via HEAD. Retourne null si indispo. */
+async function remoteContentLength(url: string): Promise<number | null> {
+	try {
+		const res = await fetch(url, { method: 'HEAD' });
+		if (!res.ok) return null;
+		const cl = res.headers.get('content-length');
+		return cl ? parseInt(cl, 10) : null;
+	} catch {
+		return null;
+	}
 }
 
 async function unzip(zipPath: string, destDir: string) {
 	await ensureDir(destDir);
-	console.log(`  ⇢ extracting ${zipPath} → ${destDir}`);
+	console.log(`  ⇢ ${zipPath} → ${destDir}`);
 	await execFile('unzip', ['-q', '-o', zipPath, '-d', destDir]);
 }
 
@@ -163,134 +175,295 @@ function asArray<T>(v: T | T[] | null | undefined): T[] {
 	return Array.isArray(v) ? v : [v];
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Step 1 — parse deputies and groups
-// ────────────────────────────────────────────────────────────────────────────
-
-interface RawActeur {
-	uid: { '#text': string };
-	etatCivil: {
-		ident: { civ: string; prenom: string; nom: string };
-		infoNaissance?: { dateNais?: string };
-	};
-	profession?: { libelleCourant?: string };
-	mandats?: { mandat?: any | any[] };
+function daysBetween(a: string, b: string): number {
+	const da = new Date(a).getTime();
+	const db = new Date(b).getTime();
+	return Math.round((db - da) / (1000 * 60 * 60 * 24));
 }
+
+/** Compare deux qualités GP par préséance. Plus haut = meilleur. */
+function qualiteRank(qualite: string | null | undefined): number {
+	if (!qualite) return 0;
+	const q = qualite.toLowerCase();
+	if (q.includes('président') && !q.includes('vice')) return 5;
+	if (q.includes('vice-président')) return 4;
+	if (q.includes('secrétaire')) return 3;
+	if (q.includes('trésorier')) return 2;
+	if (q.includes('membre')) return 1;
+	return 0;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Étape 1 — extraction des groupes politiques par législature
+// ────────────────────────────────────────────────────────────────────────────
 
 interface RawOrgane {
 	uid: string;
 	codeType: string;
 	libelle: string;
 	libelleAbrege?: string;
+	libelleAbrev?: string;
 	couleurAssociee?: string;
 	preseance?: string;
 	legislature?: string;
-	viMoDe?: { dateFin?: string | null };
+	viMoDe?: { dateDebut?: string; dateFin?: string | null };
 }
 
-async function parseDeputesAndGroupes(extractDir: string) {
-	const acteurDir = join(extractDir, 'json', 'acteur');
+async function parseGroupes(extractDir: string): Promise<Map<number, Groupe[]>> {
 	const organeDir = join(extractDir, 'json', 'organe');
-
-	// 1a — Parse all groupes politiques (active in 17e legislature)
-	const groupesById = new Map<string, Groupe>();
 	const { readdirSync } = await import('node:fs');
+
+	const byLegislature = new Map<number, Groupe[]>();
+	for (const leg of LEGISLATURES) byLegislature.set(leg, []);
 
 	for (const file of readdirSync(organeDir)) {
 		const raw = JSON.parse(await readFile(join(organeDir, file), 'utf8'));
 		const o: RawOrgane = raw.organe;
 		if (o.codeType !== 'GP') continue;
-		if (o.legislature !== '17') continue;
-		if (o.viMoDe?.dateFin) continue; // skip dissolved groups
-		groupesById.set(o.uid, {
+		const leg = o.legislature ? parseInt(o.legislature, 10) : NaN;
+		if (!LEGISLATURES.includes(leg)) continue;
+
+		const list = byLegislature.get(leg)!;
+		list.push({
 			id: o.uid,
+			legislature: leg,
 			libelle: o.libelle,
-			libelleAbrege: o.libelleAbrege ?? o.libelle.slice(0, 6).toUpperCase(),
+			libelleAbrege: o.libelleAbrege ?? o.libelleAbrev ?? o.libelle.slice(0, 6).toUpperCase(),
 			couleur: o.couleurAssociee ?? '#888888',
-			effectif: 0,
 			preseance: parseInt(o.preseance ?? '999', 10),
-			presidentId: null
+			presidentId: null, // rempli plus tard à partir des mandats
+			dateDebut: o.viMoDe?.dateDebut ?? '',
+			dateFin: o.viMoDe?.dateFin ?? null,
+			effectifFin: 0 // calculé plus tard
 		});
 	}
 
-	// 1b — Parse all deputies, attach to their group via mandate
-	const deputes: Depute[] = [];
+	for (const list of byLegislature.values()) {
+		list.sort((a, b) => a.preseance - b.preseance);
+	}
+	return byLegislature;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Étape 2 — extraction des personnes + mandats parlementaires + appartenances groupe
+// ────────────────────────────────────────────────────────────────────────────
+
+interface RawActeur {
+	uid: { '#text': string };
+	etatCivil: {
+		ident: { civ: string; prenom: string; nom: string };
+		infoNaissance?: { dateNais?: string | null; villeNais?: string | null };
+	};
+	profession?: { libelleCourant?: string | null };
+	mandats?: { mandat?: any | any[] };
+}
+
+interface RawMandat {
+	'@xsi:type'?: string;
+	uid?: string;
+	acteurRef?: string;
+	legislature?: string | null;
+	typeOrgane?: string;
+	dateDebut?: string;
+	dateFin?: string | null;
+	infosQualite?: { libQualite?: string };
+	organes?: { organeRef?: string };
+	mandature?: {
+		datePriseFonction?: string;
+		causeFin?: string | null;
+		premiereElection?: string;
+		placeHemicycle?: string;
+	};
+	election?: {
+		lieu?: {
+			region?: string;
+			departement?: string;
+			numDepartement?: string;
+			numCirco?: string;
+		};
+	};
+}
+
+interface PartialPersonne {
+	id: string;
+	identite: Personne['identite'];
+	mandatsByLeg: Map<number, Mandat>; // legislature → Mandat
+}
+
+async function parsePersonnesAndMandats(
+	extractDir: string,
+	groupesByLeg: Map<number, Groupe[]>
+): Promise<Map<string, PartialPersonne>> {
+	const acteurDir = join(extractDir, 'json', 'acteur');
+	const { readdirSync } = await import('node:fs');
+
+	const groupeIdsByLeg = new Map<number, Set<string>>();
+	for (const [leg, list] of groupesByLeg) {
+		groupeIdsByLeg.set(leg, new Set(list.map((g) => g.id)));
+	}
+
+	const personnes = new Map<string, PartialPersonne>();
+
 	for (const file of readdirSync(acteurDir)) {
 		const raw = JSON.parse(await readFile(join(acteurDir, file), 'utf8'));
 		const a: RawActeur = raw.acteur;
 		const id = a.uid['#text'];
+		const allMandats = asArray(a.mandats?.mandat) as RawMandat[];
 
-		const mandats = asArray(a.mandats?.mandat);
-		const mandatsGP = mandats.filter(
-			(m) => m['@xsi:type'] === 'MandatSimple_Type' && m.typeOrgane === 'GP' && m.legislature === '17' && !m.dateFin
-		);
-		// Membership mandate (any group affiliation) — first one wins
-		const mandatGP = mandatsGP[0];
-		const groupeId = mandatGP ? mandatGP.organes?.organeRef ?? null : null;
+		// Pour chaque législature visée, retenir les mandats parlementaires
+		// (typeOrgane=ASSEMBLEE) qui matchent.
+		const mandatsByLeg = new Map<number, Mandat>();
 
-		// Detect group presidents — there may be a separate mandate with the
-		// "Président" qualité distinct from the membership mandate.
-		for (const m of mandatsGP) {
-			const ref = m.organes?.organeRef as string | undefined;
-			const qualite = (m.infosQualite?.libQualite as string | undefined)?.toLowerCase() ?? '';
-			if (ref && groupesById.has(ref) && qualite.includes('président')) {
-				groupesById.get(ref)!.presidentId = id;
-			}
+		for (const leg of LEGISLATURES) {
+			const mandatsParl = allMandats.filter(
+				(m) =>
+					m['@xsi:type'] === 'MandatParlementaire_type' &&
+					m.typeOrgane === 'ASSEMBLEE' &&
+					m.legislature === String(leg)
+			);
+			if (mandatsParl.length === 0) continue;
+
+			// On prend le premier (typiquement il y en a un seul, ou plusieurs si
+			// substitution successive — on garde le plus précoce dateDebut).
+			mandatsParl.sort((x, y) => (x.dateDebut ?? '').localeCompare(y.dateDebut ?? ''));
+			const parl = mandatsParl[0];
+
+			const datePriseFonction = parl.mandature?.datePriseFonction ?? parl.dateDebut ?? '';
+			const dateFinFonction = parl.dateFin ?? null;
+			const lieu = parl.election?.lieu;
+
+			// Extraire les appartenances GP de cette législature.
+			const appartenances = extractAppartenancesGroupe(
+				allMandats,
+				leg,
+				groupeIdsByLeg.get(leg)!,
+				datePriseFonction
+			);
+
+			const mandat: Mandat = {
+				legislature: leg,
+				datePriseFonction,
+				dateFinFonction,
+				premiereElection: parl.mandature?.premiereElection === '1',
+				circonscription: lieu
+					? {
+							dep: lieu.departement ?? '',
+							depNum: lieu.numDepartement ?? '',
+							num: lieu.numCirco ?? '',
+							region: lieu.region ?? ''
+						}
+					: null,
+				place: parl.mandature?.placeHemicycle
+					? parseInt(parl.mandature.placeHemicycle, 10)
+					: null,
+				appartenancesGroupe: appartenances,
+				scrutinsEligibles: 0, // rempli après parse scrutins
+				stats: emptyStats(),
+				rangs: emptyRangs(),
+				badgesMandat: []
+			};
+			mandatsByLeg.set(leg, mandat);
 		}
 
-		const mandatParl = mandats.find(
-			(m) => m['@xsi:type'] === 'MandatParlementaire_type' && m.typeOrgane === 'ASSEMBLEE' && m.legislature === '17' && !m.dateFin
-		);
-		const place = mandatParl?.mandature?.placeHemicycle
-			? parseInt(mandatParl.mandature.placeHemicycle, 10)
-			: null;
-		const election = mandatParl?.election?.lieu;
-		const circo = election
-			? {
-					dep: election.departement,
-					depNum: election.numDepartement,
-					num: election.numCirco,
-					region: election.region
-				}
-			: null;
+		if (mandatsByLeg.size === 0) continue;
 
-		const datePriseFonction = mandatParl?.mandature?.datePriseFonction ?? null;
-		const premiereElection = mandatParl?.mandature?.premiereElection === '1';
+		const ec = a.etatCivil.ident;
+		const sexe: 'F' | 'M' = ec.civ === 'Mme' ? 'F' : 'M';
 
-		deputes.push({
+		personnes.set(id, {
 			id,
-			prenom: a.etatCivil.ident.prenom,
-			nom: a.etatCivil.ident.nom,
-			civ: a.etatCivil.ident.civ,
-			groupeId,
-			circo,
-			place,
-			dateNaissance: a.etatCivil.infoNaissance?.dateNais ?? null,
-			profession: a.profession?.libelleCourant ?? null,
-			photoUrl: `https://www2.assemblee-nationale.fr/static/tribun/17/photos/${id.replace(/^PA/, '')}.jpg`,
-			datePriseFonction,
-			premiereElection
+			identite: {
+				civ: ec.civ,
+				prenom: ec.prenom,
+				nom: ec.nom,
+				sexe,
+				dateNaissance: a.etatCivil.infoNaissance?.dateNais ?? null,
+				villeNaissance: a.etatCivil.infoNaissance?.villeNais ?? null,
+				photoUrl: photoUrl(id, mandatsByLeg),
+				professionDeclaree: a.profession?.libelleCourant ?? null
+			},
+			mandatsByLeg
 		});
 	}
 
-	// 1c — Compute group sizes
-	for (const d of deputes) {
-		if (d.groupeId && groupesById.has(d.groupeId)) {
-			groupesById.get(d.groupeId)!.effectif += 1;
+	return personnes;
+}
+
+/** URL de la photo officielle. Préférer la législature la plus récente où la
+ *  personne a siégé (les photos sont versionnées par législature côté AN). */
+function photoUrl(id: string, mandatsByLeg: Map<number, Mandat>): string {
+	const legs = [...mandatsByLeg.keys()].sort((a, b) => b - a);
+	const leg = legs[0] ?? 17;
+	const num = id.replace(/^PA/, '');
+	return `https://www2.assemblee-nationale.fr/static/tribun/${leg}/photos/${num}.jpg`;
+}
+
+/** Extrait, dédoublonne et marque les appartenances GP d'une législature donnée.
+ *  - Filtre sur typeOrgane=GP + organeRef ∈ groupes connus de la législature
+ *  - Dédoublonne sur (organeRef, dateDebut) en gardant la qualité la plus haute
+ *  - Marque isTransitoireNI = true pour les mandats NI ≤ 7 jours en début de législature
+ *  - Trie chronologiquement
+ */
+function extractAppartenancesGroupe(
+	mandats: RawMandat[],
+	legislature: number,
+	groupeIds: Set<string>,
+	legDatePriseFonction: string
+): AppartenanceGroupe[] {
+	const candidats = mandats.filter((m) => {
+		if (m['@xsi:type'] !== 'MandatSimple_Type') return false;
+		if (m.typeOrgane !== 'GP') return false;
+		const ref = m.organes?.organeRef;
+		if (!ref) return false;
+		// On filtre sur l'appartenance au set de groupes de cette législature.
+		// Le champ m.legislature est parfois absent, on s'en passe.
+		return groupeIds.has(ref);
+	});
+
+	// Dédoublonnage sur (organeRef, dateDebut) — garder la qualité la plus haute.
+	const dedupKey = (m: RawMandat) => `${m.organes?.organeRef}|${m.dateDebut}`;
+	const best = new Map<string, RawMandat>();
+	for (const m of candidats) {
+		const k = dedupKey(m);
+		const cur = best.get(k);
+		if (!cur || qualiteRank(m.infosQualite?.libQualite) > qualiteRank(cur.infosQualite?.libQualite)) {
+			best.set(k, m);
 		}
 	}
 
-	// Sort by political seance (left to right ordering for visualisation)
-	const groupes = [...groupesById.values()].sort((a, b) => a.preseance - b.preseance);
+	const out: AppartenanceGroupe[] = [];
+	for (const m of best.values()) {
+		const dateDebut = m.dateDebut!;
+		const dateFin = m.dateFin ?? null;
+		const qualite = m.infosQualite?.libQualite ?? 'Membre';
 
-	return { deputes, groupes };
+		// NI-bridge : appartenance "Député non-inscrit" courte au tout début de la législature.
+		const isNI = qualite.toLowerCase().includes('non-inscrit');
+		const isAtStart = legDatePriseFonction
+			? Math.abs(daysBetween(legDatePriseFonction, dateDebut)) <= 1
+			: false;
+		const duration =
+			dateFin && dateDebut ? daysBetween(dateDebut, dateFin) : Number.POSITIVE_INFINITY;
+		const isTransitoireNI = isNI && isAtStart && duration <= NI_BRIDGE_MAX_DURATION_DAYS;
+
+		out.push({
+			groupeId: m.organes!.organeRef!,
+			dateDebut,
+			dateFin,
+			qualite,
+			isTransitoireNI
+		});
+	}
+
+	out.sort((x, y) => x.dateDebut.localeCompare(y.dateDebut));
+	return out;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Step 2 — parse scrutins
+// Étape 3 — parse scrutins (un export par législature)
 // ────────────────────────────────────────────────────────────────────────────
 
-async function parseScrutins(extractDir: string) {
+async function parseScrutins(extractDir: string, legislature: number) {
 	const dir = join(extractDir, 'json');
 	const { readdirSync } = await import('node:fs');
 	const files = readdirSync(dir).filter((f) => f.startsWith('VTANR') && f.endsWith('.json'));
@@ -301,10 +474,11 @@ async function parseScrutins(extractDir: string) {
 	for (const file of files) {
 		const raw = JSON.parse(await readFile(join(dir, file), 'utf8'));
 		const s = raw.scrutin;
-
 		const decompte = s.syntheseVote?.decompte;
+
 		const idx: ScrutinIndex = {
 			uid: s.uid,
+			legislature,
 			numero: parseInt(s.numero, 10),
 			date: s.dateScrutin,
 			titre: s.titre ?? s.objet?.libelle ?? '(sans titre)',
@@ -316,11 +490,8 @@ async function parseScrutins(extractDir: string) {
 		};
 		index.push(idx);
 
-		// Build per-deputy vote map. We also remember which group each deputy
-		// voted in so we can detect frondeurs (vote opposite to group's
-		// positionMajoritaire). Abstentions never count as fronde.
 		const votes: Record<string, VotePosition> = {};
-		const groupesVentilation: ScrutinDetail['groupes'] = [];
+		const groupesVent: ScrutinDetail['groupes'] = [];
 		const frondeurs: string[] = [];
 		const groupesArr = asArray(s.ventilationVotes?.organe?.groupes?.groupe);
 
@@ -333,8 +504,6 @@ async function parseScrutins(extractDir: string) {
 				for (const v of asArray(nodes?.votant)) {
 					if (!v?.acteurRef) continue;
 					votes[v.acteurRef] = position;
-					// Frondeur if the deputy cast an *expressed* vote (pour/contre)
-					// opposite to the group majority. Abstentions never count.
 					if (
 						(position === 'pour' || position === 'contre') &&
 						(positionMaj === 'pour' || positionMaj === 'contre') &&
@@ -349,7 +518,7 @@ async function parseScrutins(extractDir: string) {
 			collect(dn.abstentions, 'abstention');
 			collect(dn.nonVotants, 'nonVotant');
 
-			groupesVentilation.push({
+			groupesVent.push({
 				id: g.organeRef,
 				effectif: parseInt(g.nombreMembresGroupe ?? '0', 10),
 				positionMajoritaire: positionMaj ?? 'abstention',
@@ -367,165 +536,155 @@ async function parseScrutins(extractDir: string) {
 			objet: s.objet?.libelle ?? idx.titre,
 			typeVote: s.typeVote?.libelleTypeVote ?? 'inconnu',
 			votes,
-			groupes: groupesVentilation,
+			groupes: groupesVent,
 			frondeurs
 		});
 	}
-
-	// Sort index from most recent to oldest
-	index.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.numero - a.numero));
 
 	return { index, details };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Step 3 — compute deputy + group statistics, build per-deputy histories
+// Étape 4 — calcul stats par mandat + cumul carrière + rangs + badges
 // ────────────────────────────────────────────────────────────────────────────
 
-interface ComputedStats {
-	deputeStats: Map<string, DeputeStats>;
-	groupeStats: Map<string, GroupeStats>;
+function emptyStats(): MandatStats {
+	return {
+		presence: { numerator: 0, denominator: 0, rate: 0 },
+		participation: { numerator: 0, denominator: 0, rate: 0 },
+		loyaute: { numerator: 0, denominator: 0, rate: null },
+		frondes: { count: 0, rate: 0 }
+	};
+}
+
+function emptyRangs(): MandatRangs {
+	return {
+		presence: { rank: 0, total: 0 },
+		participation: { rank: 0, total: 0 },
+		loyaute: { rank: null, total: 0 },
+		frondes: { rank: 0, total: 0 }
+	};
+}
+
+interface ComputedHistoriques {
 	historiques: Map<string, VoteHistoryItem[]>;
 }
 
-function computeStats(
-	deputes: Depute[],
-	groupes: Groupe[],
-	index: ScrutinIndex[],
-	details: Map<string, ScrutinDetail>
-): ComputedStats {
-	// Pre-sort scrutins chronologically (oldest → newest) so the per-deputy
-	// histories naturally come out in the same order. Then we'll reverse for
-	// display (newest first) at the end.
-	const sortedScrutins = [...index].sort((a, b) =>
+/** Parcourt les scrutins d'une législature et accumule les stats sur chaque mandat correspondant. */
+function computeStatsForLegislature(
+	legislature: number,
+	personnes: Map<string, PartialPersonne>,
+	scrutinsIndex: ScrutinIndex[],
+	scrutinsDetails: Map<string, ScrutinDetail>,
+	historiques: Map<string, VoteHistoryItem[]>
+) {
+	// Tri chronologique croissant pour l'historique
+	const sorted = [...scrutinsIndex].sort((a, b) =>
 		a.date < b.date ? -1 : a.date > b.date ? 1 : a.numero - b.numero
 	);
 
-	// ── Initialise accumulators
-	const deputeStats = new Map<string, DeputeStats>();
-	for (const d of deputes) {
-		deputeStats.set(d.id, {
-			id: d.id,
-			scrutinsEligibles: 0,
-			pour: 0,
-			contre: 0,
-			abstention: 0,
-			nonVotant: 0,
-			absent: 0,
-			frondes: 0,
-			tauxPresence: 0,
-			tauxParticipation: 0,
-			tauxLoyaute: null,
-			activite: 0,
-			rangs: {
-				presence: 0,
-				participation: 0,
-				loyaute: null,
-				frondes: 0,
-				activite: 0
-			}
-		});
-	}
-
-	const historiques = new Map<string, VoteHistoryItem[]>();
-	for (const d of deputes) historiques.set(d.id, []);
-
-	// For loyalty: count votes_aligned_with_majority and total votes_with_majority
-	// (we only consider scrutins where the deputy's group had a clear majority
-	// position of pour or contre, and the deputy expressed a vote of pour/contre).
-	const loyauteAcc = new Map<string, { aligned: number; considered: number }>();
-	for (const d of deputes) loyauteAcc.set(d.id, { aligned: 0, considered: 0 });
-
-	// For group cohesion: per scrutin, store the cohesion ratio for each group.
-	// Cohesion = (votes aligned with majority) / (votes expressed in group).
-	const groupeCohesionAcc = new Map<string, { sum: number; count: number }>();
-	for (const g of groupes) groupeCohesionAcc.set(g.id, { sum: 0, count: 0 });
-
-	// ── Walk scrutins chronologically
-	for (const idx of sortedScrutins) {
-		const detail = details.get(idx.uid);
+	for (const idx of sorted) {
+		const detail = scrutinsDetails.get(idx.uid);
 		if (!detail) continue;
 		const frondeurSet = new Set(detail.frondeurs);
 
-		// Pre-build a map: groupeId → positionMajoritaire of group on this scrutin
-		const groupePos = new Map<string, string>();
-		for (const g of detail.groupes) groupePos.set(g.id, g.positionMajoritaire);
+		for (const p of personnes.values()) {
+			const mandat = p.mandatsByLeg.get(legislature);
+			if (!mandat) continue;
+			// Éligibilité : scrutin date >= datePriseFonction du mandat (ADR 0006)
+			if (mandat.datePriseFonction && idx.date < mandat.datePriseFonction) continue;
 
-		// Walk every deputy and increment their counters if they were eligible.
-		for (const d of deputes) {
-			// Eligibility: scrutin date >= datePriseFonction
-			if (d.datePriseFonction && idx.date < d.datePriseFonction) continue;
+			mandat.scrutinsEligibles += 1;
+			const position = detail.votes[p.id];
+			const isFronde = frondeurSet.has(p.id);
 
-			const stats = deputeStats.get(d.id)!;
-			stats.scrutinsEligibles += 1;
+			const stats = mandat.stats;
+			// Présence = position connue (pas 'absent')
+			if (position) stats.presence.numerator += 1;
+			// Participation = vote exprimé (pour/contre/abstention)
+			if (position === 'pour' || position === 'contre' || position === 'abstention') {
+				stats.participation.numerator += 1;
+			}
 
-			const position = detail.votes[d.id]; // undefined → absent
-			const isFronde = frondeurSet.has(d.id);
+			if (isFronde) stats.frondes.count += 1;
 
-			if (position === 'pour') stats.pour += 1;
-			else if (position === 'contre') stats.contre += 1;
-			else if (position === 'abstention') stats.abstention += 1;
-			else if (position === 'nonVotant') stats.nonVotant += 1;
-			else stats.absent += 1;
-
-			if (isFronde) stats.frondes += 1;
-
-			// Loyauté accumulator (only when group has clear pour/contre majority
-			// AND the deputy expressed a pour/contre vote).
-			if (d.groupeId) {
-				const maj = groupePos.get(d.groupeId);
-				const expressed = position === 'pour' || position === 'contre';
-				if ((maj === 'pour' || maj === 'contre') && expressed) {
-					const acc = loyauteAcc.get(d.id)!;
-					acc.considered += 1;
-					if (position === maj) acc.aligned += 1;
+			// Loyauté : groupe au moment du vote (cf ADR 0016) → on cherche
+			// l'appartenance qui couvre idx.date
+			const groupeAuVote = appartenanceAuVote(mandat.appartenancesGroupe, idx.date);
+			if (groupeAuVote && (position === 'pour' || position === 'contre')) {
+				const grpDetail = detail.groupes.find((g) => g.id === groupeAuVote.groupeId);
+				const maj = grpDetail?.positionMajoritaire;
+				if (maj === 'pour' || maj === 'contre') {
+					stats.loyaute.denominator += 1;
+					if (position === maj) stats.loyaute.numerator += 1;
 				}
 			}
 
-			// Per-deputy history (we keep all votes; chronological order)
+			// Historique compact
 			if (position) {
-				historiques.get(d.id)!.push([idx.uid, position, isFronde ? 1 : 0]);
-			}
-		}
-
-		// Per-scrutin group cohesion
-		for (const g of detail.groupes) {
-			const maj = g.positionMajoritaire;
-			if (maj !== 'pour' && maj !== 'contre') continue;
-			const expressed = g.decompte.pour + g.decompte.contre + g.decompte.abstention;
-			if (expressed === 0) continue;
-			const aligned = maj === 'pour' ? g.decompte.pour : g.decompte.contre;
-			const cohesion = aligned / expressed;
-			const acc = groupeCohesionAcc.get(g.id);
-			if (acc) {
-				acc.sum += cohesion;
-				acc.count += 1;
+				const histList = historiques.get(p.id) ?? [];
+				histList.push([idx.uid, position, isFronde ? 1 : 0, legislature]);
+				historiques.set(p.id, histList);
 			}
 		}
 	}
+}
 
-	// ── Finalise depute stats: ratios + loyauté
-	for (const d of deputes) {
-		const stats = deputeStats.get(d.id)!;
-		const eligible = stats.scrutinsEligibles;
-		if (eligible > 0) {
-			stats.tauxPresence = (stats.pour + stats.contre + stats.abstention + stats.nonVotant) / eligible;
-			stats.tauxParticipation = (stats.pour + stats.contre + stats.abstention) / eligible;
-		}
-		stats.activite = stats.pour + stats.contre + stats.abstention;
-		const loy = loyauteAcc.get(d.id)!;
-		stats.tauxLoyaute = loy.considered > 0 ? loy.aligned / loy.considered : null;
+/** Retourne l'appartenance groupe qui couvre la date donnée, ou null si aucune
+ *  (ne renvoie pas le NI-bridge transitoire, qui ne doit pas servir au calcul de loyauté). */
+function appartenanceAuVote(
+	apps: AppartenanceGroupe[],
+	date: string
+): AppartenanceGroupe | null {
+	for (const a of apps) {
+		if (a.isTransitoireNI) continue;
+		if (a.dateDebut > date) continue;
+		if (a.dateFin && a.dateFin < date) continue;
+		return a;
+	}
+	return null;
+}
+
+/** Finalise les ratios stats sur chaque mandat. */
+function finalizeMandatStats(personne: PartialPersonne) {
+	for (const mandat of personne.mandatsByLeg.values()) {
+		const s = mandat.stats;
+		const elig = mandat.scrutinsEligibles;
+		s.presence.denominator = elig;
+		s.presence.rate = elig > 0 ? s.presence.numerator / elig : 0;
+		s.participation.denominator = elig;
+		s.participation.rate = elig > 0 ? s.participation.numerator / elig : 0;
+		s.loyaute.rate =
+			s.loyaute.denominator > 0 ? s.loyaute.numerator / s.loyaute.denominator : null;
+		s.frondes.rate = s.participation.numerator > 0 ? s.frondes.count / s.participation.numerator : 0;
+	}
+}
+
+/** Calcule rangs (par législature, dense rank) sur la cohorte des personnes
+ *  ayant un mandat dans cette législature. */
+function computeRangsForLegislature(
+	legislature: number,
+	personnes: Map<string, PartialPersonne>
+) {
+	const cohort: Mandat[] = [];
+	for (const p of personnes.values()) {
+		const m = p.mandatsByLeg.get(legislature);
+		if (m) cohort.push(m);
+	}
+	const total = cohort.length;
+	for (const m of cohort) {
+		m.rangs.presence.total = total;
+		m.rangs.participation.total = total;
+		m.rangs.loyaute.total = total;
+		m.rangs.frondes.total = total;
 	}
 
-	// ── Compute ranks. Dense rank: ties get the same rank, next group skips.
-	const allStats = [...deputeStats.values()];
-	const rankBy = <T>(
-		key: keyof DeputeStats['rangs'],
-		valueFn: (s: DeputeStats) => T | null,
-		desc = true
+	const denseRank = (
+		key: 'presence' | 'participation' | 'loyaute' | 'frondes',
+		valueFn: (m: Mandat) => number | null,
+		desc: boolean
 	) => {
-		// Sort with nulls always last
-		const sorted = [...allStats].sort((a, b) => {
+		const sorted = [...cohort].sort((a, b) => {
 			const va = valueFn(a);
 			const vb = valueFn(b);
 			if (va === null && vb === null) return 0;
@@ -535,108 +694,168 @@ function computeStats(
 			return desc ? (va < vb ? 1 : -1) : va < vb ? -1 : 1;
 		});
 		let rank = 0;
-		let lastVal: T | null | undefined = undefined;
+		let lastVal: number | null | undefined = undefined;
 		for (let i = 0; i < sorted.length; i++) {
 			const v = valueFn(sorted[i]);
 			if (v === null) {
-				sorted[i].rangs[key] = null as never;
+				sorted[i].rangs[key].rank = null as never;
 				continue;
 			}
 			if (v !== lastVal) {
 				rank = i + 1;
 				lastVal = v;
 			}
-			sorted[i].rangs[key] = rank as never;
+			sorted[i].rangs[key].rank = rank as never;
 		}
 	};
 
-	rankBy('presence', (s) => s.tauxPresence, true);
-	rankBy('participation', (s) => s.tauxParticipation, true);
-	rankBy('loyaute', (s) => s.tauxLoyaute, true);
-	rankBy('frondes', (s) => s.frondes, true);
-	rankBy('activite', (s) => s.activite, true);
+	denseRank('presence', (m) => m.stats.presence.rate, true);
+	denseRank('participation', (m) => m.stats.participation.rate, true);
+	denseRank('loyaute', (m) => m.stats.loyaute.rate, true);
+	denseRank('frondes', (m) => m.stats.frondes.count, true);
+}
 
-	// ── Group stats
-	const groupeStats = new Map<string, GroupeStats>();
-	for (const g of groupes) {
-		const cohAcc = groupeCohesionAcc.get(g.id)!;
-		const cohesion = cohAcc.count > 0 ? cohAcc.sum / cohAcc.count : null;
+/** Calcul des badges mandat (top 10% / bottom 10% par législature). */
+function computeBadgesMandat(legislature: number, personnes: Map<string, PartialPersonne>) {
+	const cohort: Mandat[] = [];
+	for (const p of personnes.values()) {
+		const m = p.mandatsByLeg.get(legislature);
+		if (m) cohort.push(m);
+	}
+	const top10 = (n: number) => Math.max(1, Math.floor(n * 0.1));
+	const total = cohort.length;
+	const t = top10(total);
 
-		const members = deputes.filter((d) => d.groupeId === g.id);
-		const presenceSum = members.reduce(
-			(acc, m) => acc + (deputeStats.get(m.id)?.tauxPresence ?? 0),
-			0
-		);
-		const tauxPresenceMoyen = members.length > 0 ? presenceSum / members.length : 0;
-		const frondesTotales = members.reduce(
-			(acc, m) => acc + (deputeStats.get(m.id)?.frondes ?? 0),
-			0
-		);
+	// Présence en or
+	const sortPres = [...cohort].sort((a, b) => b.stats.presence.rate - a.stats.presence.rate);
+	for (let i = 0; i < t; i++) sortPres[i].badgesMandat.push('presence-or');
+	// Absent remarquable
+	for (let i = total - t; i < total; i++) sortPres[i].badgesMandat.push('absent-remarquable');
 
-		const ranked = members
-			.map((m) => deputeStats.get(m.id)!)
-			.filter((s) => s.tauxLoyaute !== null);
-		const topLoyalistes = [...ranked]
-			.sort((a, b) => (b.tauxLoyaute ?? 0) - (a.tauxLoyaute ?? 0))
-			.slice(0, 5)
-			.map((s) => ({ id: s.id, tauxLoyaute: s.tauxLoyaute! }));
-		const topFrondeurs = [...ranked]
-			.sort((a, b) => b.frondes - a.frondes)
-			.slice(0, 5)
-			.filter((s) => s.frondes > 0)
-			.map((s) => ({ id: s.id, frondes: s.frondes }));
+	// Top loyaliste
+	const withLoy = cohort.filter((m) => m.stats.loyaute.rate !== null);
+	const sortLoy = [...withLoy].sort(
+		(a, b) => (b.stats.loyaute.rate ?? 0) - (a.stats.loyaute.rate ?? 0)
+	);
+	const tLoy = top10(withLoy.length);
+	for (let i = 0; i < tLoy; i++) sortLoy[i].badgesMandat.push('top-loyaliste');
 
-		groupeStats.set(g.id, {
-			id: g.id,
-			cohesion,
-			scrutinsConsideres: cohAcc.count,
-			tauxPresenceMoyen,
-			frondesTotales,
-			topLoyalistes,
-			topFrondeurs,
-			rangs: { cohesion: null, presence: 0, frondes: 0 }
-		});
+	// Frondeur (top 10% en nombre absolu de frondes)
+	const sortFr = [...cohort].sort((a, b) => b.stats.frondes.count - a.stats.frondes.count);
+	for (let i = 0; i < t; i++) {
+		if (sortFr[i].stats.frondes.count > 0) sortFr[i].badgesMandat.push('frondeur');
+	}
+}
+
+/** Calcul de la carrière agrégée (cumul pondéré, cf ADR 0017) + badges carrière. */
+function computeCarriere(personne: PartialPersonne): CarriereAggregee {
+	const mandats = [...personne.mandatsByLeg.values()];
+	const carriere: CarriereAggregee = {
+		presence: { numerator: 0, denominator: 0, rate: 0 },
+		participation: { numerator: 0, denominator: 0, rate: 0 },
+		loyaute: { numerator: 0, denominator: 0, rate: null },
+		frondes: { count: 0, rate: 0 },
+		nbMandats: mandats.length,
+		legislatures: mandats.map((m) => m.legislature).sort((a, b) => a - b),
+		badgesCarriere: []
+	};
+
+	for (const m of mandats) {
+		carriere.presence.numerator += m.stats.presence.numerator;
+		carriere.presence.denominator += m.stats.presence.denominator;
+		carriere.participation.numerator += m.stats.participation.numerator;
+		carriere.participation.denominator += m.stats.participation.denominator;
+		carriere.loyaute.numerator += m.stats.loyaute.numerator;
+		carriere.loyaute.denominator += m.stats.loyaute.denominator;
+		carriere.frondes.count += m.stats.frondes.count;
+	}
+	carriere.presence.rate =
+		carriere.presence.denominator > 0
+			? carriere.presence.numerator / carriere.presence.denominator
+			: 0;
+	carriere.participation.rate =
+		carriere.participation.denominator > 0
+			? carriere.participation.numerator / carriere.participation.denominator
+			: 0;
+	carriere.loyaute.rate =
+		carriere.loyaute.denominator > 0
+			? carriere.loyaute.numerator / carriere.loyaute.denominator
+			: null;
+	carriere.frondes.rate =
+		carriere.participation.numerator > 0
+			? carriere.frondes.count / carriere.participation.numerator
+			: 0;
+
+	// Badges carrière
+	if (mandats.length >= 2) carriere.badgesCarriere.push('reelu');
+	if (mandats.length >= 3) carriere.badgesCarriere.push('veteran');
+
+	// Recomposition : groupe principal de chaque mandat différent du précédent
+	if (mandats.length >= 2) {
+		const sorted = [...mandats].sort((a, b) => a.legislature - b.legislature);
+		const principalGroupe = (m: Mandat) => {
+			const stable = m.appartenancesGroupe.find((a) => !a.isTransitoireNI);
+			return stable?.groupeId ?? null;
+		};
+		for (let i = 1; i < sorted.length; i++) {
+			const prev = principalGroupe(sorted[i - 1]);
+			const cur = principalGroupe(sorted[i]);
+			if (prev && cur && prev !== cur) {
+				carriere.badgesCarriere.push('recomposition');
+				break;
+			}
+		}
 	}
 
-	// Compute group ranks (dense)
-	const allG = [...groupeStats.values()];
-	const rankGroupBy = <T>(
-		key: keyof GroupeStats['rangs'],
-		valueFn: (s: GroupeStats) => T | null,
-		desc = true
-	) => {
-		const sorted = [...allG].sort((a, b) => {
-			const va = valueFn(a);
-			const vb = valueFn(b);
-			if (va === null && vb === null) return 0;
-			if (va === null) return 1;
-			if (vb === null) return -1;
-			if (va === vb) return 0;
-			return desc ? (va < vb ? 1 : -1) : va < vb ? -1 : 1;
-		});
-		let rank = 0;
-		let lastVal: T | null | undefined = undefined;
-		for (let i = 0; i < sorted.length; i++) {
-			const v = valueFn(sorted[i]);
-			if (v === null) {
-				sorted[i].rangs[key] = null as never;
-				continue;
-			}
-			if (v !== lastVal) {
-				rank = i + 1;
-				lastVal = v;
-			}
-			sorted[i].rangs[key] = rank as never;
+	// Transfuge : ≥ 2 appartenances stables (hors NI-bridge) dans un même mandat
+	for (const m of mandats) {
+		const stables = m.appartenancesGroupe.filter((a) => !a.isTransitoireNI);
+		const distincts = new Set(stables.map((a) => a.groupeId));
+		if (distincts.size >= 2) {
+			carriere.badgesCarriere.push('transfuge');
+			break;
 		}
-	};
-	rankGroupBy('cohesion', (s) => s.cohesion, true);
-	rankGroupBy('presence', (s) => s.tauxPresenceMoyen, true);
-	rankGroupBy('frondes', (s) => s.frondesTotales, true);
+	}
 
-	// ── Reverse histories so most recent comes first
-	for (const list of historiques.values()) list.reverse();
+	return carriere;
+}
 
-	return { deputeStats, groupeStats, historiques };
+// ────────────────────────────────────────────────────────────────────────────
+// Étape 5 — finalisation des Groupes (effectifs + président)
+// ────────────────────────────────────────────────────────────────────────────
+
+function finalizeGroupes(
+	groupesByLeg: Map<number, Groupe[]>,
+	personnes: Map<string, PartialPersonne>
+) {
+	for (const [leg, groupes] of groupesByLeg) {
+		const byId = new Map(groupes.map((g) => [g.id, g]));
+
+		for (const p of personnes.values()) {
+			const m = p.mandatsByLeg.get(leg);
+			if (!m) continue;
+
+			// L'effectif final est l'appartenance stable la plus récente (qui couvre
+			// la fin du mandat ou est encore ouverte).
+			const lastStable = [...m.appartenancesGroupe]
+				.filter((a) => !a.isTransitoireNI)
+				.pop();
+			if (lastStable) {
+				const g = byId.get(lastStable.groupeId);
+				if (g) g.effectifFin += 1;
+			}
+
+			// Présidence : on cherche une appartenance avec qualité "Président" et
+			// dateFin null (ou la plus récente).
+			for (const a of m.appartenancesGroupe) {
+				const q = (a.qualite ?? '').toLowerCase();
+				if (q.includes('président') && !q.includes('vice')) {
+					const g = byId.get(a.groupeId);
+					if (g && !g.presidentId) g.presidentId = p.id;
+				}
+			}
+		}
+	}
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -644,96 +863,180 @@ function computeStats(
 // ────────────────────────────────────────────────────────────────────────────
 
 async function main() {
-	console.log('🏛️  Hémicycle Manager — pipeline data');
-	console.log('   Sources : data.assemblee-nationale.fr (17e législature)\n');
+	console.log('🏛️  PolitiDex — pipeline data multi-législature');
+	console.log(`   Législatures couvertes : ${LEGISLATURES.join(', ')}\n`);
 
 	await ensureDir(CACHE_DIR);
 	await ensureDir(OUT_DIR);
 	await ensureDir(join(OUT_DIR, 'scrutins'));
-
-	// ── Stage 1 : download
-	console.log('1/4  Téléchargement des sources');
-	const deputesZip = join(CACHE_DIR, 'deputes.json.zip');
-	const scrutinsZip = join(CACHE_DIR, 'scrutins.json.zip');
-	await downloadZip(SOURCES.deputes, deputesZip);
-	await downloadZip(SOURCES.scrutins, scrutinsZip);
-
-	// ── Stage 2 : extract
-	console.log('\n2/4  Extraction');
-	const deputesDir = join(CACHE_DIR, 'deputes-extracted');
-	const scrutinsDir = join(CACHE_DIR, 'scrutins-extracted');
-	if (!existsSync(join(deputesDir, 'json', 'acteur'))) {
-		await unzip(deputesZip, deputesDir);
-	} else {
-		console.log('  ↻ déjà extrait : deputes');
-	}
-	if (!existsSync(scrutinsDir) || (await import('node:fs')).readdirSync(join(scrutinsDir, 'json')).length < 100) {
-		await rm(scrutinsDir, { recursive: true, force: true });
-		await unzip(scrutinsZip, scrutinsDir);
-	} else {
-		console.log('  ↻ déjà extrait : scrutins');
-	}
-
-	// ── Stage 3 : transform
-	console.log('\n3/4  Transformation');
-	console.log('  • Députés et groupes…');
-	const { deputes, groupes } = await parseDeputesAndGroupes(deputesDir);
-	console.log(`    → ${deputes.length} députés, ${groupes.length} groupes`);
-
-	console.log('  • Scrutins (peut prendre 30-60s)…');
-	const t0 = Date.now();
-	const { index, details } = await parseScrutins(scrutinsDir);
-	console.log(`    → ${index.length} scrutins en ${((Date.now() - t0) / 1000).toFixed(1)}s`);
-
-	console.log('  • Calcul des statistiques (présence, loyauté, cohésion, historiques)…');
-	const t1 = Date.now();
-	const { deputeStats, groupeStats, historiques } = computeStats(deputes, groupes, index, details);
-	console.log(`    → stats calculées en ${((Date.now() - t1) / 1000).toFixed(1)}s`);
-
-	// ── Stage 4 : write output
-	console.log('\n4/4  Écriture des fichiers JSON');
+	await ensureDir(join(OUT_DIR, 'groupes'));
 	await ensureDir(join(OUT_DIR, 'historique'));
 
-	await writeFile(join(OUT_DIR, 'deputes.json'), JSON.stringify(deputes));
-	await writeFile(join(OUT_DIR, 'groupes.json'), JSON.stringify(groupes));
-	await writeFile(join(OUT_DIR, 'scrutins-index.json'), JSON.stringify(index));
-	await writeFile(
-		join(OUT_DIR, 'stats-deputes.json'),
-		JSON.stringify([...deputeStats.values()])
-	);
-	await writeFile(
-		join(OUT_DIR, 'stats-groupes.json'),
-		JSON.stringify([...groupeStats.values()])
-	);
+	// ── Stage 1 : download
+	console.log('1/5  Téléchargement des sources');
+	const acteursZip = join(CACHE_DIR, 'acteurs-historique.json.zip');
+	await downloadZip(SOURCE_ACTEURS, acteursZip);
+
+	const scrutinsZips = new Map<number, string>();
+	for (const leg of LEGISLATURES) {
+		const zp = join(CACHE_DIR, `scrutins-${leg}.json.zip`);
+		await downloadZip(sourceScrutins(leg), zp);
+		scrutinsZips.set(leg, zp);
+	}
+
+	// ── Stage 2 : extract
+	console.log('\n2/5  Extraction');
+	const acteursDir = join(CACHE_DIR, 'acteurs-extracted');
+	if (!existsSync(join(acteursDir, 'json', 'acteur'))) {
+		await unzip(acteursZip, acteursDir);
+	} else {
+		console.log('  ↻ déjà extrait : acteurs');
+	}
+	const scrutinsDirs = new Map<number, string>();
+	for (const leg of LEGISLATURES) {
+		const sd = join(CACHE_DIR, `scrutins-${leg}-extracted`);
+		const sentinelDir = join(sd, 'json');
+		if (!existsSync(sentinelDir) || (await import('node:fs')).readdirSync(sentinelDir).length < 50) {
+			await rm(sd, { recursive: true, force: true });
+			await unzip(scrutinsZips.get(leg)!, sd);
+		} else {
+			console.log(`  ↻ déjà extrait : scrutins ${leg}`);
+		}
+		scrutinsDirs.set(leg, sd);
+	}
+
+	// ── Stage 3 : transform — groupes + personnes + mandats
+	console.log('\n3/5  Transformation');
+	console.log('  • Groupes politiques par législature…');
+	const groupesByLeg = await parseGroupes(acteursDir);
+	for (const [leg, list] of groupesByLeg) {
+		console.log(`    → ${list.length} groupes en ${leg}ᵉ`);
+	}
+
+	console.log('  • Personnes + mandats parlementaires + appartenances groupe…');
+	const personnes = await parsePersonnesAndMandats(acteursDir, groupesByLeg);
+	console.log(`    → ${personnes.size} personnes uniques sur ${LEGISLATURES.join('+')}`);
+	const mandatsTotal = [...personnes.values()].reduce((s, p) => s + p.mandatsByLeg.size, 0);
+	console.log(`    → ${mandatsTotal} mandats total`);
+
+	// ── Stage 4 : scrutins + stats par législature
+	console.log('\n4/5  Scrutins et calcul des stats');
+	const allScrutinsIndex: ScrutinIndex[] = [];
+	const allScrutinsDetails = new Map<string, ScrutinDetail>();
+	const historiques = new Map<string, VoteHistoryItem[]>();
+
+	for (const leg of LEGISLATURES) {
+		console.log(`  • Scrutins ${leg}ᵉ…`);
+		const t0 = Date.now();
+		const { index, details } = await parseScrutins(scrutinsDirs.get(leg)!, leg);
+		console.log(`    → ${index.length} scrutins en ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+		allScrutinsIndex.push(...index);
+		for (const [u, d] of details) allScrutinsDetails.set(u, d);
+
+		console.log(`    • Stats sur les mandats ${leg}ᵉ…`);
+		computeStatsForLegislature(leg, personnes, index, details, historiques);
+	}
+
+	// Finalisation des stats puis rangs et badges par législature
+	for (const p of personnes.values()) finalizeMandatStats(p);
+	for (const leg of LEGISLATURES) {
+		computeRangsForLegislature(leg, personnes);
+		computeBadgesMandat(leg, personnes);
+	}
+
+	// Carrière agrégée + badges carrière
+	const personnesFull: Personne[] = [];
+	for (const p of personnes.values()) {
+		const carriere = computeCarriere(p);
+		const mandats = [...p.mandatsByLeg.values()].sort((a, b) => a.legislature - b.legislature);
+		personnesFull.push({
+			id: p.id,
+			identite: p.identite,
+			mandats,
+			carriere
+		});
+	}
+	personnesFull.sort((a, b) => a.identite.nom.localeCompare(b.identite.nom));
+
+	// Finalisation des groupes (effectif + président) — utilise les appartenances déjà calculées
+	finalizeGroupes(groupesByLeg, personnes);
+
+	// Index scrutins trié desc (plus récent en premier)
+	allScrutinsIndex.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.numero - a.numero));
+
+	// Reverse historiques (plus récent en premier) après accumulation chronologique
+	for (const list of historiques.values()) list.reverse();
+
+	// ── Stage 5 : write output
+	console.log('\n5/5  Écriture des fichiers JSON');
+
+	await writeFile(join(OUT_DIR, 'personnes.json'), JSON.stringify(personnesFull));
+	console.log(`  ✓ personnes.json (${personnesFull.length} personnes)`);
+
+	for (const [leg, list] of groupesByLeg) {
+		await writeFile(join(OUT_DIR, 'groupes', `${leg}.json`), JSON.stringify(list));
+	}
+	console.log(`  ✓ groupes/{${LEGISLATURES.join(',')}}.json`);
+
+	const legislaturesMeta: LegislatureMeta[] = LEGISLATURES.map((leg) => {
+		const personnesLeg = personnesFull.filter((p) =>
+			p.mandats.some((m) => m.legislature === leg)
+		);
+		const scrutinsLeg = allScrutinsIndex.filter((s) => s.legislature === leg);
+		const dates = personnesLeg.flatMap((p) =>
+			p.mandats.filter((m) => m.legislature === leg).map((m) => m.datePriseFonction)
+		);
+		const dateDebut = dates.sort()[0] ?? '';
+		const finsConnues = personnesLeg
+			.flatMap((p) => p.mandats.filter((m) => m.legislature === leg).map((m) => m.dateFinFonction))
+			.filter((d): d is string => !!d);
+		const dateFin = finsConnues.length > 0 ? finsConnues.sort().reverse()[0] : null;
+		return {
+			num: leg,
+			dateDebut,
+			dateFin,
+			nbPersonnes: personnesLeg.length,
+			nbScrutins: scrutinsLeg.length
+		};
+	});
+	await writeFile(join(OUT_DIR, 'legislatures.json'), JSON.stringify(legislaturesMeta));
+	console.log(`  ✓ legislatures.json`);
+
+	await writeFile(join(OUT_DIR, 'scrutins-index.json'), JSON.stringify(allScrutinsIndex));
+	console.log(`  ✓ scrutins-index.json (${allScrutinsIndex.length} scrutins)`);
 
 	let written = 0;
-	for (const [uid, detail] of details) {
+	for (const [uid, detail] of allScrutinsDetails) {
 		await writeFile(join(OUT_DIR, 'scrutins', `${uid}.json`), JSON.stringify(detail));
 		written++;
-		if (written % 1000 === 0) console.log(`    … scrutins ${written}/${details.size}`);
+		if (written % 1000 === 0) console.log(`    … scrutins ${written}/${allScrutinsDetails.size}`);
 	}
-	console.log(`    → ${written} fichiers de scrutins écrits`);
+	console.log(`  ✓ scrutins/{uid}.json (${written} fichiers)`);
 
 	let histWritten = 0;
-	for (const [deputeId, list] of historiques) {
-		await writeFile(join(OUT_DIR, 'historique', `${deputeId}.json`), JSON.stringify(list));
+	for (const [paId, list] of historiques) {
+		await writeFile(join(OUT_DIR, 'historique', `${paId}.json`), JSON.stringify(list));
 		histWritten++;
 		if (histWritten % 200 === 0) console.log(`    … historiques ${histWritten}/${historiques.size}`);
 	}
-	console.log(`    → ${histWritten} historiques écrits`);
+	console.log(`  ✓ historique/{paId}.json (${histWritten} fichiers)`);
 
-	const meta = {
+	const meta: BuildMeta = {
 		generatedAt: new Date().toISOString(),
-		legislature: 17,
+		legislatures: LEGISLATURES,
 		counts: {
-			deputes: deputes.length,
-			groupes: groupes.length,
-			scrutins: index.length,
-			historiques: histWritten
+			personnes: personnesFull.length,
+			mandats: mandatsTotal,
+			groupes: [...groupesByLeg.values()].reduce((s, l) => s + l.length, 0),
+			scrutins: allScrutinsIndex.length
 		},
-		sources: SOURCES
+		sources: {
+			acteurs: SOURCE_ACTEURS,
+			...Object.fromEntries(LEGISLATURES.map((leg) => [`scrutins_${leg}`, sourceScrutins(leg)]))
+		}
 	};
 	await writeFile(join(OUT_DIR, 'meta.json'), JSON.stringify(meta, null, 2));
+	console.log(`  ✓ meta.json`);
 
 	console.log('\n✅ Terminé.');
 	console.log(`   Output : ${OUT_DIR}`);

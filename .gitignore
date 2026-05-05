@@ -22,3 +22,7 @@ static/data/
 .vercel
 .cache
 .coolify
+
+# Local agent state (Claude Code, thoughts/handoffs)
+.claude/
+thoughts/

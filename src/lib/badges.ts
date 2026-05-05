@@ -1,98 +1,99 @@
-import type { Depute, DeputeStats } from './types';
+/**
+ * Badges — labels et descriptions pour rendu UI.
+ *
+ * Le calcul des badges est entièrement délégué au pipeline `scripts/fetch-data.ts`
+ * (cf ADR 0017 : top/bottom 10% par cohorte législature pour les badges mandat ;
+ * critères carrière pour Recomposition, Transfuge, Vétéran, Réélu·e).
+ *
+ * Ce module ne fait que mapper un identifiant de badge en métadonnées
+ * d'affichage : libellé, emoji, tier, description (servant aussi de texte
+ * d'InfoTip cf ADR 0016).
+ */
 
-export interface Badge {
-	id: string;
+import type { BadgeMandat, BadgeCarriere } from './types';
+
+export type BadgeTier = 'gold' | 'silver' | 'bronze' | 'special';
+
+export interface BadgeDisplay {
+	id: BadgeMandat | BadgeCarriere;
 	label: string;
 	emoji: string;
+	tier: BadgeTier;
 	description: string;
-	tier: 'gold' | 'silver' | 'bronze' | 'special';
 }
 
-/**
- * Compute the badges a deputy qualifies for.
- *
- * Thresholds are chosen relative to what's realistic in this dataset:
- *  - average presence is ~30% (the cohort baseline), so >50% = remarkable.
- *  - average loyalty is ~93% (groups are disciplined in the 5e République),
- *    so >97% qualifies for the loyalist badge.
- */
-export function computeBadges(d: Depute, s: DeputeStats): Badge[] {
-	const badges: Badge[] = [];
-
-	if (s.tauxPresence > 0.5) {
-		badges.push({
-			id: 'always-here',
-			label: 'Toujours présent',
-			emoji: '🎯',
-			description: `Présent à plus de 50 % des scrutins (vous : ${Math.round(s.tauxPresence * 100)} %).`,
-			tier: 'gold'
-		});
-	} else if (s.tauxPresence > 0.35) {
-		badges.push({
-			id: 'frequent',
-			label: 'Assidu',
-			emoji: '✋',
-			description: `Présent à plus de 35 % des scrutins (vous : ${Math.round(s.tauxPresence * 100)} %).`,
-			tier: 'silver'
-		});
+const MANDAT: Record<BadgeMandat, Omit<BadgeDisplay, 'id'>> = {
+	'top-loyaliste': {
+		label: 'Top loyaliste',
+		emoji: '🤝',
+		tier: 'gold',
+		description:
+			'Top 10 % de la législature pour le taux de loyauté (alignement avec la majorité du groupe au moment du vote).'
+	},
+	frondeur: {
+		label: 'Frondeur·euse',
+		emoji: '🔥',
+		tier: 'special',
+		description:
+			'Top 10 % de la législature en nombre absolu de votes opposés à la majorité du groupe d’appartenance au moment du vote.'
+	},
+	'presence-or': {
+		label: 'Présence en or',
+		emoji: '🎯',
+		tier: 'gold',
+		description: 'Top 10 % de la législature pour le taux de présence aux scrutins éligibles.'
+	},
+	'absent-remarquable': {
+		label: 'Absent·e remarquable',
+		emoji: '👻',
+		tier: 'special',
+		description: 'Bottom 10 % de la législature pour le taux de présence aux scrutins éligibles.'
 	}
+};
 
-	if (s.tauxLoyaute !== null && s.tauxLoyaute >= 0.99 && s.scrutinsEligibles > 100) {
-		badges.push({
-			id: 'pure-loyalist',
-			label: 'Loyaliste pur',
-			emoji: '🤝',
-			description: `Aligné à 99 % ou plus avec sa majorité de groupe.`,
-			tier: 'gold'
-		});
-	} else if (s.tauxLoyaute !== null && s.tauxLoyaute >= 0.97 && s.scrutinsEligibles > 100) {
-		badges.push({
-			id: 'loyalist',
-			label: 'Loyaliste',
-			emoji: '✅',
-			description: `Aligné à 97 % ou plus avec sa majorité de groupe.`,
-			tier: 'silver'
-		});
+const CARRIERE: Record<BadgeCarriere, Omit<BadgeDisplay, 'id'>> = {
+	recomposition: {
+		label: 'Recomposition',
+		emoji: '🔀',
+		tier: 'silver',
+		description:
+			'A changé de groupe entre deux législatures. Indique une trajectoire évolutive (réélection sous une autre étiquette, recomposition partisane).'
+	},
+	transfuge: {
+		label: 'Transfuge',
+		emoji: '🚪',
+		tier: 'special',
+		description:
+			'A changé de groupe pendant le même mandat. Souvent suite à une démission ou une exclusion. Plus marquant qu’une simple recomposition.'
+	},
+	veteran: {
+		label: 'Vétéran',
+		emoji: '🎖️',
+		tier: 'gold',
+		description: 'A siégé dans au moins 3 législatures couvertes par PolitiDex.'
+	},
+	reelu: {
+		label: 'Réélu·e',
+		emoji: '🔁',
+		tier: 'bronze',
+		description: 'A obtenu au moins 2 mandats consécutifs.'
 	}
+};
 
-	if (s.frondes > 50) {
-		badges.push({
-			id: 'rebel',
-			label: 'Franc-tireur',
-			emoji: '🔥',
-			description: `${s.frondes} votes contre la position majoritaire de son groupe.`,
-			tier: 'special'
-		});
-	} else if (s.frondes > 15) {
-		badges.push({
-			id: 'occasional-rebel',
-			label: 'Indépendant',
-			emoji: '💥',
-			description: `${s.frondes} votes contre la majorité de son groupe.`,
-			tier: 'bronze'
-		});
-	}
+export function badgeMandatDisplay(b: BadgeMandat): BadgeDisplay {
+	return { id: b, ...MANDAT[b] };
+}
 
-	if (d.premiereElection) {
-		badges.push({
-			id: 'rookie',
-			label: 'Premier mandat',
-			emoji: '👶',
-			description: 'Premier mandat de député à l\'Assemblée nationale.',
-			tier: 'bronze'
-		});
-	}
+export function badgeCarriereDisplay(b: BadgeCarriere): BadgeDisplay {
+	return { id: b, ...CARRIERE[b] };
+}
 
-	const expressed = s.pour + s.contre + s.abstention;
-	if (expressed > 3000) {
-		badges.push({
-			id: 'voter',
-			label: 'Hyperactif',
-			emoji: '🦅',
-			description: `Plus de 3000 votes exprimés.`,
-			tier: 'gold'
-		});
-	}
-
-	return badges;
+export function badgeDisplayUnknown(b: string): BadgeDisplay {
+	return {
+		id: b as BadgeMandat,
+		label: b,
+		emoji: '⚪',
+		tier: 'bronze',
+		description: 'Badge non documenté.'
+	};
 }
