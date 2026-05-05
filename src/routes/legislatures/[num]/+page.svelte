@@ -1,4 +1,8 @@
 <script lang="ts">
+	/**
+	 * Home par législature. Même UI que la home racine `/`, mais paramétrée
+	 * sur params.num. La home racine fixe la leg = la plus récente.
+	 */
 	import Hemicycle from '$lib/components/Hemicycle.svelte';
 	import MiniDeputeCard from '$lib/components/MiniDeputeCard.svelte';
 	import { POLITICAL_ORDER } from '$lib/political-order';
@@ -22,7 +26,6 @@
 		return m;
 	});
 
-	/** Filtre : seulement les personnes ayant un mandat dans la leg courante. */
 	const personnesLeg = $derived(
 		data.personnes.filter((p) => p.mandats.some((m) => m.legislature === data.legCourante))
 	);
@@ -51,12 +54,13 @@
 		cutoff.setDate(cutoff.getDate() - 7);
 		const cutoffStr = cutoff.toISOString().slice(0, 10);
 		const recent = scrutinsLeg.filter((s) => s.date >= cutoffStr);
-		// Si rien sur 7 jours, retomber sur les 8 plus récents (cas hors session)
 		if (recent.length === 0) return scrutinsLeg.slice(0, 8);
 		return recent;
 	});
 
-	// Cache les groupes éteints en cours de leg (effectifFin = 0).
+	// Sur la liste compacte de la home, on cache les groupes "morts" en cours de
+	// législature (effectifFin = 0) pour éviter d'afficher 2 lignes par
+	// recomposition (cf scission SOC en 16ᵉ : PO800496 → PO830170).
 	const sortedGroupes = $derived(
 		[...data.groupes]
 			.filter((g) => g.effectifFin > 0)
@@ -107,7 +111,7 @@
 </script>
 
 <svelte:head>
-	<title>PolitiDex — Pokédex des élus français</title>
+	<title>{data.legCourante}ᵉ législature — PolitiDex</title>
 </svelte:head>
 
 <svelte:window onmousemove={trackCursor} />
@@ -115,9 +119,11 @@
 <section class="max-w-7xl mx-auto px-6 py-8">
 	<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
 		<div>
-			<h1 class="title-display text-4xl sm:text-5xl tracking-wider">Hémicycle</h1>
+			<h1 class="title-display text-4xl sm:text-5xl tracking-wider">
+				{data.legCourante}<sup>e</sup> législature
+			</h1>
 			<p class="text-assembly-muted mt-1">
-				{data.legCourante}<sup>e</sup> législature · Survolez un siège pour voir la fiche, cliquez pour ouvrir.
+				Survolez un siège pour voir la fiche, cliquez pour ouvrir.
 			</p>
 		</div>
 		<div class="flex items-center gap-1 text-xs">

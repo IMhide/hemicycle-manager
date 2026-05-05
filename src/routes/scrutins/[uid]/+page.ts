@@ -1,21 +1,20 @@
 import type { PageLoad } from './$types';
 import {
-	loadDeputes,
+	loadPersonnes,
 	loadGroupes,
 	loadScrutinDetail,
-	loadScrutinsIndex
+	loadScrutinsIndex,
+	loadLegislatures
 } from '$lib/data';
 
-// SPA mode: do not prerender 6287 pages, render client-side instead.
 export const prerender = false;
 export const ssr = false;
 
 export const load: PageLoad = async ({ fetch, params }) => {
-	const [deputes, groupes, detail, index] = await Promise.all([
-		loadDeputes(fetch),
-		loadGroupes(fetch),
-		loadScrutinDetail(fetch, params.uid),
-		loadScrutinsIndex(fetch)
-	]);
-	return { deputes, groupes, detail, index };
+	const detail = await loadScrutinDetail(fetch, params.uid);
+	const legislatures = await loadLegislatures(fetch);
+	const groupesByLeg = await Promise.all(legislatures.map((l) => loadGroupes(fetch, l.num)));
+	const [personnes, index] = await Promise.all([loadPersonnes(fetch), loadScrutinsIndex(fetch)]);
+	const groupes = groupesByLeg.flat();
+	return { personnes, groupes, detail, index, legislatures };
 };

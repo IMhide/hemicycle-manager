@@ -1,43 +1,54 @@
 <script lang="ts">
 	/**
-	 * Compact FIFA-style card shown on hover. Mirrors DeputeCard's visual
-	 * language but small enough to float next to the cursor.
+	 * Compact FIFA-style card shown on hover.
+	 *
+	 * Modèle Phase 1 (cf ADR 0015, 0017) : on affiche une `Personne`. Si un
+	 * `mandat` est passé en prop, on est en vue mandat (stats + rangs scopés
+	 * législature). Sinon on est en vue carrière (cumul pondéré, pas de rang).
 	 */
-	import type { Depute, Groupe, DeputeStats } from '$lib/types';
+	import type { Personne, Groupe, Mandat } from '$lib/types';
 	import Rank from './Rank.svelte';
 
 	interface Props {
-		depute: Depute;
+		personne: Personne;
 		groupe: Groupe | null;
-		stats: DeputeStats;
+		/** Si fourni : vue mandat. Si null : vue carrière. */
+		mandat: Mandat | null;
+		/** Total cohorte pour le rang (n'est lu qu'en vue mandat). */
 		total?: number;
 	}
 
-	let { depute, groupe, stats, total = 577 }: Props = $props();
+	let { personne, groupe, mandat, total = 577 }: Props = $props();
+
+	const stats = $derived(mandat ? mandat.stats : personne.carriere);
+	const rangs = $derived(mandat ? mandat.rangs : null);
+	const frondes = $derived(stats.frondes.count);
 
 	const overall = $derived(
 		Math.round(
-			(stats.tauxPresence * 0.3 +
-				stats.tauxParticipation * 0.2 +
-				(stats.tauxLoyaute ?? 0) * 0.3 +
-				Math.min(1, stats.activite / 3000) * 0.2) *
+			(stats.presence.rate * 0.4 +
+				stats.participation.rate * 0.2 +
+				(stats.loyaute.rate ?? 0) * 0.4) *
 				99
 		)
 	);
 
+	const href = $derived(mandat ? `/deputes/${personne.id}/?leg=${mandat.legislature}` : `/deputes/${personne.id}/`);
+
 	function pct(n: number | null): string {
 		return n === null ? 'N/A' : `${Math.round(n * 100)} %`;
 	}
+
+	const circo = $derived(mandat?.circonscription ?? personne.mandats.at(-1)?.circonscription ?? null);
 </script>
 
 <div
 	class="card p-3 shadow-2xl"
 	style="background: radial-gradient(circle at 20% 0%, {groupe?.couleur ?? '#475569'}33 0%, transparent 60%), linear-gradient(180deg, #1e293b, #0f172a); border-color: {groupe?.couleur ?? '#475569'}55; min-width: 260px;"
 >
-	<!-- Top row: photo + identity + overall -->
 	<div class="flex items-start gap-3">
 		<img
-			src={depute.photoUrl}
+			src={personne.identite.photoUrl}
 			alt=""
 			class="w-16 h-20 object-cover rounded border border-assembly-border bg-assembly-border flex-shrink-0"
 			loading="lazy"
@@ -56,50 +67,59 @@
 				{/if}
 			</div>
 			<div class="mt-1">
-				<div class="text-[10px] uppercase tracking-widest text-assembly-muted">{depute.civ ?? ''}</div>
-				<div class="title-display text-sm leading-tight">{depute.prenom}</div>
-				<div class="title-display text-base leading-tight">{depute.nom}</div>
+				<div class="text-[10px] uppercase tracking-widest text-assembly-muted">{personne.identite.civ}</div>
+				<div class="title-display text-sm leading-tight">{personne.identite.prenom}</div>
+				<div class="title-display text-base leading-tight">{personne.identite.nom}</div>
 			</div>
-			{#if depute.circo}
+			{#if circo}
 				<div class="text-[10px] text-assembly-muted mt-1">
-					{depute.circo.dep} · {depute.circo.depNum}-{depute.circo.num}
+					{circo.dep} · {circo.depNum}-{circo.num}
+				</div>
+			{/if}
+			{#if !mandat}
+				<div class="text-[9px] text-assembly-muted mt-1 italic">
+					Carrière · {personne.carriere.nbMandats} mandat{personne.carriere.nbMandats > 1 ? 's' : ''}
 				</div>
 			{/if}
 		</div>
 	</div>
 
-	<!-- Stats grid -->
 	<div class="grid grid-cols-3 gap-2 mt-3 pt-2 border-t border-assembly-border/40 text-center">
 		<div>
 			<div class="text-[9px] uppercase text-assembly-muted">Présence</div>
 			<div class="title-display text-base text-blue-400 leading-tight tabular-nums">
-				{pct(stats.tauxPresence)}
+				{pct(stats.presence.rate)}
 			</div>
-			<div class="mt-0.5">
-				<Rank rank={stats.rangs.presence} {total} size="xs" />
-			</div>
+			{#if rangs}
+				<div class="mt-0.5">
+					<Rank rank={rangs.presence.rank} total={rangs.presence.total} size="xs" />
+				</div>
+			{/if}
 		</div>
 		<div>
 			<div class="text-[9px] uppercase text-assembly-muted">Loyauté</div>
 			<div class="title-display text-base text-emerald-400 leading-tight tabular-nums">
-				{pct(stats.tauxLoyaute)}
+				{pct(stats.loyaute.rate)}
 			</div>
-			<div class="mt-0.5">
-				<Rank rank={stats.rangs.loyaute} {total} size="xs" />
-			</div>
+			{#if rangs}
+				<div class="mt-0.5">
+					<Rank rank={rangs.loyaute.rank} total={rangs.loyaute.total} size="xs" />
+				</div>
+			{/if}
 		</div>
 		<div>
 			<div class="text-[9px] uppercase text-assembly-muted">Frondes</div>
 			<div class="title-display text-base text-rose-400 leading-tight tabular-nums">
-				{stats.frondes}
+				{frondes}
 			</div>
-			<div class="mt-0.5">
-				<Rank rank={stats.rangs.frondes} {total} size="xs" />
-			</div>
+			{#if rangs}
+				<div class="mt-0.5">
+					<Rank rank={rangs.frondes.rank} total={rangs.frondes.total} size="xs" />
+				</div>
+			{/if}
 		</div>
 	</div>
 
-	<!-- Hint -->
 	<div class="text-[9px] text-assembly-muted text-center mt-2 italic">
 		Cliquez pour voir la fiche complète
 	</div>

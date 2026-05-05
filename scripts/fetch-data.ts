@@ -54,9 +54,29 @@ const CACHE_DIR = join(tmpdir(), 'politidex-cache');
 /** Législatures couvertes. Phase 1 = [16, 17]. Étendre pour Phase 2/3. */
 const LEGISLATURES: number[] = [16, 17];
 
-/** Source historique unique des acteurs/organes (cf ADR 0018). */
+/** Source historique d'identité (PA-id stable, cross-leg) — cf ADR 0018. */
 const SOURCE_ACTEURS =
 	'https://data.assemblee-nationale.fr/static/openData/repository/17/amo/tous_acteurs_mandats_organes_xi_legislature/AMO30_tous_acteurs_tous_mandats_tous_organes_historique.json.zip';
+
+/**
+ * Sources d'enrichissement par législature (AMO10 / AMO20). Cf ADR 0019 :
+ * AMO10 (legis. en cours) et AMO20 (legis. passées) sont prioritaires sur AMO30
+ * pour les champs précis (placeHemicycle notamment).
+ *
+ * Pour Phase 1 :
+ *   - 17ᵉ législature → AMO10 (snapshot temps réel)
+ *   - 16ᵉ législature → AMO20 (snapshot figé à la dissolution 2024-06-09)
+ */
+const SOURCES_ENRICHISSEMENT = new Map<number, string>([
+	[
+		17,
+		'https://data.assemblee-nationale.fr/static/openData/repository/17/amo/deputes_actifs_mandats_actifs_organes/AMO10_deputes_actifs_mandats_actifs_organes.json.zip'
+	],
+	[
+		16,
+		'https://data.assemblee-nationale.fr/static/openData/repository/16/amo/deputes_senateurs_ministres_legislature/AMO20_dep_sen_min_tous_mandats_et_organes.json.zip'
+	]
+]);
 
 // ⚠️  L'archive Scrutins.json.zip de la 17ᵉ législature est servie extrêmement
 //     lentement par le CDN AN (POP 46.105.202.26 / Rouen) : ~25-30 KB/s, identique
@@ -68,8 +88,12 @@ const SOURCE_ACTEURS =
 const sourceScrutins = (leg: number) =>
 	`https://data.assemblee-nationale.fr/static/openData/repository/${leg}/loi/scrutins/Scrutins.json.zip`;
 
-/** Seuil pour identifier le NI-bridge transitoire (en jours). */
-const NI_BRIDGE_MAX_DURATION_DAYS = 7;
+/** Seuil pour identifier le NI-bridge transitoire (en jours).
+ *  En 16ᵉ le délai d'inscription au groupe a été ~6 jours (22→28 juin 2022).
+ *  En 17ᵉ il a été plus long (~10 jours : 8→18 juillet 2024) car élections
+ *  législatives anticipées + congés d'été. On garde une marge à 21 jours
+ *  pour absorber les variations futures. */
+const NI_BRIDGE_MAX_DURATION_DAYS = 21;
 
 // ────────────────────────────────────────────────────────────────────────────
 // Utilitaires
@@ -93,6 +117,14 @@ async function ensureDir(path: string) {
  *   jusqu'à 3 fois — la reprise repartira d'où on s'est arrêté.
  */
 async function downloadZip(url: string, target: string): Promise<void> {
+	// FORCE_CACHE=1 court-circuite la vérification de Content-Length serveur
+	// (utile en dev quand on touche à la pipeline et qu'on veut épargner les
+	// 12 min de re-download des scrutins 17ᵉ).
+	if (process.env.FORCE_CACHE === '1' && existsSync(target)) {
+		const localSize = (await import('node:fs')).statSync(target).size;
+		console.log(`  ↻ cache hit (forcé): ${target} (${(localSize / 1024 / 1024).toFixed(1)} MB)`);
+		return;
+	}
 	const expected = await remoteContentLength(url);
 	if (existsSync(target)) {
 		const localSize = (await import('node:fs')).statSync(target).size;
@@ -167,7 +199,19 @@ async function remoteContentLength(url: string): Promise<number | null> {
 async function unzip(zipPath: string, destDir: string) {
 	await ensureDir(destDir);
 	console.log(`  ⇢ ${zipPath} → ${destDir}`);
-	await execFile('unzip', ['-q', '-o', zipPath, '-d', destDir]);
+	// bsdtar gère les ZIP modernes mieux que unzip macOS (notamment ZIP64 et
+	// gros fichiers). On garde un fallback unzip si bsdtar n'est pas dispo.
+	try {
+		await execFile('bsdtar', ['-xf', zipPath, '-C', destDir]);
+	} catch (errBsd) {
+		try {
+			await execFile('unzip', ['-q', '-o', zipPath, '-d', destDir]);
+		} catch (errUnzip) {
+			throw new Error(
+				`unzip failed (bsdtar: ${(errBsd as Error).message} / unzip: ${(errUnzip as Error).message})`
+			);
+		}
+	}
 }
 
 function asArray<T>(v: T | T[] | null | undefined): T[] {
@@ -396,6 +440,78 @@ function photoUrl(id: string, mandatsByLeg: Map<number, Mandat>): string {
 	const leg = legs[0] ?? 17;
 	const num = id.replace(/^PA/, '');
 	return `https://www2.assemblee-nationale.fr/static/tribun/${leg}/photos/${num}.jpg`;
+}
+
+/**
+ * Enrichit les mandats existants avec les champs précis venus d'AMO10/AMO20
+ * (cf ADR 0019). Lecture par législature : pour chaque acteur trouvé dans la
+ * source d'enrichissement, on cherche son mandat parlementaire de la légis.
+ * et on remplace les champs `place`/`circonscription`/`premiereElection`
+ * quand AMO30 n'avait que des valeurs nulles ou moins précises.
+ *
+ * Renvoie un compteur de champs enrichis (pour log).
+ */
+async function enrichMandatsFromSource(
+	extractDir: string,
+	leg: number,
+	personnes: Map<string, PartialPersonne>
+): Promise<{ placeAjoute: number; circoAjoutee: number; total: number }> {
+	const acteurDir = join(extractDir, 'json', 'acteur');
+	const { readdirSync } = await import('node:fs');
+	if (!existsSync(acteurDir)) {
+		console.log(`    ⚠ pas de dossier acteur dans la source d'enrichissement leg ${leg}`);
+		return { placeAjoute: 0, circoAjoutee: 0, total: 0 };
+	}
+
+	let placeAjoute = 0;
+	let circoAjoutee = 0;
+	let total = 0;
+
+	for (const file of readdirSync(acteurDir)) {
+		const raw = JSON.parse(await readFile(join(acteurDir, file), 'utf8'));
+		const a: RawActeur = raw.acteur;
+		const id = a.uid['#text'];
+		const partial = personnes.get(id);
+		if (!partial) continue;
+		const m = partial.mandatsByLeg.get(leg);
+		if (!m) continue;
+
+		const allMandats = asArray(a.mandats?.mandat) as RawMandat[];
+		const mandatsParl = allMandats.filter(
+			(md) =>
+				md['@xsi:type'] === 'MandatParlementaire_type' &&
+				md.typeOrgane === 'ASSEMBLEE' &&
+				md.legislature === String(leg)
+		);
+		if (mandatsParl.length === 0) continue;
+		mandatsParl.sort((x, y) => (x.dateDebut ?? '').localeCompare(y.dateDebut ?? ''));
+		const parl = mandatsParl[0];
+
+		// placeHemicycle : remplace si AMO30 n'avait pas de place et que la nouvelle source en a une.
+		const newPlace = parl.mandature?.placeHemicycle
+			? parseInt(parl.mandature.placeHemicycle, 10)
+			: null;
+		if (newPlace !== null && !Number.isNaN(newPlace) && m.place === null) {
+			m.place = newPlace;
+			placeAjoute++;
+		}
+
+		// Circonscription : si AMO30 ne l'avait pas mais la nouvelle source oui.
+		if (m.circonscription === null && parl.election?.lieu) {
+			const lieu = parl.election.lieu;
+			m.circonscription = {
+				dep: lieu.departement ?? '',
+				depNum: lieu.numDepartement ?? '',
+				num: lieu.numCirco ?? '',
+				region: lieu.region ?? ''
+			};
+			circoAjoutee++;
+		}
+
+		total++;
+	}
+
+	return { placeAjoute, circoAjoutee, total };
 }
 
 /** Extrait, dédoublonne et marque les appartenances GP d'une législature donnée.
@@ -884,6 +1000,15 @@ async function main() {
 		scrutinsZips.set(leg, zp);
 	}
 
+	// Sources d'enrichissement (AMO10/AMO20) — cf ADR 0019
+	const enrichZips = new Map<number, string>();
+	for (const [leg, url] of SOURCES_ENRICHISSEMENT) {
+		if (!LEGISLATURES.includes(leg)) continue;
+		const zp = join(CACHE_DIR, `enrich-${leg}.json.zip`);
+		await downloadZip(url, zp);
+		enrichZips.set(leg, zp);
+	}
+
 	// ── Stage 2 : extract
 	console.log('\n2/5  Extraction');
 	const acteursDir = join(CACHE_DIR, 'acteurs-extracted');
@@ -905,6 +1030,24 @@ async function main() {
 		scrutinsDirs.set(leg, sd);
 	}
 
+	// Extract sources d'enrichissement
+	const enrichDirs = new Map<number, string>();
+	for (const [leg, zp] of enrichZips) {
+		const ed = join(CACHE_DIR, `enrich-${leg}-extracted`);
+		const sentinelDir = join(ed, 'json', 'acteur');
+		if (!existsSync(sentinelDir) || (await import('node:fs')).readdirSync(sentinelDir).length < 50) {
+			await rm(ed, { recursive: true, force: true });
+			try {
+				await unzip(zp, ed);
+			} catch (err) {
+				console.log(`    ⚠ extraction enrich-${leg} : ${(err as Error).message}`);
+			}
+		} else {
+			console.log(`  ↻ déjà extrait : enrich ${leg}`);
+		}
+		enrichDirs.set(leg, ed);
+	}
+
 	// ── Stage 3 : transform — groupes + personnes + mandats
 	console.log('\n3/5  Transformation');
 	console.log('  • Groupes politiques par législature…');
@@ -918,6 +1061,20 @@ async function main() {
 	console.log(`    → ${personnes.size} personnes uniques sur ${LEGISLATURES.join('+')}`);
 	const mandatsTotal = [...personnes.values()].reduce((s, p) => s + p.mandatsByLeg.size, 0);
 	console.log(`    → ${mandatsTotal} mandats total`);
+
+	// Passe d'enrichissement AMO10/AMO20 (cf ADR 0019) : on remplit les champs
+	// que AMO30 historique laisse souvent vides pour les mandats clos (placeHemicycle).
+	console.log('  • Enrichissement AMO10/AMO20 (places hémicycle, etc.)…');
+	for (const [leg, dir] of enrichDirs) {
+		if (!existsSync(join(dir, 'json', 'acteur'))) {
+			console.log(`    ⚠ enrich-${leg} non disponible, skip`);
+			continue;
+		}
+		const stats = await enrichMandatsFromSource(dir, leg, personnes);
+		console.log(
+			`    → leg ${leg} : ${stats.placeAjoute} places ajoutées, ${stats.circoAjoutee} circo ajoutées (${stats.total} mandats croisés)`
+		);
+	}
 
 	// ── Stage 4 : scrutins + stats par législature
 	console.log('\n4/5  Scrutins et calcul des stats');

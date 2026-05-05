@@ -1,23 +1,35 @@
 <script lang="ts">
-	import type { Depute, Groupe, VotePosition } from '$lib/types';
+	/**
+	 * Rendu de l'hémicycle pour une législature donnée.
+	 *
+	 * Modèle Phase 1 (cf ADR 0015) : reçoit des `Personne[]`. La législature
+	 * cible est passée en prop pour sélectionner le bon mandat de chaque personne
+	 * (place officielle + groupe d'appartenance au moment du rendu).
+	 *
+	 * Le mode "vote" utilise le groupe **au moment du vote** (cf ADR 0016) ; les
+	 * autres modes utilisent le groupe en fin de mandat (ou en cours si le mandat
+	 * est actif).
+	 */
+	import type { Personne, Groupe, VotePosition, Mandat, AppartenanceGroupe } from '$lib/types';
 	import { SEAT_MAP, HEMICYCLE_VIEWBOX, SEAT_RADIUS, VOTE_COLORS } from '$lib/hemicycle';
-	import { gradientColorFor, POLITICAL_ORDER } from '$lib/political-order';
+	import { gradientColorFor } from '$lib/political-order';
 
 	type Mode =
-		| { kind: 'groupe'; groupes: Groupe[] }      // tinte par couleur officielle du groupe
-		| { kind: 'gradient'; groupes: Groupe[] }    // gradient politique (rouge → bleu)
-		| { kind: 'vote'; votes: Record<string, VotePosition>; groupes: Groupe[] }
+		| { kind: 'groupe'; groupes: Groupe[] }
+		| { kind: 'gradient'; groupes: Groupe[] }
+		| { kind: 'vote'; votes: Record<string, VotePosition>; groupes: Groupe[]; dateScrutin: string }
 		| { kind: 'highlight-groupe'; groupeId: string; groupes: Groupe[] };
 
 	interface Props {
-		deputes: Depute[];
+		personnes: Personne[];
+		legislature: number;
 		mode: Mode;
 		hovered?: string | null;
-		onhover?: (deputeId: string | null) => void;
-		onselect?: (deputeId: string) => void;
+		onhover?: (personneId: string | null) => void;
+		onselect?: (personneId: string) => void;
 	}
 
-	let { deputes, mode, hovered = null, onhover, onselect }: Props = $props();
+	let { personnes, legislature, mode, hovered = null, onhover, onselect }: Props = $props();
 
 	const groupeById = $derived.by(() => {
 		const m = new Map<string, Groupe>();
@@ -25,57 +37,90 @@
 		return m;
 	});
 
-	function colorForDepute(d: Depute): string {
-		const groupe = d.groupeId ? groupeById.get(d.groupeId) : null;
+	function mandatPourLeg(p: Personne): Mandat | null {
+		return p.mandats.find((m) => m.legislature === legislature) ?? null;
+	}
+
+	/** Appartenance du mandat couvrant la date donnée (cf ADR 0016). */
+	function appartenanceALaDate(m: Mandat, date: string): AppartenanceGroupe | null {
+		for (const a of m.appartenancesGroupe) {
+			if (a.dateDebut <= date && (a.dateFin === null || a.dateFin >= date)) return a;
+		}
+		return m.appartenancesGroupe.at(-1) ?? null;
+	}
+
+	/** Appartenance "principale" du mandat (la plus récente non-NI-transitoire). */
+	function appartenancePrincipale(m: Mandat): AppartenanceGroupe | null {
+		for (let i = m.appartenancesGroupe.length - 1; i >= 0; i--) {
+			const a = m.appartenancesGroupe[i];
+			if (!a.isTransitoireNI) return a;
+		}
+		return m.appartenancesGroupe.at(-1) ?? null;
+	}
+
+	function appartenanceContextuelle(m: Mandat): AppartenanceGroupe | null {
+		if (mode.kind === 'vote') return appartenanceALaDate(m, mode.dateScrutin);
+		return appartenancePrincipale(m);
+	}
+
+	function colorForPersonne(p: Personne, m: Mandat): string {
+		const app = appartenanceContextuelle(m);
+		const groupe = app ? groupeById.get(app.groupeId) ?? null : null;
 		const abrev = groupe?.libelleAbrege ?? null;
 
 		if (mode.kind === 'gradient') return gradientColorFor(abrev);
 		if (mode.kind === 'groupe') return groupe?.couleur ?? '#888';
 
 		if (mode.kind === 'highlight-groupe') {
-			if (d.groupeId === mode.groupeId) {
-				return groupe?.couleur ?? '#fbbf24';
-			}
+			if (app?.groupeId === mode.groupeId) return groupe?.couleur ?? '#fbbf24';
 			return '#334155';
 		}
 
 		// vote mode
-		const pos = mode.votes[d.id] ?? 'absent';
+		const pos = mode.votes[p.id] ?? 'absent';
 		return VOTE_COLORS[pos];
 	}
 
-	function opacityForDepute(d: Depute): number {
-		if (mode.kind === 'vote' && !mode.votes[d.id]) return 0.25;
-		if (mode.kind === 'highlight-groupe' && d.groupeId !== mode.groupeId) return 0.2;
+	function opacityForPersonne(p: Personne, m: Mandat): number {
+		if (mode.kind === 'vote' && !mode.votes[p.id]) return 0.25;
+		if (mode.kind === 'highlight-groupe') {
+			const app = appartenanceContextuelle(m);
+			if (app?.groupeId !== mode.groupeId) return 0.2;
+		}
 		return 1;
 	}
 
-	// Split deputies: those with a known seat go to the hémicycle; NI go to
-	// the bench. Non-inscrits group is detected by abrégé "NI".
 	const layout = $derived.by(() => {
-		const seated: Array<{ depute: Depute; x: number; y: number }> = [];
-		const benched: Depute[] = [];
+		const seated: Array<{ personne: Personne; mandat: Mandat; x: number; y: number }> = [];
+		const benched: Array<{ personne: Personne; mandat: Mandat }> = [];
+		/** Personnes sans `placeHemicycle` dans AMO30 (suppléants, ministres,
+		 *  démissionnaires précoces…) qui n'ont pas leur place dans le SVG officiel. */
+		let nonPlaces = 0;
 
-		for (const d of deputes) {
-			const groupe = d.groupeId ? groupeById.get(d.groupeId) : null;
-			const isNI = groupe?.libelleAbrege === 'NI' || !d.groupeId;
+		for (const p of personnes) {
+			const m = mandatPourLeg(p);
+			if (!m) continue;
+
+			const app = appartenanceContextuelle(m);
+			const groupe = app ? groupeById.get(app.groupeId) ?? null : null;
+			const isNI = groupe?.libelleAbrege === 'NI' || !app;
 
 			if (isNI) {
-				benched.push(d);
+				benched.push({ personne: p, mandat: m });
 				continue;
 			}
-			if (d.place && SEAT_MAP.has(d.place)) {
-				const pos = SEAT_MAP.get(d.place)!;
-				seated.push({ depute: d, x: pos.x, y: pos.y });
+			if (m.place && SEAT_MAP.has(m.place)) {
+				const pos = SEAT_MAP.get(m.place)!;
+				seated.push({ personne: p, mandat: m, x: pos.x, y: pos.y });
 			} else {
-				// fallback: missing seat → put on bench so they don't disappear
-				benched.push(d);
+				// Place non renseignée par AMO30 (cf README). On les compte mais
+				// on ne les met PAS au banc des NI (ce serait trompeur visuellement).
+				nonPlaces++;
 			}
 		}
-		return { seated, benched };
+		return { seated, benched, nonPlaces };
 	});
 
-	// Bench geometry: a horizontal row underneath the hémicycle.
 	const benchY = HEMICYCLE_VIEWBOX.y + HEMICYCLE_VIEWBOX.height + 20;
 	const benchPadding = 40;
 
@@ -84,22 +129,26 @@
 		if (n === 0) return [];
 		const usableWidth = HEMICYCLE_VIEWBOX.width - 2 * benchPadding;
 		const step = n === 1 ? 0 : usableWidth / (n - 1);
-		return layout.benched.map((d, i) => ({
-			depute: d,
+		return layout.benched.map((entry, i) => ({
+			...entry,
 			x: HEMICYCLE_VIEWBOX.x + benchPadding + step * i,
 			y: benchY + 10
 		}));
 	});
 
-	// Extend the viewBox to include the bench.
 	const fullViewBox = $derived(
 		`${HEMICYCLE_VIEWBOX.x} ${HEMICYCLE_VIEWBOX.y} ${HEMICYCLE_VIEWBOX.width} ${HEMICYCLE_VIEWBOX.height + 50}`
 	);
 </script>
 
 <div class="relative w-full">
-	<svg viewBox={fullViewBox} class="w-full h-auto max-h-[60vh]" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Hémicycle de l'Assemblée nationale">
-		<!-- Perchoir indicator: small bar at the bottom-center of the hémicycle -->
+	<svg
+		viewBox={fullViewBox}
+		class="w-full h-auto max-h-[60vh]"
+		preserveAspectRatio="xMidYMid meet"
+		role="img"
+		aria-label="Hémicycle de l'Assemblée nationale, {legislature}ᵉ législature"
+	>
 		<g opacity="0.5">
 			<rect
 				x={HEMICYCLE_VIEWBOX.x + HEMICYCLE_VIEWBOX.width / 2 - 30}
@@ -121,29 +170,27 @@
 			</text>
 		</g>
 
-		<!-- Hémicycle seats -->
-		{#each layout.seated as { depute, x, y } (depute.id)}
-			{@const isHovered = hovered === depute.id}
+		{#each layout.seated as { personne, mandat, x, y } (personne.id)}
+			{@const isHovered = hovered === personne.id}
 			<circle
 				cx={x}
 				cy={y}
 				r={SEAT_RADIUS * (isHovered ? 1.6 : 1)}
-				fill={colorForDepute(depute)}
-				opacity={opacityForDepute(depute)}
+				fill={colorForPersonne(personne, mandat)}
+				opacity={opacityForPersonne(personne, mandat)}
 				stroke={isHovered ? '#fbbf24' : 'rgba(15,23,42,0.4)'}
 				stroke-width={isHovered ? 1.2 : 0.4}
 				class="cursor-pointer transition-all duration-300"
-				onmouseenter={() => onhover?.(depute.id)}
+				onmouseenter={() => onhover?.(personne.id)}
 				onmouseleave={() => onhover?.(null)}
-				onclick={() => onselect?.(depute.id)}
-				onkeydown={(e) => (e.key === 'Enter' ? onselect?.(depute.id) : null)}
+				onclick={() => onselect?.(personne.id)}
+				onkeydown={(e) => (e.key === 'Enter' ? onselect?.(personne.id) : null)}
 				role="button"
 				tabindex="-1"
-				aria-label="{depute.prenom} {depute.nom}"
+				aria-label="{personne.identite.prenom} {personne.identite.nom}"
 			/>
 		{/each}
 
-		<!-- Bench (Non-inscrits row) -->
 		{#if benchedPositions.length > 0}
 			<g>
 				<rect
@@ -166,27 +213,32 @@
 				>
 					BANC · NON INSCRITS
 				</text>
-				{#each benchedPositions as { depute, x, y } (depute.id)}
-					{@const isHovered = hovered === depute.id}
+				{#each benchedPositions as { personne, mandat, x, y } (personne.id)}
+					{@const isHovered = hovered === personne.id}
 					<circle
 						cx={x}
 						cy={y}
 						r={SEAT_RADIUS * (isHovered ? 1.6 : 1)}
-						fill={colorForDepute(depute)}
-						opacity={opacityForDepute(depute)}
+						fill={colorForPersonne(personne, mandat)}
+						opacity={opacityForPersonne(personne, mandat)}
 						stroke={isHovered ? '#fbbf24' : 'rgba(15,23,42,0.4)'}
 						stroke-width={isHovered ? 1.2 : 0.4}
 						class="cursor-pointer transition-all duration-300"
-						onmouseenter={() => onhover?.(depute.id)}
+						onmouseenter={() => onhover?.(personne.id)}
 						onmouseleave={() => onhover?.(null)}
-						onclick={() => onselect?.(depute.id)}
-						onkeydown={(e) => (e.key === 'Enter' ? onselect?.(depute.id) : null)}
+						onclick={() => onselect?.(personne.id)}
+						onkeydown={(e) => (e.key === 'Enter' ? onselect?.(personne.id) : null)}
 						role="button"
 						tabindex="-1"
-						aria-label="{depute.prenom} {depute.nom}"
+						aria-label="{personne.identite.prenom} {personne.identite.nom}"
 					/>
 				{/each}
 			</g>
 		{/if}
 	</svg>
+	{#if layout.nonPlaces > 0}
+		<div class="text-[10px] text-assembly-muted text-center mt-2 italic">
+			{layout.nonPlaces} député·e·s sans siège officiel publié par l'Assemblée pour cette législature (suppléants, démissionnaires, ministres). Visibles dans la liste des députés.
+		</div>
+	{/if}
 </div>

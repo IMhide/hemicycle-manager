@@ -1,14 +1,23 @@
 <script lang="ts">
-	import type { Depute, DeputeStats } from '$lib/types';
+	/**
+	 * Ligne compacte d'un député dans une liste (top loyalistes, frondeurs, etc.).
+	 * Modèle Phase 1 : reçoit `Personne` + `Mandat | null` (cf ADR 0015, 0017).
+	 */
+	import type { Personne, Mandat } from '$lib/types';
 
 	interface Props {
-		depute: Depute;
-		stats: DeputeStats;
+		personne: Personne;
+		/** Mandat scopant les stats. Si null : vue carrière (cumul pondéré). */
+		mandat: Mandat | null;
 		highlight?: 'loyaute' | 'frondes' | 'presence' | null;
 		isPresident?: boolean;
 	}
 
-	let { depute, stats, highlight = null, isPresident = false }: Props = $props();
+	let { personne, mandat, highlight = null, isPresident = false }: Props = $props();
+
+	const stats = $derived(mandat ? mandat.stats : personne.carriere);
+	const circo = $derived(mandat?.circonscription ?? personne.mandats.at(-1)?.circonscription ?? null);
+	const href = $derived(mandat ? `/deputes/${personne.id}/?leg=${mandat.legislature}` : `/deputes/${personne.id}/`);
 
 	function pct(n: number | null): string {
 		if (n === null) return 'N/A';
@@ -17,11 +26,11 @@
 </script>
 
 <a
-	href="/deputes/{depute.id}/"
+	{href}
 	class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
 >
 	<img
-		src={depute.photoUrl}
+		src={personne.identite.photoUrl}
 		alt=""
 		class="w-10 h-10 rounded-full object-cover bg-assembly-border flex-shrink-0"
 		loading="lazy"
@@ -29,7 +38,7 @@
 	/>
 	<div class="min-w-0 flex-1">
 		<div class="text-sm font-semibold truncate flex items-center gap-1.5">
-			{depute.prenom} {depute.nom}
+			{personne.identite.prenom} {personne.identite.nom}
 			{#if isPresident}
 				<span
 					class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30"
@@ -39,9 +48,9 @@
 				</span>
 			{/if}
 		</div>
-		{#if depute.circo}
+		{#if circo}
 			<div class="text-[10px] text-assembly-muted">
-				{depute.circo.dep} ({depute.circo.depNum}-{depute.circo.num})
+				{circo.dep} ({circo.depNum}-{circo.num})
 			</div>
 		{/if}
 	</div>
@@ -52,7 +61,7 @@
 					? 'text-blue-400'
 					: ''}"
 			>
-				{pct(stats.tauxPresence)}
+				{pct(stats.presence.rate)}
 			</div>
 			<div class="text-[9px] text-assembly-muted uppercase">Prés.</div>
 		</div>
@@ -62,7 +71,7 @@
 					? 'text-emerald-400'
 					: ''}"
 			>
-				{pct(stats.tauxLoyaute)}
+				{pct(stats.loyaute.rate)}
 			</div>
 			<div class="text-[9px] text-assembly-muted uppercase">Loy.</div>
 		</div>
@@ -72,7 +81,7 @@
 					? 'text-rose-400'
 					: ''}"
 			>
-				{stats.frondes}
+				{stats.frondes.count}
 			</div>
 			<div class="text-[9px] text-assembly-muted uppercase">Frd.</div>
 		</div>

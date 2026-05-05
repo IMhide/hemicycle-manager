@@ -1,17 +1,22 @@
 <script lang="ts">
-	import type { ScrutinIndex, Groupe } from '$lib/types';
+	import type { Groupe } from '$lib/types';
 
 	let { data } = $props();
 
 	type SortKey = 'date-desc' | 'date-asc' | 'numero-desc' | 'numero-asc';
 	type SortFilter = 'all' | 'adopté' | 'rejeté';
 	type Period = 'all' | '30j' | '6m' | '1an';
+
+	const legSorted = $derived([...data.legislatures].sort((a, b) => b.num - a.num));
+
 	let search = $state('');
 	let sortFilter: SortFilter = $state('all');
 	let demandeurFilter = $state<Set<string>>(new Set());
 	let period: Period = $state('all');
 	let sortKey: SortKey = $state('date-desc');
 	let visibleCount = $state(50);
+	/** null = toutes législatures */
+	let scopeLeg: number | null = $state(null);
 
 	function clearFilters() {
 		search = '';
@@ -19,33 +24,36 @@
 		demandeurFilter = new Set();
 		period = 'all';
 		sortKey = 'date-desc';
+		scopeLeg = null;
 		visibleCount = 50;
 	}
 
-	function toggleDemandeur(label: string) {
+	function toggleDemandeur(id: string) {
 		const next = new Set(demandeurFilter);
-		if (next.has(label)) next.delete(label);
-		else next.add(label);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
 		demandeurFilter = next;
 	}
 
-	// Build a list of demandeurs (groupes only — many "demandeur" strings reference
-	// "Président du groupe X"; we extract X by matching against the known groups).
+	const groupesScope = $derived.by(() =>
+		scopeLeg === null ? data.groupes : data.groupes.filter((g) => g.legislature === scopeLeg)
+	);
+
 	const demandeurOptions = $derived.by(() => {
-		const opts: Array<{ label: string; groupe: Groupe; count: number }> = [];
+		const opts: Array<{ groupe: Groupe; count: number }> = [];
 		const counts = new Map<string, number>();
 		for (const s of data.scrutins) {
 			if (!s.demandeur) continue;
-			for (const g of data.groupes) {
-				const needle = `"${g.libelle}"`;
-				if (s.demandeur.includes(needle) || s.demandeur.includes(g.libelle)) {
+			if (scopeLeg !== null && s.legislature !== scopeLeg) continue;
+			for (const g of groupesScope) {
+				if (s.demandeur.includes(g.libelle)) {
 					counts.set(g.id, (counts.get(g.id) ?? 0) + 1);
 				}
 			}
 		}
-		for (const g of data.groupes) {
+		for (const g of groupesScope) {
 			const c = counts.get(g.id) ?? 0;
-			if (c > 0) opts.push({ label: g.id, groupe: g, count: c });
+			if (c > 0) opts.push({ groupe: g, count: c });
 		}
 		return opts.sort((a, b) => b.count - a.count);
 	});
@@ -63,6 +71,7 @@
 	const filtered = $derived.by(() => {
 		const q = search.trim().toLowerCase();
 		return data.scrutins.filter((s) => {
+			if (scopeLeg !== null && s.legislature !== scopeLeg) return false;
 			if (q && !s.titre.toLowerCase().includes(q)) return false;
 			if (sortFilter !== 'all' && s.sort !== sortFilter) return false;
 			if (periodCutoff && s.date < periodCutoff) return false;
@@ -84,16 +93,12 @@
 		switch (sortKey) {
 			case 'date-desc':
 				arr.sort(
-					(a, b) =>
-						(a.date < b.date ? 1 : a.date > b.date ? -1 : 0) ||
-						b.numero - a.numero
+					(a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0) || b.numero - a.numero
 				);
 				break;
 			case 'date-asc':
 				arr.sort(
-					(a, b) =>
-						(a.date < b.date ? -1 : a.date > b.date ? 1 : 0) ||
-						a.numero - b.numero
+					(a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0) || a.numero - b.numero
 				);
 				break;
 			case 'numero-desc':
@@ -114,6 +119,7 @@
 		void demandeurFilter;
 		void period;
 		void sortKey;
+		void scopeLeg;
 		visibleCount = 50;
 	});
 
@@ -134,13 +140,15 @@
 			sortFilter !== 'all' ||
 			demandeurFilter.size > 0 ||
 			period !== 'all' ||
-			sortKey !== 'date-desc'
+			sortKey !== 'date-desc' ||
+			scopeLeg !== null
 	);
 
-	// Total counts for the sort filter buttons
 	const counts = $derived.by(() => {
-		const c = { all: data.scrutins.length, adopté: 0, rejeté: 0 };
+		const c = { all: 0, adopté: 0, rejeté: 0 };
 		for (const s of data.scrutins) {
+			if (scopeLeg !== null && s.legislature !== scopeLeg) continue;
+			c.all += 1;
 			if (s.sort === 'adopté') c.adopté += 1;
 			else if (s.sort === 'rejeté') c.rejeté += 1;
 		}
@@ -149,19 +157,44 @@
 </script>
 
 <svelte:head>
-	<title>Scrutins — Hémicycle Manager</title>
+	<title>Scrutins — PolitiDex</title>
 </svelte:head>
 
 <section class="max-w-7xl mx-auto px-6 py-8">
-	<div class="mb-6">
-		<h1 class="title-display text-4xl">Scrutins</h1>
-		<p class="text-assembly-muted text-sm mt-1">
-			{data.scrutins.length} scrutins publics de la 17ᵉ législature.
-		</p>
+	<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+		<div>
+			<h1 class="title-display text-4xl">Scrutins</h1>
+			<p class="text-assembly-muted text-sm mt-1">
+				{counts.all} scrutin{counts.all > 1 ? 's' : ''} public{counts.all > 1 ? 's' : ''}
+				{#if scopeLeg !== null}
+					· {scopeLeg}<sup>e</sup> législature
+				{/if}
+			</p>
+		</div>
+		<div class="flex items-center gap-1 text-xs">
+			<span class="text-assembly-muted">Législature :</span>
+			<button
+				class="px-3 py-1 rounded {scopeLeg === null
+					? 'bg-assembly-accent text-assembly-bg font-semibold'
+					: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+				onclick={() => (scopeLeg = null)}
+			>
+				Toutes
+			</button>
+			{#each legSorted as l (l.num)}
+				<button
+					class="px-3 py-1 rounded {scopeLeg === l.num
+						? 'bg-assembly-accent text-assembly-bg font-semibold'
+						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+					onclick={() => (scopeLeg = l.num)}
+				>
+					{l.num}<sup>e</sup>
+				</button>
+			{/each}
+		</div>
 	</div>
 
 	<div class="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 items-start">
-		<!-- Filter sidebar -->
 		<aside class="card p-4 lg:sticky lg:top-20 space-y-4 text-sm">
 			<div>
 				<label
@@ -195,7 +228,7 @@
 			<div>
 				<div class="text-xs uppercase tracking-widest text-assembly-muted mb-1.5">Résultat</div>
 				<div class="flex flex-col gap-1">
-					{#each [['all', `Tous (${counts.all})`, 'all'], ['adopté', `Adopté (${counts.adopté})`, 'pour'], ['rejeté', `Rejeté (${counts.rejeté})`, 'contre']] as [key, label] (key)}
+					{#each [['all', `Tous (${counts.all})`], ['adopté', `Adopté (${counts.adopté})`], ['rejeté', `Rejeté (${counts.rejeté})`]] as [key, label] (key)}
 						<button
 							class="btn px-3 py-1 text-xs text-left {sortFilter === key
 								? 'bg-assembly-accent text-assembly-bg'
@@ -225,7 +258,9 @@
 			</div>
 
 			<div>
-				<div class="text-xs uppercase tracking-widest text-assembly-muted mb-1.5 flex items-center gap-1">
+				<div
+					class="text-xs uppercase tracking-widest text-assembly-muted mb-1.5 flex items-center gap-1"
+				>
 					Demandeur
 					{#if demandeurFilter.size > 0}
 						<button
@@ -271,14 +306,13 @@
 			{/if}
 		</aside>
 
-		<!-- Results -->
 		<div>
 			<div class="flex items-center justify-between gap-3 mb-3 text-xs text-assembly-muted">
 				<div>
 					<span class="title-display text-base text-assembly-text">{filtered.length}</span>
 					scrutin{filtered.length > 1 ? 's' : ''} trouvé{filtered.length > 1 ? 's' : ''}
-					{#if filtered.length !== data.scrutins.length}
-						<span class="text-assembly-muted">/ {data.scrutins.length}</span>
+					{#if filtered.length !== counts.all}
+						<span class="text-assembly-muted">/ {counts.all}</span>
 					{/if}
 				</div>
 			</div>
@@ -307,14 +341,17 @@
 
 							<div class="min-w-0 flex-1">
 								<div class="text-sm leading-snug">{truncate(s.titre, 140)}</div>
-								{#if s.demandeur}
-									<div class="text-[10px] text-assembly-muted mt-0.5 truncate">
-										Demandé par : {s.demandeur}
-									</div>
-								{/if}
+								<div class="text-[10px] text-assembly-muted mt-0.5 flex items-center gap-2">
+									<span>{s.legislature}<sup>e</sup> lég.</span>
+									{#if s.demandeur}
+										<span class="truncate">· Demandé par : {s.demandeur}</span>
+									{/if}
+								</div>
 							</div>
 
-							<div class="hidden sm:flex gap-2 text-[10px] flex-shrink-0 items-center tabular-nums">
+							<div
+								class="hidden sm:flex gap-2 text-[10px] flex-shrink-0 items-center tabular-nums"
+							>
 								<span class="text-vote-pour">{s.pour}</span>
 								<span class="text-assembly-muted">·</span>
 								<span class="text-vote-contre">{s.contre}</span>

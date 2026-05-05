@@ -1,30 +1,41 @@
 <script lang="ts">
 	import MemberRow from '$lib/components/MemberRow.svelte';
-	import GroupBadge from '$lib/components/GroupBadge.svelte';
 	import InfoTip from '$lib/components/InfoTip.svelte';
 	import { POLITICAL_ORDER } from '$lib/political-order';
-	import type { Depute, DeputeStats, Groupe } from '$lib/types';
+	import type { Personne, Mandat, Groupe } from '$lib/types';
 
 	let { data } = $props();
 
-	type SortKey = 'nom' | 'presence' | 'loyaute' | 'frondes' | 'activite';
+	type SortKey = 'nom' | 'presence' | 'loyaute' | 'frondes' | 'participation';
+
+	const legislatureCourante = $derived(
+		[...data.legislatures].sort((a, b) => b.num - a.num)[0]?.num ?? 17
+	);
+
 	let search = $state('');
 	let sortKey: SortKey = $state('nom');
-	// Empty Set = no filter (show everyone). Otherwise: show only deputies in
-	// these groups.
 	let groupFilter = $state<Set<string>>(new Set());
 	let civFilter = $state<'all' | 'M.' | 'Mme'>('all');
 	let visibleCount = $state(60);
 	let onlyPresidents = $state(false);
+	/** null = vue carrière (cross-leg), sinon scope par législature */
+	let scopeLeg: number | null = $state(
+		[...data.legislatures].sort((a, b) => b.num - a.num)[0]?.num ?? 17
+	);
 
-	const statsById = $derived.by(() => {
-		const m = new Map<string, DeputeStats>();
-		for (const s of data.stats) m.set(s.id, s);
+	const groupesById = $derived.by(() => {
+		const m = new Map<string, Groupe>();
+		for (const g of data.groupes) m.set(g.id, g);
 		return m;
 	});
 
+	const groupesScope = $derived.by(() => {
+		if (scopeLeg === null) return data.groupes;
+		return data.groupes.filter((g) => g.legislature === scopeLeg);
+	});
+
 	const groupesSorted = $derived(
-		[...data.groupes].sort(
+		[...groupesScope].sort(
 			(a, b) =>
 				(POLITICAL_ORDER[a.libelleAbrege]?.rank ?? 99) -
 				(POLITICAL_ORDER[b.libelleAbrege]?.rank ?? 99)
@@ -32,7 +43,7 @@
 	);
 
 	const presidentIds = $derived(
-		new Set(data.groupes.map((g) => g.presidentId).filter((x): x is string => !!x))
+		new Set(groupesScope.map((g) => g.presidentId).filter((x): x is string => !!x))
 	);
 
 	function toggleGroup(id: string) {
@@ -52,44 +63,94 @@
 		visibleCount = 60;
 	}
 
+	/** Pour chaque personne, trouve son mandat dans le scope (ou null si carrière). */
+	function mandatScope(p: Personne): Mandat | null {
+		if (scopeLeg === null) return null;
+		return p.mandats.find((m) => m.legislature === scopeLeg) ?? null;
+	}
+
+	/** Groupe "principal" pour une personne dans le scope courant. */
+	function groupePrincipal(p: Personne, m: Mandat | null): Groupe | null {
+		const mandats = m ? [m] : p.mandats;
+		for (let i = mandats.length - 1; i >= 0; i--) {
+			const md = mandats[i];
+			for (let j = md.appartenancesGroupe.length - 1; j >= 0; j--) {
+				const a = md.appartenancesGroupe[j];
+				if (a.isTransitoireNI) continue;
+				const g = groupesById.get(a.groupeId);
+				if (g) return g;
+			}
+		}
+		return null;
+	}
+
+	const enriched = $derived.by(() => {
+		return data.personnes
+			.map((p) => {
+				const m = mandatScope(p);
+				if (scopeLeg !== null && !m) return null;
+				return { personne: p, mandat: m, groupe: groupePrincipal(p, m) };
+			})
+			.filter((x): x is { personne: Personne; mandat: Mandat | null; groupe: Groupe | null } => !!x);
+	});
+
 	const filtered = $derived.by(() => {
 		const q = search.trim().toLowerCase();
-		return data.deputes
-			.map((d) => ({ depute: d, stats: statsById.get(d.id)! }))
-			.filter(({ depute }) => {
-				if (q) {
-					const hay = `${depute.prenom} ${depute.nom}`.toLowerCase();
-					if (!hay.includes(q)) return false;
-				}
-				if (civFilter !== 'all' && depute.civ !== civFilter) return false;
-				if (groupFilter.size > 0) {
-					if (!depute.groupeId || !groupFilter.has(depute.groupeId)) return false;
-				}
-				if (onlyPresidents && !presidentIds.has(depute.id)) return false;
-				return true;
-			});
+		return enriched.filter(({ personne, groupe }) => {
+			if (q) {
+				const hay = `${personne.identite.prenom} ${personne.identite.nom}`.toLowerCase();
+				if (!hay.includes(q)) return false;
+			}
+			if (civFilter !== 'all' && personne.identite.civ !== civFilter) return false;
+			if (groupFilter.size > 0) {
+				if (!groupe || !groupFilter.has(groupe.id)) return false;
+			}
+			if (onlyPresidents && !presidentIds.has(personne.id)) return false;
+			return true;
+		});
 	});
 
 	const sorted = $derived.by(() => {
 		const arr = [...filtered];
 		switch (sortKey) {
 			case 'nom':
-				arr.sort((a, b) =>
-					a.depute.nom.localeCompare(b.depute.nom) ||
-					a.depute.prenom.localeCompare(b.depute.prenom)
+				arr.sort(
+					(a, b) =>
+						a.personne.identite.nom.localeCompare(b.personne.identite.nom) ||
+						a.personne.identite.prenom.localeCompare(b.personne.identite.prenom)
 				);
 				break;
 			case 'presence':
-				arr.sort((a, b) => b.stats.tauxPresence - a.stats.tauxPresence);
+				arr.sort((a, b) => {
+					const sa = a.mandat ? a.mandat.stats.presence.rate : a.personne.carriere.presence.rate;
+					const sb = b.mandat ? b.mandat.stats.presence.rate : b.personne.carriere.presence.rate;
+					return sb - sa;
+				});
 				break;
 			case 'loyaute':
-				arr.sort((a, b) => (b.stats.tauxLoyaute ?? 0) - (a.stats.tauxLoyaute ?? 0));
+				arr.sort((a, b) => {
+					const sa = (a.mandat ? a.mandat.stats.loyaute.rate : a.personne.carriere.loyaute.rate) ?? 0;
+					const sb = (b.mandat ? b.mandat.stats.loyaute.rate : b.personne.carriere.loyaute.rate) ?? 0;
+					return sb - sa;
+				});
 				break;
 			case 'frondes':
-				arr.sort((a, b) => b.stats.frondes - a.stats.frondes);
+				arr.sort((a, b) => {
+					const sa = a.mandat ? a.mandat.stats.frondes.count : a.personne.carriere.frondes.count;
+					const sb = b.mandat ? b.mandat.stats.frondes.count : b.personne.carriere.frondes.count;
+					return sb - sa;
+				});
 				break;
-			case 'activite':
-				arr.sort((a, b) => b.stats.activite - a.stats.activite);
+			case 'participation':
+				arr.sort((a, b) => {
+					const sa = a.mandat
+						? a.mandat.stats.participation.rate
+						: a.personne.carriere.participation.rate;
+					const sb = b.mandat
+						? b.mandat.stats.participation.rate
+						: b.personne.carriere.participation.rate;
+					return sb - sa;
+				});
 				break;
 		}
 		return arr;
@@ -97,39 +158,72 @@
 
 	const visible = $derived(sorted.slice(0, visibleCount));
 
-	// Reset visible count when filters change
 	$effect(() => {
-		// Touch the dependencies so the effect tracks them
 		void search;
 		void groupFilter;
 		void civFilter;
 		void onlyPresidents;
 		void sortKey;
+		void scopeLeg;
 		visibleCount = 60;
 	});
 
 	const highlight = $derived(
-		sortKey === 'nom' ? null : (sortKey as 'presence' | 'loyaute' | 'frondes')
+		sortKey === 'nom' || sortKey === 'participation'
+			? null
+			: (sortKey as 'presence' | 'loyaute' | 'frondes')
 	);
+
+	const legSorted = $derived([...data.legislatures].sort((a, b) => b.num - a.num));
 </script>
 
 <svelte:head>
-	<title>Députés — Hémicycle Manager</title>
+	<title>Députés — PolitiDex</title>
 </svelte:head>
 
 <section class="max-w-7xl mx-auto px-6 py-8">
-	<div class="mb-6">
-		<h1 class="title-display text-4xl">Députés</h1>
-		<p class="text-assembly-muted text-sm mt-1">
-			{data.deputes.length} députés de la 17ᵉ législature.
-		</p>
+	<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+		<div>
+			<h1 class="title-display text-4xl">Députés</h1>
+			<p class="text-assembly-muted text-sm mt-1">
+				{enriched.length} personne{enriched.length > 1 ? 's' : ''}
+				{#if scopeLeg !== null}
+					ayant siégé en {scopeLeg}<sup>e</sup> législature
+				{:else}
+					sur l'ensemble des législatures couvertes
+				{/if}
+			</p>
+		</div>
+		<div class="flex items-center gap-1 text-xs">
+			<span class="text-assembly-muted">Vue :</span>
+			<button
+				class="px-3 py-1 rounded {scopeLeg === null
+					? 'bg-assembly-accent text-assembly-bg font-semibold'
+					: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+				onclick={() => (scopeLeg = null)}
+			>
+				Carrière
+			</button>
+			{#each legSorted as l (l.num)}
+				<button
+					class="px-3 py-1 rounded {scopeLeg === l.num
+						? 'bg-assembly-accent text-assembly-bg font-semibold'
+						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+					onclick={() => (scopeLeg = l.num)}
+				>
+					{l.num}<sup>e</sup>
+				</button>
+			{/each}
+		</div>
 	</div>
 
 	<div class="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 items-start">
-		<!-- Filter sidebar -->
 		<aside class="card p-4 lg:sticky lg:top-20 space-y-4 text-sm">
 			<div>
-				<label class="text-xs uppercase tracking-widest text-assembly-muted block mb-1.5" for="search-deputes">
+				<label
+					class="text-xs uppercase tracking-widest text-assembly-muted block mb-1.5"
+					for="search-deputes"
+				>
 					Recherche
 				</label>
 				<input
@@ -149,9 +243,9 @@
 				>
 					<option value="nom">Nom (A→Z)</option>
 					<option value="presence">Présence ↓</option>
+					<option value="participation">Participation ↓</option>
 					<option value="loyaute">Loyauté ↓</option>
 					<option value="frondes">Frondes ↓</option>
-					<option value="activite">Activité ↓</option>
 				</select>
 			</div>
 
@@ -171,48 +265,52 @@
 				</div>
 			</div>
 
-			<div>
-				<label class="flex items-center gap-2 cursor-pointer">
-					<input type="checkbox" bind:checked={onlyPresidents} class="accent-assembly-accent" />
-					<span class="text-xs">⭐ Présidents de groupe seulement</span>
-				</label>
-			</div>
+			{#if scopeLeg !== null}
+				<div>
+					<label class="flex items-center gap-2 cursor-pointer">
+						<input type="checkbox" bind:checked={onlyPresidents} class="accent-assembly-accent" />
+						<span class="text-xs">⭐ Présidents de groupe seulement</span>
+					</label>
+				</div>
 
-			<div>
-				<div class="text-xs uppercase tracking-widest text-assembly-muted mb-1.5 flex items-center gap-1">
-					Groupes
-					{#if groupFilter.size > 0}
-						<button
-							class="ml-auto text-[10px] underline hover:text-assembly-accent"
-							onclick={() => {
-								groupFilter = new Set();
-							}}
-						>
-							effacer
-						</button>
-					{/if}
+				<div>
+					<div
+						class="text-xs uppercase tracking-widest text-assembly-muted mb-1.5 flex items-center gap-1"
+					>
+						Groupes
+						{#if groupFilter.size > 0}
+							<button
+								class="ml-auto text-[10px] underline hover:text-assembly-accent"
+								onclick={() => {
+									groupFilter = new Set();
+								}}
+							>
+								effacer
+							</button>
+						{/if}
+					</div>
+					<div class="space-y-1">
+						{#each groupesSorted as g (g.id)}
+							{@const isActive = groupFilter.has(g.id)}
+							<button
+								class="w-full flex items-center justify-between gap-2 px-2 py-1 rounded text-left transition-colors {isActive
+									? 'bg-assembly-border/60'
+									: 'hover:bg-assembly-border/30'}"
+								onclick={() => toggleGroup(g.id)}
+							>
+								<span class="flex items-center gap-2 min-w-0">
+									<span
+										class="w-2 h-2 rounded-full flex-shrink-0"
+										style="background-color: {g.couleur}"
+									></span>
+									<span class="text-xs font-medium truncate">{g.libelleAbrege}</span>
+								</span>
+								<span class="text-[10px] text-assembly-muted tabular-nums">{g.effectifFin}</span>
+							</button>
+						{/each}
+					</div>
 				</div>
-				<div class="space-y-1">
-					{#each groupesSorted as g (g.id)}
-						{@const isActive = groupFilter.has(g.id)}
-						<button
-							class="w-full flex items-center justify-between gap-2 px-2 py-1 rounded text-left transition-colors {isActive
-								? 'bg-assembly-border/60'
-								: 'hover:bg-assembly-border/30'}"
-							onclick={() => toggleGroup(g.id)}
-						>
-							<span class="flex items-center gap-2 min-w-0">
-								<span
-									class="w-2 h-2 rounded-full flex-shrink-0"
-									style="background-color: {g.couleur}"
-								></span>
-								<span class="text-xs font-medium truncate">{g.libelleAbrege}</span>
-							</span>
-							<span class="text-[10px] text-assembly-muted tabular-nums">{g.effectif}</span>
-						</button>
-					{/each}
-				</div>
-			</div>
+			{/if}
 
 			{#if search || groupFilter.size > 0 || civFilter !== 'all' || onlyPresidents || sortKey !== 'nom'}
 				<button class="btn-ghost w-full text-xs" onclick={clearFilters}>
@@ -221,14 +319,13 @@
 			{/if}
 		</aside>
 
-		<!-- Results -->
 		<div>
 			<div class="flex items-center justify-between gap-3 mb-3 text-xs text-assembly-muted">
 				<div>
 					<span class="title-display text-base text-assembly-text">{filtered.length}</span>
 					député{filtered.length > 1 ? 's' : ''} trouvé{filtered.length > 1 ? 's' : ''}
-					{#if filtered.length !== data.deputes.length}
-						<span class="text-assembly-muted">/ {data.deputes.length}</span>
+					{#if filtered.length !== enriched.length}
+						<span class="text-assembly-muted">/ {enriched.length}</span>
 					{/if}
 				</div>
 				{#if highlight}
@@ -245,18 +342,16 @@
 				<div class="card p-8 text-center text-assembly-muted">
 					<div class="title-display text-2xl mb-1">😶</div>
 					<div class="text-sm">Aucun député ne correspond à ces critères.</div>
-					<button class="btn-ghost mt-4 text-sm" onclick={clearFilters}>
-						Réinitialiser
-					</button>
+					<button class="btn-ghost mt-4 text-sm" onclick={clearFilters}> Réinitialiser </button>
 				</div>
 			{:else}
 				<div class="grid grid-cols-1 xl:grid-cols-2 gap-2">
-					{#each visible as { depute, stats } (depute.id)}
+					{#each visible as { personne, mandat } (personne.id)}
 						<MemberRow
-							{depute}
-							{stats}
+							{personne}
+							{mandat}
 							{highlight}
-							isPresident={presidentIds.has(depute.id)}
+							isPresident={presidentIds.has(personne.id)}
 						/>
 					{/each}
 				</div>
