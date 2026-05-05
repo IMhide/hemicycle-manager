@@ -92,6 +92,27 @@ Mergée en une seule PR cumulant Phase 1 (16ᵉ+17ᵉ) et Phase 2 (15ᵉ).
 - [x] **Auto-deploy GitHub → Coolify** activé via webhook (cf ADR 0002) — tout push sur `main` déclenche un build automatique. Plus besoin de redéploiement manuel pour les changements committés
 - [x] Builds chauds : ~15 min → ~30 s quand rien ne bouge côté data (validé localement, validation prod = deploy id 78 du merge PR #4)
 
+## ✅ Overall + Le Championnat + FAQ (mergé 2026-05-06, PR #6)
+
+- [x] **ADR 0022** — Score Overall figé : `0.55·Participation + 0.35·Volume(centile95) + 0.10·Présence × 99`
+  - Postulat : "député = employé du peuple, payé pour voter des lois"
+  - Loyauté **retirée** du score (reste sur radar + alimente badges)
+  - Volume normalisé sur centile 95 cohorte (par leg pour mandats, tous-temps pour carrière)
+  - Magic number 3000 supprimé
+- [x] Calcul **dans le pipeline** (`stats.overall`, `carriere.overall`), lu par les cartes (alignement DeputeCard ↔ MiniDeputeCard)
+- [x] `Groupe.overallMoyen` + `overallEffectif` pré-calculés (rattachement = groupe principal, cf ADR 0016)
+- [x] Helpers `BLOCS` / `blocOf` / `blocMeta` ajoutés à `political-order.ts` (5 blocs CHES)
+- [x] `/classements/` restructurée en mode football :
+  - 🏆 **Le Championnat** : Top députés (par leg ou Carrière) · Top groupes · Top blocs (5 blocs CHES)
+  - ⚽ **Les Coupes** : Présence / Participation / Loyauté / Frondes (par leg uniquement, cf ADR 0017)
+- [x] Bloc dépliable "Comment se calcule l'Overall ?" inline sur `/classements/` (pédagogie sans clic)
+- [x] **Page `/faq/`** ludique avec 7 sections (Le projet · Overall · Championnat & Coupes · Métriques · Badges · Modèle · Méta), accordéons, ancres directes, liens vers ADR
+- [x] Header enrichi avec bouton 📚 → FAQ
+- [x] Footer enrichi : lien FAQ + lien GitHub repo + invitation explicite à contribuer + Unlicense
+- [x] InfoTip explicatif sur DeputeCard avec lien `/faq#overall` + ADR 0022
+- [x] Axe radar `Activité (/3000)` → `Volume (centile 95 cohorte)`
+- [x] Smoke-test 40/40 ✅, type-check 0 erreur, distribution overalls saine
+
 ## 🌐 Phase 3 — Au-delà de l'AN (Sénat, ministres, président)
 
 À démarrer une fois Phases 1+2 stabilisées. Implique probablement de **généraliser le type `Mandat`** (ajout d'un champ `chambre: 'AN' | 'Senat'` ou similaire) et d'introduire un type `MandatGouvernemental` pour les ministres. Mini-ADR de cadrage à prévoir au démarrage.

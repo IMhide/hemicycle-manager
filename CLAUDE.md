@@ -15,7 +15,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 2. ✅ **Phase 2** (mergée 2026-05-05) — 15ᵉ législature AN ajoutée (toute l'ère Macron à l'AN couverte)
 3. ⏳ **Phase 3** (à venir) — Sénat + ministres + président
 
-**État actuel** : 1196 personnes uniques, 1925 mandats, 14 838 scrutins, 50+ vétérans 15+16+17. Smoke-test 40/40 ✅.
+**État actuel** : 1196 personnes uniques, 1925 mandats, 14 840 scrutins, 50+ vétérans 15+16+17. Smoke-test 40/40 ✅. Score **Overall** v2 + **Le Championnat / Les Coupes** + **FAQ** mergés 2026-05-06 (PR #6, ADR 0022).
 
 > ⚠️ **Le repo s'appelle encore `hemicycle-manager`** (rebrand pas encore fait, cf ADR 0014). Le **nom de produit** est désormais **PolitiDex**.
 
@@ -105,7 +105,8 @@ src/
     deputes/                   # /deputes/ liste filtrable cross-leg + /deputes/[id]/?leg=N (SPA, MandatTabs)
     groupes/[legislature]/[id]/ # fiche groupe scopée par leg (SPA, mode highlight-groupe)
     scrutins/                  # /scrutins/ liste paginée + /scrutins/[uid]/ (SPA, groupe au moment du vote)
-    classements/               # /classements/ 4 leaderboards par leg (cf ADR 0017 : pas de cohorte cross-leg)
+    classements/               # /classements/ — Le Championnat (overall) + Les Coupes (présence/participation/loyauté/frondes)
+    faq/                       # /faq/ — page FAQ ludique (préredue) avec ancres #overall, #presence, etc.
     legislatures/[num]/        # (SPA) home par législature (équivalent / mais paramétrée)
 scripts/
   fetch-data.ts                # pipeline AMO30 (identité) + AMO10/AMO20 (enrichissement par leg)
