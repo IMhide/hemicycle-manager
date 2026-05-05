@@ -114,39 +114,108 @@ async function ensureDir(path: string) {
 }
 
 /**
- * Télécharge un ZIP via `curl` avec progression et reprise automatique.
+ * Télécharge un ZIP via `curl` avec cache HTTP conditionnel.
  *
- * Stratégie de robustesse face au CDN Etalab très lent (cf commentaire SOURCE_ACTEURS) :
- * - Détection du Content-Length serveur ; si le fichier local existe et a la même
- *   taille → cache hit complet, on saute.
- * - Sinon, on appelle `curl -C -` qui reprend depuis l'offset existant.
- * - `--max-time` = 30 min par tentative (le 17ᵉ scrutins peut prendre ~12 min en fresh,
- *   on garde de la marge pour les CDN extra-lents).
- * - `--retry 5 --retry-delay 5` : 5 tentatives, 5s d'attente.
- * - Boucle externe : si curl plante quand même (ex: code 92 stream error), on relance
- *   jusqu'à 3 fois — la reprise repartira d'où on s'est arrêté.
+ * Stratégie (cf ADR 0021), face au CDN Etalab parfois lent sur Scrutins 17ᵉ :
+ *
+ * 1. **HEAD conditionnel** — on récupère `Last-Modified`, `ETag` et `Content-Length`
+ *    distants et on les compare à `<target>.meta.json` du dernier run.
+ *    Si tous matchent → cache hit complet, 0 byte téléchargé.
+ *    Pour les sources figées (15ᵉ, 16ᵉ archives) : skip systématique en ~50 ms.
+ * 2. **Fresh download** sinon. Pas de `curl -C -` (resume) parce que le CDN AN
+ *    re-publie parfois le même ZIP avec des bytes différents et la même taille,
+ *    ce qui produit des archives corrompues quand on raccroche un range request
+ *    sur une queue locale incohérente. Mieux vaut re-télécharger franco.
+ *
+ * Options `curl` :
+ * - `--max-time 1800` : 30 min/tentative (le 17ᵉ scrutins peut prendre ~12 min).
+ * - `--retry 5 --retry-delay 5` : 5 tentatives intra-curl.
+ * - Boucle externe MAX_OUTER_RETRIES=3 : couvre les codes 92 (stream error) etc.
+ *
+ * `FORCE_CACHE=1` court-circuite la vérification HEAD (utile en dev).
  */
+interface CacheMeta {
+	url: string;
+	contentLength: number | null;
+	lastModified: string | null;
+	etag: string | null;
+	fetchedAt: string;
+}
+
+async function readCacheMeta(metaPath: string): Promise<CacheMeta | null> {
+	if (!existsSync(metaPath)) return null;
+	try {
+		return JSON.parse(await readFile(metaPath, 'utf8')) as CacheMeta;
+	} catch {
+		return null;
+	}
+}
+
+async function writeCacheMeta(metaPath: string, meta: CacheMeta) {
+	await writeFile(metaPath, JSON.stringify(meta, null, 2));
+}
+
+interface RemoteHead {
+	contentLength: number | null;
+	lastModified: string | null;
+	etag: string | null;
+}
+
+async function remoteHead(url: string): Promise<RemoteHead | null> {
+	try {
+		const res = await fetch(url, { method: 'HEAD' });
+		if (!res.ok) return null;
+		const cl = res.headers.get('content-length');
+		return {
+			contentLength: cl ? parseInt(cl, 10) : null,
+			lastModified: res.headers.get('last-modified'),
+			etag: res.headers.get('etag')
+		};
+	} catch {
+		return null;
+	}
+}
+
 async function downloadZip(url: string, target: string): Promise<void> {
-	// FORCE_CACHE=1 court-circuite la vérification de Content-Length serveur
-	// (utile en dev quand on touche à la pipeline et qu'on veut épargner les
-	// 12 min de re-download des scrutins 17ᵉ).
+	const metaPath = `${target}.meta.json`;
+	const fs = await import('node:fs');
+
+	// 0. FORCE_CACHE=1 — court-circuit total (mode dev).
 	if (process.env.FORCE_CACHE === '1' && existsSync(target)) {
-		const localSize = (await import('node:fs')).statSync(target).size;
+		const localSize = fs.statSync(target).size;
 		console.log(`  ↻ cache hit (forcé): ${target} (${(localSize / 1024 / 1024).toFixed(1)} MB)`);
 		return;
 	}
-	const expected = await remoteContentLength(url);
+
+	// 1. Cache HTTP conditionnel : HEAD + comparaison avec .meta.json
+	const remote = await remoteHead(url);
+	const cached = await readCacheMeta(metaPath);
+
+	if (
+		remote &&
+		cached &&
+		existsSync(target) &&
+		fs.statSync(target).size === remote.contentLength &&
+		// On considère un hit si Last-Modified ET ETag matchent (ou s'ils sont
+		// tous les deux null, on retombe sur la simple égalité de taille — le
+		// CDN AN expose toujours Last-Modified pour les ZIP statiques).
+		((remote.lastModified !== null && remote.lastModified === cached.lastModified) ||
+			(remote.etag !== null && remote.etag === cached.etag) ||
+			(remote.lastModified === null && remote.etag === null && cached.contentLength === remote.contentLength))
+	) {
+		const sizeMb = (remote.contentLength! / 1024 / 1024).toFixed(1);
+		const lm = remote.lastModified ? ` (Last-Modified: ${remote.lastModified})` : '';
+		console.log(`  ↻ cache hit: ${target} ${sizeMb} MB${lm}`);
+		return;
+	}
+
+	// 2. Cache miss : on purge le fichier local s'il existe (pas de resume — voir
+	// le block-comment de la fonction) et on télécharge à zéro.
 	if (existsSync(target)) {
-		const localSize = (await import('node:fs')).statSync(target).size;
-		if (expected !== null && localSize === expected) {
-			console.log(`  ↻ cache hit: ${target} (${(localSize / 1024 / 1024).toFixed(1)} MB)`);
-			return;
-		}
-		if (expected !== null) {
-			console.log(
-				`  ⏯ reprise: ${(localSize / 1024 / 1024).toFixed(1)} / ${(expected / 1024 / 1024).toFixed(1)} MB`
-			);
-		}
+		fs.unlinkSync(target);
+	}
+	if (existsSync(metaPath)) {
+		fs.unlinkSync(metaPath);
 	}
 	console.log(`  ⬇ ${url}`);
 
@@ -159,8 +228,6 @@ async function downloadZip(url: string, target: string): Promise<void> {
 					'curl',
 					[
 						'-L',
-						'-C',
-						'-',
 						'--retry',
 						'5',
 						'--retry-delay',
@@ -180,29 +247,31 @@ async function downloadZip(url: string, target: string): Promise<void> {
 					else reject(new Error(`curl exited ${code}`));
 				});
 			});
-			break; // success
+			break;
 		} catch (err) {
 			if (attempt === MAX_OUTER_RETRIES) {
 				throw new Error(`curl failed ${attempt}× for ${url}: ${(err as Error).message}`);
 			}
-			console.log(`  ⚠ tentative ${attempt}/${MAX_OUTER_RETRIES} échouée, reprise…`);
+			console.log(`  ⚠ tentative ${attempt}/${MAX_OUTER_RETRIES} échouée…`);
+			if (existsSync(target)) fs.unlinkSync(target);
 			await new Promise((r) => setTimeout(r, 5000));
 		}
 	}
 
-	const stats = await import('node:fs').then((m) => m.statSync(target));
+	const stats = fs.statSync(target);
 	console.log(`  ✓ ${(stats.size / 1024 / 1024).toFixed(1)} MB → ${target}`);
-}
 
-/** Récupère le Content-Length d'un fichier distant via HEAD. Retourne null si indispo. */
-async function remoteContentLength(url: string): Promise<number | null> {
-	try {
-		const res = await fetch(url, { method: 'HEAD' });
-		if (!res.ok) return null;
-		const cl = res.headers.get('content-length');
-		return cl ? parseInt(cl, 10) : null;
-	} catch {
-		return null;
+	// Persister les métadonnées pour le prochain run. On relit côté serveur après
+	// download au cas où le fichier ait bougé pendant le téléchargement.
+	const finalRemote = remote ?? (await remoteHead(url));
+	if (finalRemote) {
+		await writeCacheMeta(metaPath, {
+			url,
+			contentLength: finalRemote.contentLength,
+			lastModified: finalRemote.lastModified,
+			etag: finalRemote.etag,
+			fetchedAt: new Date().toISOString()
+		});
 	}
 }
 
@@ -222,6 +291,52 @@ async function unzip(zipPath: string, destDir: string) {
 			);
 		}
 	}
+}
+
+/**
+ * Extrait `zipPath` dans `destDir` si nécessaire. Le marqueur `<destDir>.zip-meta`
+ * stocke le `mtime`+taille du ZIP source à la dernière extraction : si l'un ou
+ * l'autre a changé, on purge et on ré-extrait.
+ *
+ * `sentinelRelPath` : chemin relatif d'un fichier/dossier qui doit exister
+ * après extraction réussie (pour détecter une extraction interrompue).
+ * `minEntries` : si > 0, vérifie aussi qu'il y a au moins N entrées dans la
+ * sentinelle (utile pour les ZIP de scrutins qui ont des milliers de fichiers).
+ */
+async function extractIfNeeded(
+	zipPath: string,
+	destDir: string,
+	sentinelRelPath: string,
+	minEntries = 0,
+	label = ''
+): Promise<void> {
+	const fs = await import('node:fs');
+	const markerPath = `${destDir}.zip-meta`;
+	const zipStat = fs.statSync(zipPath);
+	const fingerprint = `${zipStat.size}|${zipStat.mtimeMs}`;
+	const sentinelFull = join(destDir, sentinelRelPath);
+
+	const sentinelOk =
+		existsSync(sentinelFull) &&
+		(minEntries === 0 || fs.readdirSync(sentinelFull).length >= minEntries);
+
+	let markerOk = false;
+	if (existsSync(markerPath)) {
+		try {
+			markerOk = (await readFile(markerPath, 'utf8')).trim() === fingerprint;
+		} catch {
+			markerOk = false;
+		}
+	}
+
+	if (sentinelOk && markerOk) {
+		console.log(`  ↻ déjà extrait : ${label || destDir}`);
+		return;
+	}
+
+	await rm(destDir, { recursive: true, force: true });
+	await unzip(zipPath, destDir);
+	await writeFile(markerPath, fingerprint);
 }
 
 function asArray<T>(v: T | T[] | null | undefined): T[] {
@@ -1019,41 +1134,25 @@ async function main() {
 		enrichZips.set(leg, zp);
 	}
 
-	// ── Stage 2 : extract
+	// ── Stage 2 : extract (réutilise les dossiers si le ZIP n'a pas bougé)
 	console.log('\n2/5  Extraction');
 	const acteursDir = join(CACHE_DIR, 'acteurs-extracted');
-	if (!existsSync(join(acteursDir, 'json', 'acteur'))) {
-		await unzip(acteursZip, acteursDir);
-	} else {
-		console.log('  ↻ déjà extrait : acteurs');
-	}
+	await extractIfNeeded(acteursZip, acteursDir, 'json/acteur', 50, 'acteurs');
+
 	const scrutinsDirs = new Map<number, string>();
 	for (const leg of LEGISLATURES) {
 		const sd = join(CACHE_DIR, `scrutins-${leg}-extracted`);
-		const sentinelDir = join(sd, 'json');
-		if (!existsSync(sentinelDir) || (await import('node:fs')).readdirSync(sentinelDir).length < 50) {
-			await rm(sd, { recursive: true, force: true });
-			await unzip(scrutinsZips.get(leg)!, sd);
-		} else {
-			console.log(`  ↻ déjà extrait : scrutins ${leg}`);
-		}
+		await extractIfNeeded(scrutinsZips.get(leg)!, sd, 'json', 50, `scrutins ${leg}`);
 		scrutinsDirs.set(leg, sd);
 	}
 
-	// Extract sources d'enrichissement
 	const enrichDirs = new Map<number, string>();
 	for (const [leg, zp] of enrichZips) {
 		const ed = join(CACHE_DIR, `enrich-${leg}-extracted`);
-		const sentinelDir = join(ed, 'json', 'acteur');
-		if (!existsSync(sentinelDir) || (await import('node:fs')).readdirSync(sentinelDir).length < 50) {
-			await rm(ed, { recursive: true, force: true });
-			try {
-				await unzip(zp, ed);
-			} catch (err) {
-				console.log(`    ⚠ extraction enrich-${leg} : ${(err as Error).message}`);
-			}
-		} else {
-			console.log(`  ↻ déjà extrait : enrich ${leg}`);
+		try {
+			await extractIfNeeded(zp, ed, 'json/acteur', 50, `enrich ${leg}`);
+		} catch (err) {
+			console.log(`    ⚠ extraction enrich-${leg} : ${(err as Error).message}`);
 		}
 		enrichDirs.set(leg, ed);
 	}

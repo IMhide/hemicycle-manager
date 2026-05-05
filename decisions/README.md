@@ -4,9 +4,9 @@
 
 Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque décision est un fichier dédié au format [ADR](https://adr.github.io). Pour ajouter une décision : créer `decisions/NNNN-slug.md` avec la trame de `TEMPLATE.md`, puis lancer `npm run decisions:index`.
 
-**20 décisions** consignées.
+**21 décisions** consignées.
 
-**Tags** : `data`(7) · `métriques`(4) · `déploiement`(3) · `sémantique`(3) · `pipeline-data`(2) · `ux`(2) · `sourcing`(2) · `gouvernance`(2) · `scope`(2) · `roadmap`(2) · `modèle`(2) · `identité`(2) · `badges`(2) · `pipeline`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `hémicycle`(1) · `layout`(1) · `licence`(1) · `runtime`(1) · `build`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `routes`(1) · `groupes`(1) · `phase-1`(1) · `sources`(1) · `etalab`(1) · `ches`(1) · `multi-legislature`(1)
+**Tags** : `data`(8) · `déploiement`(4) · `métriques`(4) · `sémantique`(3) · `pipeline-data`(2) · `ux`(2) · `sourcing`(2) · `gouvernance`(2) · `build`(2) · `scope`(2) · `roadmap`(2) · `modèle`(2) · `identité`(2) · `badges`(2) · `pipeline`(2) · `etalab`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `hémicycle`(1) · `layout`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `routes`(1) · `groupes`(1) · `phase-1`(1) · `sources`(1) · `ches`(1) · `multi-legislature`(1) · `performance`(1)
 
 ## Index chronologique
 
@@ -32,6 +32,7 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 | 0018 | [Identifiant stable cross-législature : `acteur.uid` (PA-id)](0018-identifiant-stable-cross-legislature.md) | ✅ accepté | `data` `identité` `pipeline` `phase-1` | 2026-05-05 |
 | 0019 | [Priorité de sources AMO Etalab : AMO10/AMO20 prioritaires sur AMO30](0019-priorite-sources-amo.md) | ✅ accepté | `data` `pipeline` `sources` `etalab` | 2026-05-05 |
 | 0020 | [Phase 2 : ajout de la 15ᵉ législature (ère Macron complète)](0020-phase2-15e-legislature.md) | ✅ accepté | `data` `scope` `roadmap` `ches` `multi-legislature` | 2026-05-05 |
+| 0021 | [Cache HTTP conditionnel + cache mount BuildKit pour les sources Etalab](0021-cache-conditionnel-sources.md) | ✅ accepté | `data` `déploiement` `build` `performance` `etalab` | 2026-05-05 |
 
 ## Résumés
 
@@ -154,3 +155,9 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 > Phase 2 ajoute la 15ᵉ au pipeline, aux types, à l'UI et aux mappings politiques sans nouveau refacto structurel :
 
 📄 [Lire la décision complète](0020-phase2-15e-legislature.md)
+
+### 0021 — Cache HTTP conditionnel + cache mount BuildKit pour les sources Etalab
+
+> Cache HTTP conditionnel côté script + cache mount BuildKit côté Dockerfile, deux mécanismes complémentaires :
+
+📄 [Lire la décision complète](0021-cache-conditionnel-sources.md)
