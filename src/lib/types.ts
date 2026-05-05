@@ -156,6 +156,12 @@ export interface Groupe {
 	dateFin: string | null; // null = encore actif (groupes 17e en cours)
 	/** Effectif final du groupe (à la fin de la législature, ou à ce jour si en cours). */
 	effectifFin: number;
+	/** Moyenne d'overall des membres rattachés à ce groupe comme groupe principal
+	 *  (cf ADR 0022 + ADR 0016). Calculé pipeline. 0 si aucun membre. */
+	overallMoyen: number;
+	/** Nb de personnes prises en compte dans `overallMoyen` (= membres ayant un mandat
+	 *  dans cette législature et pour qui ce groupe est le principal). */
+	overallEffectif: number;
 }
 
 // ────────────────────────────────────────────────────────────────────────────

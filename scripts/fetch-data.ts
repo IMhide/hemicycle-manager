@@ -403,7 +403,9 @@ async function parseGroupes(extractDir: string): Promise<Map<number, Groupe[]>> 
 			presidentId: null, // rempli plus tard à partir des mandats
 			dateDebut: o.viMoDe?.dateDebut ?? '',
 			dateFin: o.viMoDe?.dateFin ?? null,
-			effectifFin: 0 // calculé plus tard
+			effectifFin: 0, // calculé plus tard
+			overallMoyen: 0, // calculé après les overalls par mandat
+			overallEffectif: 0
 		});
 	}
 
@@ -1045,6 +1047,37 @@ function computeOverallsForLegislature(
 	}
 }
 
+/** Calcul de la moyenne d'overall par groupe politique pour une législature donnée.
+ *  Rattachement = groupe principal (premier appartenance stable hors NI-bridge, cf ADR 0016).
+ *  Cohérent avec la convention de la page /classements/.  */
+function finalizeGroupesOveralls(
+	groupesByLeg: Map<number, Groupe[]>,
+	personnes: Map<string, PartialPersonne>
+) {
+	for (const [leg, groupes] of groupesByLeg) {
+		const sumByGroup = new Map<string, { sum: number; count: number }>();
+		for (const g of groupes) sumByGroup.set(g.id, { sum: 0, count: 0 });
+
+		for (const p of personnes.values()) {
+			const m = p.mandatsByLeg.get(leg);
+			if (!m) continue;
+			// Groupe principal = première appartenance stable (hors NI-bridge transitoire)
+			const principal = m.appartenancesGroupe.find((a) => !a.isTransitoireNI);
+			if (!principal) continue;
+			const acc = sumByGroup.get(principal.groupeId);
+			if (!acc) continue;
+			acc.sum += m.stats.overall;
+			acc.count += 1;
+		}
+
+		for (const g of groupes) {
+			const acc = sumByGroup.get(g.id)!;
+			g.overallEffectif = acc.count;
+			g.overallMoyen = acc.count > 0 ? Math.round(acc.sum / acc.count) : 0;
+		}
+	}
+}
+
 /** Calcul des overalls carrière. volumeRef = centile 95 du nb de scrutins votés
  *  cumulés (toutes législatures confondues) sur l'ensemble des personnes. */
 function computeOverallsCarriere(personnes: Personne[]) {
@@ -1305,6 +1338,9 @@ async function main() {
 
 	// Finalisation des groupes (effectif + président) — utilise les appartenances déjà calculées
 	finalizeGroupes(groupesByLeg, personnes);
+
+	// Moyenne d'overall par groupe (championnat des groupes, cf ADR 0022)
+	finalizeGroupesOveralls(groupesByLeg, personnes);
 
 	// Index scrutins trié desc (plus récent en premier)
 	allScrutinsIndex.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.numero - a.numero));
