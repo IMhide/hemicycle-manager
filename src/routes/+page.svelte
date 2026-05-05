@@ -1,7 +1,9 @@
 <script lang="ts">
 	import Hemicycle from '$lib/components/Hemicycle.svelte';
 	import MiniDeputeCard from '$lib/components/MiniDeputeCard.svelte';
+	import HemicycleColorToggle from '$lib/components/HemicycleColorToggle.svelte';
 	import { POLITICAL_ORDER } from '$lib/political-order';
+	import { colorMode } from '$lib/color-mode.svelte';
 	import { goto } from '$app/navigation';
 	import type { Personne, Groupe, Mandat } from '$lib/types';
 
@@ -120,18 +122,21 @@
 				{data.legCourante}<sup>e</sup> législature · Survolez un siège pour voir la fiche, cliquez pour ouvrir.
 			</p>
 		</div>
-		<div class="flex items-center gap-1 text-xs">
-			<span class="text-assembly-muted">Législature :</span>
-			{#each legSorted as l (l.num)}
-				<button
-					class="px-3 py-1 rounded {l.num === data.legCourante
-						? 'bg-assembly-accent text-assembly-bg font-semibold'
-						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
-					onclick={() => basculerLeg(l.num)}
-				>
-					{l.num}<sup>e</sup>
-				</button>
-			{/each}
+		<div class="flex flex-col items-end gap-2 text-xs">
+			<div class="flex items-center gap-1">
+				<span class="text-assembly-muted">Législature :</span>
+				{#each legSorted as l (l.num)}
+					<button
+						class="px-3 py-1 rounded {l.num === data.legCourante
+							? 'bg-assembly-accent text-assembly-bg font-semibold'
+							: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+						onclick={() => basculerLeg(l.num)}
+					>
+						{l.num}<sup>e</sup>
+					</button>
+				{/each}
+			</div>
+			<HemicycleColorToggle />
 		</div>
 	</div>
 
@@ -139,7 +144,7 @@
 		<Hemicycle
 			personnes={personnesLeg}
 			legislature={data.legCourante}
-			mode={{ kind: 'groupe', groupes: data.groupes }}
+			mode={{ kind: colorMode.current, groupes: data.groupes }}
 			{hovered}
 			onhover={(id) => (hovered = id)}
 			onselect={(id) => selectPersonne(id)}
