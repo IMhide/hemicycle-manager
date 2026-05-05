@@ -81,8 +81,16 @@ Mergée en une seule PR cumulant Phase 1 (16ᵉ+17ᵉ) et Phase 2 (15ᵉ).
 
 - [ ] Cohésion par groupe (Rice index) à recalculer côté pipeline — actuellement les pages `/groupes/[leg]/[id]/` n'affichent plus la cohésion globale
 - [ ] Récupérer les ~98 placeHemicycle 15ᵉ/17ᵉ encore manquants (suppléants, ministres) — investiguer AMO40 ou AMO50 ?
-- [ ] Auto-refresh quotidien des données 17ᵉ via cron Coolify
+- [ ] Auto-refresh quotidien des données 17ᵉ via cron Coolify (relancer le build à heure fixe pour avoir les nouveaux scrutins même sans push)
 - [ ] Page d'erreur 404 custom pour `/legislatures/{num}` invalides
+
+## ✅ Cache build + auto-deploy (mergé 2026-05-05, PR #4)
+
+- [x] Cache HTTP conditionnel (Last-Modified/ETag) dans `downloadZip` — ADR 0021
+- [x] Cache mount BuildKit (`--mount=type=cache`) dans le Dockerfile pour persister `/tmp/politidex-cache` entre builds
+- [x] Extraction des ZIP idempotente via marqueur `size+mtime` du ZIP source
+- [x] **Auto-deploy GitHub → Coolify** activé via webhook (cf ADR 0002) — tout push sur `main` déclenche un build automatique. Plus besoin de redéploiement manuel pour les changements committés
+- [x] Builds chauds : ~15 min → ~30 s quand rien ne bouge côté data (validé localement, validation prod = deploy id 78 du merge PR #4)
 
 ## 🌐 Phase 3 — Au-delà de l'AN (Sénat, ministres, président)
 
@@ -135,8 +143,8 @@ Mergée en une seule PR cumulant Phase 1 (16ᵉ+17ᵉ) et Phase 2 (15ᵉ).
 - [ ] **Page d'erreur 404 custom** (actuellement le 404 par défaut SvelteKit)
 - [ ] **SEO / Open Graph** : meta tags par page, og:image dynamique
 - [ ] **Mobile responsive deep check** : vérifier toutes les pages sur 375px et corriger
-- [ ] **Auto-deploy GitHub → Coolify** : configurer une GitHub App ou un webhook manuel (cf ADR 0002)
-- [ ] **Cron de rebuild quotidien** sur Coolify (pour les données fraîches sans intervention)
+- [x] ~~**Auto-deploy GitHub → Coolify**~~ ✅ activé 2026-05-05 via webhook (PR #4)
+- [ ] **Cron de rebuild quotidien** sur Coolify (pour les données fraîches sans intervention) — moins urgent maintenant que les builds chauds sont à ~30s
 - [ ] **Lazy-load** le composant Hemicycle et la photo dans MiniDeputeCard pour le boot
 - [ ] **Préfetch** des données fréquentes (groupes, deputes-lite) dans `+layout.ts`
 

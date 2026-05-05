@@ -2,6 +2,8 @@
 
 > Ce fichier est **lu automatiquement** par Claude Code à chaque session ouverte dans ce projet. Il sert de mémoire continue entre les conversations. **Toute décision structurante doit y être référencée**, jamais oubliée.
 
+> 🚨 **Repo OPEN SOURCE.** Ne jamais committer de détails d'infra privée : UUID Coolify, secrets/tokens, URL d'admin (`control.*`, `coolify.*`), hostnames internes, chemins absolus `/Users/...`. Utiliser des placeholders (`<APP_UUID>`, `~/Agents/...`). Les détails d'infra vivent dans la mémoire auto Claude (locale, gitignored) et chez le sous-agent `coolify_control`.
+
 ## TL;DR du projet
 
 **PolitiDex** : un Pokédex ludique des **élus nationaux français**, avec UX de type **Football Manager**.
@@ -26,7 +28,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 
 **Toutes les décisions structurantes** (sémantique des métriques, choix techniques, sources, contraintes infra) sont consignées dans **[`decisions/`](decisions/README.md)** au format ADR (Architecture Decision Records).
 
-**À chaque ouverture de session sur ce repo**, lis l'index : [`decisions/README.md`](decisions/README.md). Il liste les 20 décisions actives avec leur statut et leurs tags. Tu peux ouvrir n'importe quelle ADR pour les détails.
+**À chaque ouverture de session sur ce repo**, lis l'index : [`decisions/README.md`](decisions/README.md). Il liste les 21 décisions actives avec leur statut et leurs tags. Tu peux ouvrir n'importe quelle ADR pour les détails.
 
 **Avant de proposer un changement** qui touche à :
 
@@ -41,6 +43,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 - la **stack** (Node, Svelte, Tailwind…) → vérifie ADR 0001 et 0010
 - le **déploiement** (Dockerfile, healthcheck, Coolify) → vérifie ADR 0002 et 0011
 - les **données** (fetch, format, gitignore) → vérifie ADR 0003 et 0012
+- le **cache du pipeline data** (HEAD conditionnel, BuildKit cache mount, no-resume) → vérifie ADR 0021
 - l'**ordonnancement gauche-droite** des groupes → vérifie ADR 0007 (sourcé CHES 2024)
 - la **licence** ou la **gouvernance** → vérifie ADR 0009 et 0013
 
@@ -70,15 +73,11 @@ npm run decisions:index  # regen decisions/README.md
 
 ## 🚀 Mise à jour des données / redéploiement
 
-Voir [README.md section "Mise à jour des données"](README.md). En résumé :
+**Auto-deploy activé** depuis 2026-05-05 (PR #4) : tout push sur `main` déclenche un build automatique chez l'hébergeur via webhook. Pas besoin d'invoquer la plateforme à la main pour les changements committés.
 
-```bash
-# Redéploiement manuel (re-fetch automatique des data au build)
-cd /Users/hide/Agents/coolify_control
-./scripts/coolify deploy <APP_UUID>
-```
+Pour un redéploiement manuel (par ex. sans changement de code), passer par le sous-agent dans `~/Agents/coolify_control/`.
 
-L'auto-deploy GitHub n'est pas activable via API publique Coolify — voir ADR 0002 pour les options.
+**Pipeline data accéléré** (cf ADR 0021) : `npm run data:fetch` est en ~30s quand le cache `tmpdir/politidex-cache/` est chaud (cache HTTP conditionnel via Last-Modified/ETag). Premier run cold = ~12-15 min selon le throttling CDN AN sur Scrutins 17ᵉ.
 
 ## 🧭 Architecture rapide
 
