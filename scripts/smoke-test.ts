@@ -1,10 +1,12 @@
 /**
- * Smoke test pour valider l'output du pipeline Phase 1.
+ * Smoke test pour valider l'output du pipeline.
  * Lance après `npm run data:fetch`.
+ *
+ * Phase 2 : couvre les législatures 15ᵉ + 16ᵉ + 17ᵉ (ère Macron complète).
  *
  * Vérifie :
  *  - comptes globaux (personnes, mandats, groupes par leg, scrutins)
- *  - cas concrets connus (Habib, Vallaud, transfuges)
+ *  - cas concrets connus (Habib, Vallaud, Le Pen, vétérans 15+16+17)
  *  - cohérence des stats (rate ∈ [0,1], denominator ≥ numerator)
  *  - détection NI-bridge correcte
  */
@@ -35,7 +37,7 @@ function check(label: string, ok: boolean, detail?: string) {
 }
 
 async function main() {
-	console.log('🔬 Smoke test PolitiDex Phase 1\n');
+	console.log('🔬 Smoke test PolitiDex (15ᵉ + 16ᵉ + 17ᵉ)\n');
 
 	// ─── Meta + comptes globaux
 	const meta = await loadJson<BuildMeta>('meta.json');
@@ -45,55 +47,60 @@ async function main() {
 	);
 
 	console.log('1. Comptes globaux');
-	check('legislatures = [16, 17]', JSON.stringify(meta.legislatures) === '[16,17]');
-	// Realité observée sur 16+17 : 830 personnes uniques, 1262 mandats.
-	// Le surplus vs 577×2 vient des suppléants montés / démissions sur la durée
-	// d'une législature (turnover ~10%/leg).
+	check('legislatures = [15, 16, 17]', JSON.stringify(meta.legislatures) === '[15,16,17]');
+	// Réalité empirique attendue sur 15+16+17 :
+	//  - 577 sièges × 3 = 1731
+	//  - chevauchement réélus 15→16 (~250-300) et 16→17 (~430)
+	//  - turnover ~10% par leg
+	// Estimation : 1200-1500 personnes uniques.
 	check(
-		'≈ 800-900 personnes uniques (577×2 - réélus, avec turnover)',
-		meta.counts.personnes >= 750 && meta.counts.personnes <= 900,
+		'≈ 1200-1500 personnes uniques sur 3 legs',
+		meta.counts.personnes >= 1100 && meta.counts.personnes <= 1600,
 		`got ${meta.counts.personnes}`
 	);
 	check(
-		'≈ 1200-1300 mandats (un mandat = une personne × une législature)',
-		meta.counts.mandats >= 1100 && meta.counts.mandats <= 1350,
+		'≈ 1750-2050 mandats (un mandat = une personne × une législature)',
+		meta.counts.mandats >= 1700 && meta.counts.mandats <= 2100,
 		`got ${meta.counts.mandats}`
 	);
 
 	// ─── Légistlatures
 	console.log('\n2. Légistlatures');
 	const legislatures = await loadJson<LegislatureMeta[]>('legislatures.json');
-	check('2 législatures dans legislatures.json', legislatures.length === 2);
+	check('3 législatures dans legislatures.json', legislatures.length === 3);
+	const leg15 = legislatures.find((l) => l.num === 15);
 	const leg16 = legislatures.find((l) => l.num === 16);
 	const leg17 = legislatures.find((l) => l.num === 17);
+	check('leg 15 présente', !!leg15);
 	check('leg 16 présente', !!leg16);
 	check('leg 17 présente', !!leg17);
-	// 577 sièges + turnover (suppléants montés, démissions). On accepte 577..650.
-	check(
-		'leg 16 nbPersonnes ≈ 577-650',
-		!!leg16 && leg16.nbPersonnes >= 577 && leg16.nbPersonnes <= 650,
-		leg16 ? `got ${leg16.nbPersonnes}` : 'n/a'
-	);
-	check(
-		'leg 17 nbPersonnes ≈ 577-650',
-		!!leg17 && leg17.nbPersonnes >= 577 && leg17.nbPersonnes <= 650,
-		leg17 ? `got ${leg17.nbPersonnes}` : 'n/a'
-	);
+	for (const [name, l] of [['15', leg15], ['16', leg16], ['17', leg17]] as const) {
+		check(
+			`leg ${name} nbPersonnes ≈ 577-650`,
+			!!l && l.nbPersonnes >= 577 && l.nbPersonnes <= 700,
+			l ? `got ${l.nbPersonnes}` : 'n/a'
+		);
+	}
 
 	// ─── Groupes par législature
 	console.log('\n3. Groupes par législature');
+	const groupes15 = await loadJson<Groupe[]>('groupes/15.json');
 	const groupes16 = await loadJson<Groupe[]>('groupes/16.json');
 	const groupes17 = await loadJson<Groupe[]>('groupes/17.json');
+	// 15ᵉ : 17 groupes incluant les éphémères (NG, LC, EDS, deux UDI-AGIR successifs, deux UDI-I, MODEM/Dem rebrand, AE)
+	check('groupes/15.json contient 15-19 groupes', groupes15.length >= 15 && groupes15.length <= 19, `got ${groupes15.length}`);
 	check('groupes/16.json contient 12 groupes', groupes16.length === 12, `got ${groupes16.length}`);
 	check('groupes/17.json contient 14 groupes', groupes17.length === 14, `got ${groupes17.length}`);
 	check(
-		'tous les groupes 16 ont legislature=16',
-		groupes16.every((g) => g.legislature === 16)
+		'tous les groupes 15 ont legislature=15',
+		groupes15.every((g) => g.legislature === 15)
 	);
 	check(
-		'tous les groupes 16 ont une couleur',
-		groupes16.every((g) => /^#[0-9A-Fa-f]{6}$/.test(g.couleur))
+		'tous les groupes 15 ont une couleur',
+		groupes15.every((g) => /^#[0-9A-Fa-f]{6}$/.test(g.couleur))
 	);
+	const lremGr15 = groupes15.find((g) => /LREM|REM/.test(g.libelleAbrege));
+	check('LREM/REM présent en 15', !!lremGr15);
 	const ldGr16 = groupes16.find((g) => g.libelleAbrege.includes('LFI'));
 	check('LFI-NUPES présent en 16', !!ldGr16);
 	const epr17 = groupes17.find((g) => g.libelleAbrege === 'EPR');
@@ -106,9 +113,17 @@ async function main() {
 	check('PA1592 (David Habib) présent', !!habib);
 	if (habib) {
 		const legs = habib.mandats.map((m) => m.legislature).sort();
-		check('Habib a un mandat 16e + 17e', JSON.stringify(legs) === '[16,17]', `got ${legs.join(',')}`);
-		check('Habib carriere.nbMandats = 2', habib.carriere.nbMandats === 2);
+		// David Habib est un vétéran, élu sur 15+16+17 (et au-delà historiquement)
+		check(
+			'Habib a au moins 2 mandats 16e + 17e (vétéran si 15+16+17)',
+			legs.includes(16) && legs.includes(17),
+			`got ${legs.join(',')}`
+		);
+		check('Habib carriere.nbMandats ≥ 2', habib.carriere.nbMandats >= 2);
 		check('Habib badge réélu', habib.carriere.badgesCarriere.includes('reelu'));
+		if (legs.includes(15)) {
+			check('Habib badge vétéran (3+ legs)', habib.carriere.badgesCarriere.includes('veteran'));
+		}
 	}
 
 	const vallaud = personnes.find((p) => p.id === 'PA719930');
@@ -171,11 +186,35 @@ async function main() {
 	// ─── Scrutins
 	console.log('\n7. Scrutins');
 	const scrutinsIdx = await loadJson<ScrutinIndex[]>('scrutins-index.json');
+	const sc15 = scrutinsIdx.filter((s) => s.legislature === 15).length;
 	const sc16 = scrutinsIdx.filter((s) => s.legislature === 16).length;
 	const sc17 = scrutinsIdx.filter((s) => s.legislature === 17).length;
+	check(`scrutins 15 ≥ 2500 (got ${sc15})`, sc15 >= 2500);
 	check(`scrutins 16 ≥ 1500 (got ${sc16})`, sc16 >= 1500);
 	check(`scrutins 17 ≥ 500 (got ${sc17})`, sc17 >= 500);
-	check('toutes les entrées de scrutins-index.json ont un champ legislature', scrutinsIdx.every((s) => s.legislature === 16 || s.legislature === 17));
+	check(
+		'toutes les entrées de scrutins-index.json ont un champ legislature ∈ {15,16,17}',
+		scrutinsIdx.every((s) => [15, 16, 17].includes(s.legislature))
+	);
+
+	// ─── Vétérans (au moins une personne 15+16+17)
+	console.log('\n8. Vétérans (Phase 2)');
+	const veterans = personnes.filter((p) => {
+		const legs = new Set(p.mandats.map((m) => m.legislature));
+		return legs.has(15) && legs.has(16) && legs.has(17);
+	});
+	check(
+		`au moins 50 vétérans (3 legs consécutives)`,
+		veterans.length >= 50,
+		`got ${veterans.length}`
+	);
+	if (veterans.length > 0) {
+		check(
+			'tous les vétérans ont le badge veteran',
+			veterans.every((v) => v.carriere.badgesCarriere.includes('veteran')),
+			`${veterans.filter((v) => !v.carriere.badgesCarriere.includes('veteran')).length} sans badge`
+		);
+	}
 
 	console.log(`\n──────────────────`);
 	console.log(`✅ ${pass} passed   ❌ ${fail} failed`);

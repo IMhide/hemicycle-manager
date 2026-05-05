@@ -51,8 +51,10 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'static', 'data');
 const CACHE_DIR = join(tmpdir(), 'politidex-cache');
 
-/** Législatures couvertes. Phase 1 = [16, 17]. Étendre pour Phase 2/3. */
-const LEGISLATURES: number[] = [16, 17];
+/** Législatures couvertes.
+ *  Phase 1 = [16, 17] (Borne→Macron II)
+ *  Phase 2 = [15, 16, 17] (toute l'ère Macron, depuis juin 2017) — cf NEXT_STEPS.md */
+const LEGISLATURES: number[] = [15, 16, 17];
 
 /** Source historique d'identité (PA-id stable, cross-leg) — cf ADR 0018. */
 const SOURCE_ACTEURS =
@@ -75,6 +77,10 @@ const SOURCES_ENRICHISSEMENT = new Map<number, string>([
 	[
 		16,
 		'https://data.assemblee-nationale.fr/static/openData/repository/16/amo/deputes_senateurs_ministres_legislature/AMO20_dep_sen_min_tous_mandats_et_organes.json.zip'
+	],
+	[
+		15,
+		'https://data.assemblee-nationale.fr/static/openData/repository/15/amo/deputes_senateurs_ministres_legislature/AMO20_dep_sen_min_tous_mandats_et_organes_XV.json.zip'
 	]
 ]);
 
@@ -85,8 +91,12 @@ const SOURCES_ENRICHISSEMENT = new Map<number, string>([
 //     entre deux runs si tu n'as pas explicitement besoin de re-fetch.
 //     Côté Coolify : prévoir un build timeout ≥ 15 min.
 
-const sourceScrutins = (leg: number) =>
-	`https://data.assemblee-nationale.fr/static/openData/repository/${leg}/loi/scrutins/Scrutins.json.zip`;
+const sourceScrutins = (leg: number) => {
+	// La 15ᵉ législature a un nom de fichier différent : `Scrutins_XV.json.zip`
+	// (suffixe romain), alors que 16ᵉ et 17ᵉ utilisent simplement `Scrutins.json.zip`.
+	const filename = leg === 15 ? 'Scrutins_XV.json.zip' : 'Scrutins.json.zip';
+	return `https://data.assemblee-nationale.fr/static/openData/repository/${leg}/loi/scrutins/${filename}`;
+};
 
 /** Seuil pour identifier le NI-bridge transitoire (en jours).
  *  En 16ᵉ le délai d'inscription au groupe a été ~6 jours (22→28 juin 2022).
