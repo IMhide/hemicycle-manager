@@ -9,9 +9,11 @@
 L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernement) sur les députés, sénateurs, ministres et présidents pour offrir une expérience de "fiches collectionnables" : carte FIFA par personne, hémicycle interactif, classements, badges, comparateurs.
 
 **Roadmap en 3 phases** (cf ADR 0014) :
-1. **Phase 1** — 16ᵉ + 17ᵉ législatures AN avec modèle "personne unique cross-législature"
-2. **Phase 2** — 15ᵉ législature AN (couvre toute l'ère Macron à l'AN)
-3. **Phase 3** — Sénat + ministres + président
+1. ✅ **Phase 1** (mergée 2026-05-05) — 16ᵉ + 17ᵉ législatures AN avec modèle "personne unique cross-législature"
+2. ✅ **Phase 2** (mergée 2026-05-05) — 15ᵉ législature AN ajoutée (toute l'ère Macron à l'AN couverte)
+3. ⏳ **Phase 3** (à venir) — Sénat + ministres + président
+
+**État actuel** : 1196 personnes uniques, 1925 mandats, 14 838 scrutins, 50+ vétérans 15+16+17. Smoke-test 40/40 ✅.
 
 > ⚠️ **Le repo s'appelle encore `hemicycle-manager`** (rebrand pas encore fait, cf ADR 0014). Le **nom de produit** est désormais **PolitiDex**.
 
@@ -24,14 +26,17 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 
 **Toutes les décisions structurantes** (sémantique des métriques, choix techniques, sources, contraintes infra) sont consignées dans **[`decisions/`](decisions/README.md)** au format ADR (Architecture Decision Records).
 
-**À chaque ouverture de session sur ce repo**, lis l'index : [`decisions/README.md`](decisions/README.md). Il liste les 17 décisions actives avec leur statut et leurs tags. Tu peux ouvrir n'importe quelle ADR pour les détails.
+**À chaque ouverture de session sur ce repo**, lis l'index : [`decisions/README.md`](decisions/README.md). Il liste les 20 décisions actives avec leur statut et leurs tags. Tu peux ouvrir n'importe quelle ADR pour les détails.
 
 **Avant de proposer un changement** qui touche à :
 
 - le **scope** ou le **branding** (PolitiDex vs Hémicycle Manager, élus nationaux, roadmap) → vérifie ADR 0014
 - le **modèle "personne unique cross-législature"** (fusion d'identité, mandats, routes `/deputes/[id]/`) → vérifie ADR 0015
 - les **groupes politiques** (multi-appartenances, badges Recomposition / Transfuge, groupe au moment du vote) → vérifie ADR 0016
-- les **stats par mandat ou en cumul carrière** (formules de cumul, rangs, tabs `[Carrière] [16e] [17e]`, distinction badges carrière vs mandat) → vérifie ADR 0017
+- les **stats par mandat ou en cumul carrière** (formules de cumul, rangs, tabs `[Carrière] [15e] [16e] [17e]`, distinction badges carrière vs mandat) → vérifie ADR 0017
+- l'**identité PA-id stable cross-leg** (fusion AMO30) → vérifie ADR 0018
+- les **sources de données AMO Etalab** (priorité AMO10/AMO20 > AMO30 pour `placeHemicycle` notamment) → vérifie ADR 0019
+- l'ajout de la **15ᵉ législature** ou du **mapping CHES** (groupes, libellés Etalab exacts, suffixe `_XV`) → vérifie ADR 0020
 - la **sémantique d'une métrique** (présence, participation, loyauté, frondes, cohésion) → vérifie les ADR `métriques` et `sémantique` (0004, 0005, 0006, 0017)
 - la **stack** (Node, Svelte, Tailwind…) → vérifie ADR 0001 et 0010
 - le **déploiement** (Dockerfile, healthcheck, Coolify) → vérifie ADR 0002 et 0011
@@ -77,36 +82,44 @@ L'auto-deploy GitHub n'est pas activable via API publique Coolify — voir ADR 0
 
 ## 🧭 Architecture rapide
 
-> ⚠️ Architecture en transition Phase 1 (cf ADR 0015-0017). Le code 17e-only sera refactoré en modèle "Personne + mandats[]". L'arbo ci-dessous décrit l'état **actuel** ; les nouveaux fichiers Phase 1 seront ajoutés/modifiés au fil de l'implémentation.
+Architecture multi-législature (15ᵉ + 16ᵉ + 17ᵉ) en place depuis le merge Phase 1+2 (2026-05-05). Modèle `Personne + Mandat[]` consommé partout (cf ADR 0015).
 
 ```
 src/
   lib/
-    components/        # Hemicycle, DeputeCard, MiniDeputeCard, GlobalSearch, Rank, InfoTip, …
-    data.ts            # data access layer (loadDeputes, loadScrutinDetail, …) — refacto Phase 1
-    hemicycle.ts       # géométrie SVG (charge seats.json — voir ADR 0008)
-    political-order.ts # ordre gauche-droite + scores CHES (voir ADR 0007)
-    badges.ts          # logique des badges (refacto Phase 1 : badges carrière vs mandat, cf ADR 0017)
-    search-index.ts    # recherche globale lazy-loaded (refacto Phase 1 : indexer la personne, cf ADR 0015)
-    types.ts           # types partagés front/pipeline (DOIT rester en phase avec scripts/fetch-data.ts)
+    components/                # Hemicycle, DeputeCard, MiniDeputeCard, MandatTabs, Badge,
+                               # HemicycleColorToggle, GlobalSearch, Rank, InfoTip, …
+    data.ts                    # loaders : loadPersonnes, loadHistorique(paId), loadGroupes(leg), loadLegislatures
+    hemicycle.ts               # géométrie SVG (seats.json — voir ADR 0008)
+    political-order.ts         # ordre gauche-droite + scores CHES 2024 (cf ADR 0007 + ADR 0020)
+                               # 17 groupes 15ᵉ + 12 groupes 16ᵉ + 14 groupes 17ᵉ mappés
+    badges.ts                  # mapping pur badge id → display (label/emoji/tier/desc)
+                               # calcul délégué au pipeline (cf ADR 0017)
+    color-mode.svelte.ts       # store du mode de coloration hémicycle (gradient / groupe), localStorage
+    search-index.ts            # recherche globale lazy-loaded (indexe Personne, cf ADR 0015)
+    types.ts                   # types Personne, Mandat, AppartenanceGroupe, MandatStats…
+                               # DOIT rester en phase avec scripts/fetch-data.ts
   routes/
-    +page.svelte           # accueil — hémicycle législature courante + scrutins 7j + groupes compacts
-    deputes/               # /deputes/ liste filtrable + /deputes/[id]/ fiche personne (cf ADR 0015)
-    groupes/               # /groupes/[legislature]/[id]/ scopé par législature (cf ADR 0016)
-    scrutins/              # /scrutins/ liste paginée + /scrutins/[uid]/ avec frondeurs
-    classements/           # /classements/ 5 leaderboards globaux ou par groupe, par législature
-    legislatures/          # (Phase 1) /legislatures/[num]/ home par législature
+    +page.svelte               # home racine — hémicycle leg courante + scrutins récents + groupes compacts
+    +page.ts                   # charge la leg courante (= max num)
+    deputes/                   # /deputes/ liste filtrable cross-leg + /deputes/[id]/?leg=N (SPA, MandatTabs)
+    groupes/[legislature]/[id]/ # fiche groupe scopée par leg (SPA, mode highlight-groupe)
+    scrutins/                  # /scrutins/ liste paginée + /scrutins/[uid]/ (SPA, groupe au moment du vote)
+    classements/               # /classements/ 4 leaderboards par leg (cf ADR 0017 : pas de cohorte cross-leg)
+    legislatures/[num]/        # (SPA) home par législature (équivalent / mais paramétrée)
 scripts/
-  fetch-data.ts            # pipeline Open Data → JSON + stats + rangs + historiques (refacto Phase 1 : multi-législature)
-  extract-seats.ts         # extrait seats.json depuis Serrulien/hemicycle-france
-  decisions-index.ts       # regen decisions/README.md
+  fetch-data.ts                # pipeline AMO30 (identité) + AMO10/AMO20 (enrichissement par leg)
+                               # cf ADR 0018, 0019. LEGISLATURES = [15, 16, 17]
+  smoke-test.ts                # validation 40/40 (cas concrets, comptes, vétérans, NI-bridge)
+  extract-seats.ts             # extrait seats.json depuis Serrulien/hemicycle-france
+  decisions-index.ts           # regen decisions/README.md
 decisions/
-  README.md                # index auto-généré (NE PAS éditer à la main)
-  TEMPLATE.md              # trame pour nouvelles décisions
-  NNNN-slug.md             # 17 ADR actuelles
+  README.md                    # index auto-généré (NE PAS éditer à la main)
+  TEMPLATE.md                  # trame pour nouvelles décisions
+  NNNN-slug.md                 # 20 ADR actuelles
 deploy/
-  nginx.conf               # config Nginx du container
-Dockerfile                 # multi-stage node:22-alpine + nginx:1.27-alpine
+  nginx.conf                   # config Nginx du container
+Dockerfile                     # multi-stage node:22-alpine + nginx:1.27-alpine
 ```
 
 ## 🎯 Posture éditoriale

@@ -28,57 +28,61 @@ Liste vivante des évolutions envisagées. Coche au fur et à mesure, ajoute lib
 - ADR 0015 — Personne unique cross-législature (modèle Pokédex)
 - ADR 0016 — Multi-appartenances de groupe + badges Recomposition / Transfuge
 - ADR 0017 — Stats par mandat, cumul carrière sans rang, tabs `[Carrière] [16e] [17e]`
+- ADR 0018 — Identifiant stable cross-législature (PA-id, AMO30 historique)
+- ADR 0019 — Priorité de sources AMO Etalab (AMO10/AMO20 > AMO30)
+- ADR 0020 — Phase 2 : ajout 15ᵉ législature
 
-## 🚧 Phase 1 — Multi-législature AN (16e + 17e)
+## ✅ Phase 1 + 2 — Ère Macron complète AN (mergée 2026-05-05, PR #3)
 
-Refacto structurel pour passer du modèle "député 17e plat" au modèle "personne + mandats[]".
+Mergée en une seule PR cumulant Phase 1 (16ᵉ+17ᵉ) et Phase 2 (15ᵉ).
 
-### Pipeline data
+### Pipeline data ✅
 
-- [ ] **Confirmer la stratégie d'identifiant cross-législature** (champ stable AN ? fallback `(nom + dateNaissance)` ?) → mini-ADR Phase 1 quand tranché
-- [ ] **Paramétrer `scripts/fetch-data.ts`** par législature (URL + format Etalab 16e à valider)
-- [ ] Fusion 16e+17e en un seul dataset `personnes.json` avec `mandats[]`
-- [ ] Calcul stats `MandatStats` (numerator/denominator/rate) + rangs **par législature**
-- [ ] Calcul `CarriereAggregee` (cumul pondéré, sans rang)
-- [ ] Extraction `appartenancesGroupe[]` complètes (chronologiques, avec dates) — cf ADR 0016
-- [ ] Calcul des **badges carrière** (Recomposition, Transfuge, Vétéran, Réélu·e) + badges mandat
-- [ ] **Vérifier que Serrulien fournit les coordonnées 16e** (sinon scraping à refaire) — cf ADR 0008
+- [x] Identifiant stable PA-id validé empiriquement sur 432 réélus 16→17 et 50+ vétérans 15+16+17 (cf ADR 0018)
+- [x] `scripts/fetch-data.ts` paramétré par législature, `LEGISLATURES = [15, 16, 17]`
+- [x] Sources AMO30 (identité) + AMO10 17ᵉ + AMO20 16ᵉ/15ᵉ pour enrichissement (cf ADR 0019)
+- [x] Fusion 15+16+17 → `personnes.json` (1196 personnes, 1925 mandats)
+- [x] Stats `MandatStats` num/denom/rate + rangs **par législature**
+- [x] `CarriereAggregee` (cumul pondéré, sans rang)
+- [x] `appartenancesGroupe[]` chronologiques + flag `isTransitoireNI` (seuil 21 jours, cf bug fix transfuge 17ᵉ)
+- [x] Badges carrière (Recomposition, Transfuge, Vétéran, Réélu) + badges mandat
+- [x] Coordonnées sièges 15+16+17 (Serrulien `seats.json` 1-650 + enrichissement places via AMO20)
 
-### Modèle & types
+### Modèle & types ✅
 
-- [ ] Refactorer `src/lib/types.ts` : nouveaux types `Personne`, `Mandat`, `AppartenanceGroupe`, `MandatStats`, `MandatRangs`, `CarriereAggregee`, `BadgeMandat`, `BadgeCarriere`
-- [ ] Refactorer `src/lib/data.ts` : `loadPersonne(id)`, `loadMandat(id, leg)`, `loadCarriere(id)`
-- [ ] Étendre `political-order.ts` au mapping CHES des groupes 16e (cf ADR 0007)
+- [x] `src/lib/types.ts` : `Personne`, `Mandat`, `AppartenanceGroupe`, `MandatStats`, `MandatRangs`, `CarriereAggregee`, `BadgeMandat`, `BadgeCarriere`
+- [x] `src/lib/data.ts` : `loadPersonne(id)`, `loadHistorique(paId)`, `loadGroupes(leg)`, `loadLegislatures()`
+- [x] `political-order.ts` : 17 groupes 15ᵉ + 12 groupes 16ᵉ + 14 groupes 17ᵉ mappés CHES 2024
 
-### Routes & UI
+### Routes & UI ✅
 
-- [ ] **Sélecteur de législature** dans le header (par défaut = la plus récente)
-- [ ] `/legislatures/[num]/` (nouvelle home par législature) — l'actuelle home `/` redirige vers la législature courante
-- [ ] `/deputes/[id]/` reste à la racine, gère **vue carrière par défaut + tabs `[Carrière] [16e] [17e]`** (cf ADR 0017)
-- [ ] `/groupes/[legislature]/[id]/` (les groupes deviennent scopés)
-- [ ] **Timeline des appartenances de groupe** dans la vue mandat si > 1 appartenance (cf ADR 0016)
-- [ ] Refactorer `DeputeCard` : prop `vue: 'carriere' | 'mandat'` + `mandat: Mandat | null`
-- [ ] Composant `<MandatTabs>`
-- [ ] **Étendre InfoTip à tous les badges** (cf ADR 0016, 0017) — création `<BadgeWithInfoTip>`
-- [ ] Mettre à jour la **recherche globale** : indexer la personne (avec ses prénoms/noms et toutes ses appartenances de groupe pour matching)
-- [ ] Page scrutin : afficher le groupe **au moment du vote** pour chaque député listé
+- [x] **Sélecteur de législature** en haut de la fiche (sous le header) avec 3 boutons 15/16/17
+- [x] `/legislatures/[num]/` route SPA paramétrée
+- [x] `/deputes/[id]/?leg=N` querystring pour les tabs `[Carrière] [15e] [16e] [17e]`
+- [x] `/groupes/[legislature]/[id]/` scopé par législature
+- [x] **Timeline des appartenances** : par législature en vue carrière, du mandat actif en vue mandat
+- [x] `DeputeCard` : prop `mandat: Mandat | null` (carrière vs mandat)
+- [x] Composant `<MandatTabs>` chronologique avec querystring
+- [x] InfoTip systématique sur badges via `Badge.svelte`
+- [x] Recherche globale `searchAll` indexant la personne + libellés de groupes historiques
+- [x] Page scrutin : groupe **au moment du vote** affiché pour chaque frondeur
+- [x] **Toggle GCHES/OFFI** pour la coloration hémicycle (gradient CHES vs couleurs officielles Etalab)
+- [x] Layout : `.depute-card-col` sticky avec scroll interne (vétérans 15+16+17 affichent une grosse carrière)
+- [x] Rebrand layout vers PolitiDex (logo P, header)
 
-### Validation
+### Validation ✅
 
-- [ ] **Cas test** : vérifier qu'une personne ayant siégé en 16e et 17e affiche bien une seule fiche avec les deux mandats
-- [ ] **Cas test** : vérifier les badges Recomposition (changement entre 16e et 17e) et Transfuge (changement intra-mandat 16e ou 17e) sur des cas réels documentés
-- [ ] **Vérifier le calcul de fronde** sur la 16e (groupe au moment du vote, pas groupe actuel)
+- [x] Smoke-test 40/40 (3 legs, vétérans 15+16+17)
+- [x] CI vert (TS check 0 erreur, build avec placeholders multi-leg)
+- [x] Cas concrets : Habib (PA1592, vétéran 15+16+17), Vallaud (PA719930, transfuge 16ᵉ), Le Pen (PA720614, réélue)
+- [x] Build local validé en mode placeholders (CI) et en mode données réelles (prod)
 
-## 🚀 Phase 2 — Ère Macron complète (15e législature)
+### Polish post-merge à envisager
 
-À démarrer une fois Phase 1 stabilisée. Le refacto Phase 1 doit rendre cette extension principalement incrémentale.
-
-- [ ] Ajouter le pipeline 15e (URLs Etalab, format)
-- [ ] Étendre le mapping CHES aux groupes 15e (LREM, MoDem, LR, PS, FI, GDR, etc.)
-- [ ] Vérifier disponibilité des positions de sièges 15e
-- [ ] Tester la fusion d'identité sur 3 législatures (15e + 16e + 17e)
-- [ ] Activer le badge **Vétéran** (3+ législatures) qui devient pertinent à partir de Phase 2
-- [ ] Mettre à jour les InfoTips de scope (e.g. "Carrière (toutes législatures couvertes)")
+- [ ] Cohésion par groupe (Rice index) à recalculer côté pipeline — actuellement les pages `/groupes/[leg]/[id]/` n'affichent plus la cohésion globale
+- [ ] Récupérer les ~98 placeHemicycle 15ᵉ/17ᵉ encore manquants (suppléants, ministres) — investiguer AMO40 ou AMO50 ?
+- [ ] Auto-refresh quotidien des données 17ᵉ via cron Coolify
+- [ ] Page d'erreur 404 custom pour `/legislatures/{num}` invalides
 
 ## 🌐 Phase 3 — Au-delà de l'AN (Sénat, ministres, président)
 
