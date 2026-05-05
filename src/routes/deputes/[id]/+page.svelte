@@ -106,14 +106,30 @@
 		visibleCount = 50;
 	});
 
-	/** Timeline des appartenances de groupe pour le mandat actif (cf ADR 0016). */
+	/** Timeline des appartenances de groupe (cf ADR 0016).
+	 *  - Vue mandat : appartenances du mandat actif uniquement.
+	 *  - Vue carrière : toutes les législatures, regroupées par leg, ordre chronologique. */
 	const appartenancesTimeline = $derived.by(() => {
-		if (!mandatActif) return [];
-		return mandatActif.appartenancesGroupe.map((a) => ({
-			...a,
-			groupe: groupesById.get(a.groupeId) ?? null
+		const mandats = mandatActif
+			? [mandatActif]
+			: [...data.personne.mandats].sort((a, b) => a.legislature - b.legislature);
+		return mandats.map((m) => ({
+			legislature: m.legislature,
+			datePriseFonction: m.datePriseFonction,
+			dateFinFonction: m.dateFinFonction,
+			circonscription: m.circonscription,
+			appartenances: m.appartenancesGroupe.map((a) => ({
+				...a,
+				groupe: groupesById.get(a.groupeId) ?? null
+			}))
 		}));
 	});
+
+	const showTimeline = $derived(
+		// Carrière : toujours afficher si ≥ 1 mandat
+		// Mandat : afficher si ≥ 2 appartenances (sinon redondant avec la carte)
+		mandatActif ? mandatActif.appartenancesGroupe.length > 1 : data.personne.mandats.length >= 1
+	);
 
 	const scrutinsEligibles = $derived(
 		mandatActif ? mandatActif.stats.presence.denominator : data.personne.carriere.presence.denominator
@@ -145,29 +161,64 @@
 		<div class="depute-card-col">
 			<DeputeCard personne={data.personne} groupe={groupePrincipal} mandat={mandatActif} />
 
-			{#if appartenancesTimeline.length > 1}
+			{#if showTimeline}
 				<div class="card p-4 mt-3 text-xs">
-					<div class="text-[10px] uppercase tracking-widest text-assembly-muted mb-2">
-						Appartenances de groupe — {mandatActif?.legislature}<sup>e</sup>
+					<div class="text-[10px] uppercase tracking-widest text-assembly-muted mb-3">
+						{#if mandatActif}
+							Appartenances de groupe — {mandatActif.legislature}<sup>e</sup>
+						{:else}
+							Carrière politique
+						{/if}
 					</div>
-					<div class="space-y-1.5">
-						{#each appartenancesTimeline as a (a.groupeId + a.dateDebut)}
-							<div class="flex items-center justify-between gap-2">
-								<div class="flex items-center gap-1.5 min-w-0">
-									{#if a.groupe}
-										<span
-											class="w-2 h-2 rounded-full flex-shrink-0"
-											style="background-color: {a.groupe.couleur}"
-										></span>
-										<span class="font-medium truncate">{a.groupe.libelleAbrege}</span>
-									{:else}
-										<span class="text-assembly-muted italic">Groupe inconnu</span>
-									{/if}
-									<span class="text-[10px] text-assembly-muted">· {a.qualite}</span>
+					<div class="space-y-3">
+						{#each appartenancesTimeline as m (m.legislature)}
+							<div>
+								{#if !mandatActif}
+									<div class="flex items-baseline justify-between gap-2 mb-1.5 pb-1 border-b border-assembly-border/40">
+										<div class="font-semibold">
+											{m.legislature}<sup>e</sup> législature
+											{#if m.circonscription}
+												<span class="text-[10px] text-assembly-muted font-normal">
+													· {m.circonscription.dep}
+													{m.circonscription.depNum}-{m.circonscription.num}
+												</span>
+											{/if}
+										</div>
+										<span class="text-[10px] text-assembly-muted whitespace-nowrap">
+											{formatDate(m.datePriseFonction)} → {m.dateFinFonction
+												? formatDate(m.dateFinFonction)
+												: 'en cours'}
+										</span>
+									</div>
+								{/if}
+								<div class="space-y-1.5">
+									{#each m.appartenances as a (a.groupeId + a.dateDebut)}
+										<div class="flex items-center justify-between gap-2">
+											<div class="flex items-center gap-1.5 min-w-0">
+												{#if a.groupe}
+													<span
+														class="w-2 h-2 rounded-full flex-shrink-0"
+														style="background-color: {a.groupe.couleur}"
+													></span>
+													<span class="font-medium truncate">{a.groupe.libelleAbrege}</span>
+												{:else}
+													<span class="text-assembly-muted italic">Groupe inconnu</span>
+												{/if}
+												<span class="text-[10px] text-assembly-muted">· {a.qualite}</span>
+												{#if a.isTransitoireNI}
+													<span
+														class="text-[9px] text-assembly-muted/70 italic"
+														title="NI transitoire en début de législature, avant inscription au groupe"
+														>(transitoire)</span
+													>
+												{/if}
+											</div>
+											<span class="text-[10px] text-assembly-muted whitespace-nowrap">
+												{formatDate(a.dateDebut)} → {a.dateFin ? formatDate(a.dateFin) : 'en cours'}
+											</span>
+										</div>
+									{/each}
 								</div>
-								<span class="text-[10px] text-assembly-muted whitespace-nowrap">
-									{formatDate(a.dateDebut)} → {a.dateFin ? formatDate(a.dateFin) : 'en cours'}
-								</span>
 							</div>
 						{/each}
 					</div>
