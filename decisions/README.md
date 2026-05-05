@@ -4,9 +4,9 @@
 
 Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque décision est un fichier dédié au format [ADR](https://adr.github.io). Pour ajouter une décision : créer `decisions/NNNN-slug.md` avec la trame de `TEMPLATE.md`, puis lancer `npm run decisions:index`.
 
-**13 décisions** consignées.
+**17 décisions** consignées.
 
-**Tags** : `déploiement`(3) · `métriques`(3) · `data`(2) · `pipeline-data`(2) · `sémantique`(2) · `sourcing`(2) · `gouvernance`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `ux`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `hémicycle`(1) · `layout`(1) · `licence`(1) · `runtime`(1) · `build`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1)
+**Tags** : `data`(4) · `métriques`(4) · `déploiement`(3) · `sémantique`(3) · `pipeline-data`(2) · `ux`(2) · `sourcing`(2) · `gouvernance`(2) · `modèle`(2) · `badges`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `hémicycle`(1) · `layout`(1) · `licence`(1) · `runtime`(1) · `build`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `scope`(1) · `roadmap`(1) · `branding`(1) · `identité`(1) · `routes`(1) · `groupes`(1)
 
 ## Index chronologique
 
@@ -25,6 +25,10 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 | 0011 | [Healthcheck Docker sur `127.0.0.1` avec `start-period: 30s`](0011-healthcheck-ipv4-start-period.md) | ✅ accepté | `déploiement` `docker` `debug` | 2026-05-04 |
 | 0012 | [Format compact en tuple pour les historiques de vote](0012-historiques-format-tuple-compact.md) | ✅ accepté | `data` `perf` `format` | 2026-05-04 |
 | 0013 | [Gouvernance ouverte avec direction technique centralisée](0013-gouvernance-ouverte-direction-centralisee.md) | ✅ accepté | `gouvernance` `open-source` `processus` | 2026-05-04 |
+| 0014 | [Pivot vers PolitiDex (élus nationaux multi-périodes)](0014-pivot-politidex-elus-nationaux.md) | ✅ accepté | `produit` `scope` `roadmap` `branding` | 2026-05-05 |
+| 0015 | [Personne unique cross-législature, mandats multiples (modèle Pokédex)](0015-personne-unique-cross-legislature.md) | ✅ accepté | `data` `modèle` `identité` `routes` | 2026-05-05 |
+| 0016 | [Multi-appartenances de groupe (intra et inter-législature)](0016-multi-appartenances-groupe.md) | ✅ accepté | `data` `modèle` `groupes` `badges` | 2026-05-05 |
+| 0017 | [Stats par mandat, cumul carrière sans rang, tabs sur fiche député](0017-stats-par-mandat-cumul-carriere.md) | ✅ accepté | `métriques` `ux` `sémantique` `badges` | 2026-05-05 |
 
 ## Résumés
 
@@ -105,3 +109,27 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 > Gouvernance ouverte avec direction technique centralisée, calibrée pour un mainteneur solo.
 
 📄 [Lire la décision complète](0013-gouvernance-ouverte-direction-centralisee.md)
+
+### 0014 — Pivot vers PolitiDex (élus nationaux multi-périodes)
+
+> Le projet est rebrandé "PolitiDex" et adopte un scope élargi mais borné :
+
+📄 [Lire la décision complète](0014-pivot-politidex-elus-nationaux.md)
+
+### 0015 — Personne unique cross-législature, mandats multiples (modèle Pokédex)
+
+> Une personne politique = une fiche unique, peu importe le nombre de mandats successifs. Les apparitions en législature sont des mandats rattachés à cette personne.
+
+📄 [Lire la décision complète](0015-personne-unique-cross-legislature.md)
+
+### 0016 — Multi-appartenances de groupe (intra et inter-législature)
+
+> ### Modèle de données
+
+📄 [Lire la décision complète](0016-multi-appartenances-groupe.md)
+
+### 0017 — Stats par mandat, cumul carrière sans rang, tabs sur fiche député
+
+> ### Vue par défaut : Carrière
+
+📄 [Lire la décision complète](0017-stats-par-mandat-cumul-carriere.md)
