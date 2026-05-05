@@ -1,10 +1,12 @@
+# syntax=docker/dockerfile:1.7
 # ── Stage 1 : build the SvelteKit static site ─────────────────────────────
 # The data files are not committed (see .gitignore) — we fetch them fresh at
 # build time so each deployment ships the latest scrutins and deputies.
 FROM node:22-alpine AS builder
 
-# unzip is needed by the data-fetch pipeline
-RUN apk add --no-cache unzip
+# unzip + curl are needed by the data-fetch pipeline.
+# bsdtar (libarchive-tools) handles ZIP64 better than busybox unzip.
+RUN apk add --no-cache curl libarchive-tools
 
 WORKDIR /app
 
@@ -15,9 +17,12 @@ RUN npm ci --no-audit --no-fund
 # Copy the rest of the source.
 COPY . .
 
-# Fetch and process the open data (downloads ~25 MB, generates ~75 MB JSON).
-# This happens on every build so the deployment is always up to date.
-RUN npm run data:fetch
+# Fetch and process the open data — ADR 0021.
+# `--mount=type=cache` persists /tmp/politidex-cache across builds, so we only
+# re-download ZIPs whose Last-Modified/ETag has changed. Frozen archives (15ᵉ,
+# 16ᵉ) become 0-byte HEAD requests on subsequent builds (~50 ms each).
+RUN --mount=type=cache,target=/tmp/politidex-cache,id=politidex-data \
+    npm run data:fetch
 
 # Build the static site.
 RUN npm run build
