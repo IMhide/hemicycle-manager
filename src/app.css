@@ -43,9 +43,14 @@
 		.depute-layout {
 			grid-template-columns: 400px minmax(0, 1fr);
 		}
+		/* Sticky avec scroll interne si la carrière complète dépasse la viewport
+		 * (vétérans 15+16+17 avec recompositions). */
 		.depute-card-col {
 			position: sticky;
 			top: 5rem;
+			max-height: calc(100vh - 6rem);
+			overflow-y: auto;
+			scrollbar-gutter: stable;
 		}
 	}
 }

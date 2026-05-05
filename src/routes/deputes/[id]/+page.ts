@@ -1,33 +1,18 @@
 import type { PageLoad } from './$types';
-import {
-	loadDeputes,
-	loadGroupes,
-	loadDeputeStats,
-	loadDeputeHistorique,
-	loadScrutinsIndex
-} from '$lib/data';
+import { loadPersonne, loadGroupes, loadHistorique, loadScrutinsIndex, loadLegislatures } from '$lib/data';
 
 export const prerender = false;
 export const ssr = false;
 
 export const load: PageLoad = async ({ fetch, params }) => {
-	const [deputes, groupes, stats, historique, scrutinsIndex] = await Promise.all([
-		loadDeputes(fetch),
-		loadGroupes(fetch),
-		loadDeputeStats(fetch),
-		loadDeputeHistorique(fetch, params.id),
-		loadScrutinsIndex(fetch)
-	]);
+	const personne = await loadPersonne(fetch, params.id);
+	if (!personne) throw new Error(`Personne ${params.id} introuvable`);
 
-	const depute = deputes.find((d) => d.id === params.id);
-	if (!depute) {
-		throw new Error(`Député ${params.id} introuvable`);
-	}
-	const stat = stats.find((s) => s.id === params.id);
-	if (!stat) {
-		throw new Error(`Stats du député ${params.id} introuvables`);
-	}
-	const groupe = depute.groupeId ? groupes.find((g) => g.id === depute.groupeId) ?? null : null;
+	const legislatures = await loadLegislatures(fetch);
+	const groupesByLeg = await Promise.all(legislatures.map((l) => loadGroupes(fetch, l.num)));
+	const historique = await loadHistorique(fetch, params.id).catch(() => []);
+	const scrutinsIndex = await loadScrutinsIndex(fetch);
 
-	return { depute, groupe, stat, historique, scrutinsIndex, groupes };
+	const groupes = groupesByLeg.flat();
+	return { personne, groupes, historique, scrutinsIndex, legislatures };
 };

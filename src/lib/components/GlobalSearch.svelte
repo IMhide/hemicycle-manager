@@ -7,27 +7,29 @@
 	let isOpen = $state(false);
 	let isLoading = $state(false);
 	let index: SearchIndex | null = $state(null);
-	let results: SearchResults = $state({ deputes: [], groupes: [], scrutins: [] });
-	let activeIndex = $state(0); // 0..flatResults.length-1
+	let results: SearchResults = $state({ personnes: [], groupes: [], scrutins: [] });
+	let activeIndex = $state(0);
 	let inputEl: HTMLInputElement | null = $state(null);
 	let containerEl: HTMLDivElement | null = $state(null);
 
-	// Flat list of items for keyboard navigation. Order: deputes, groupes, scrutins.
 	type Item =
-		| { kind: 'depute'; href: string; data: SearchResults['deputes'][number] }
+		| { kind: 'personne'; href: string; data: SearchResults['personnes'][number] }
 		| { kind: 'groupe'; href: string; data: SearchResults['groupes'][number] }
 		| { kind: 'scrutin'; href: string; data: SearchResults['scrutins'][number] };
 
 	const flatResults = $derived.by(() => {
 		const out: Item[] = [];
-		for (const d of results.deputes) out.push({ kind: 'depute', href: `/deputes/${d.id}/`, data: d });
-		for (const g of results.groupes) out.push({ kind: 'groupe', href: `/groupes/${g.id}/`, data: g });
-		for (const s of results.scrutins) out.push({ kind: 'scrutin', href: `/scrutins/${s.uid}/`, data: s });
+		for (const p of results.personnes)
+			out.push({ kind: 'personne', href: `/deputes/${p.id}/`, data: p });
+		for (const g of results.groupes)
+			out.push({ kind: 'groupe', href: `/groupes/${g.legislature}/${g.id}/`, data: g });
+		for (const s of results.scrutins)
+			out.push({ kind: 'scrutin', href: `/scrutins/${s.uid}/`, data: s });
 		return out;
 	});
 
 	const totalCount = $derived(
-		results.deputes.length + results.groupes.length + results.scrutins.length
+		results.personnes.length + results.groupes.length + results.scrutins.length
 	);
 
 	async function ensureLoaded() {
@@ -48,7 +50,6 @@
 	}
 
 	function handleBlur() {
-		// Defer so a click on a result still fires before we hide
 		setTimeout(() => {
 			if (containerEl && !containerEl.contains(document.activeElement)) {
 				isOpen = false;
@@ -94,7 +95,7 @@
 	function close() {
 		isOpen = false;
 		query = '';
-		results = { deputes: [], groupes: [], scrutins: [] };
+		results = { personnes: [], groupes: [], scrutins: [] };
 		inputEl?.blur();
 	}
 
@@ -103,7 +104,6 @@
 		close();
 	}
 
-	// Cmd/Ctrl + K to focus
 	function handleGlobalKeydown(e: KeyboardEvent) {
 		if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
 			e.preventDefault();
@@ -132,7 +132,11 @@
 	}
 
 	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' });
+		return new Date(iso).toLocaleDateString('fr-FR', {
+			day: 'numeric',
+			month: 'short',
+			year: '2-digit'
+		});
 	}
 
 	function truncate(s: string, n: number): string {
@@ -162,7 +166,6 @@
 			placeholder="Rechercher un député, un groupe, une loi…"
 			class="w-full bg-assembly-bg border border-assembly-border rounded-full pl-9 pr-12 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-assembly-accent/40 focus:border-assembly-accent/60 transition-all"
 			aria-label="Recherche globale"
-			aria-expanded={isOpen}
 			aria-controls="global-search-results"
 			autocomplete="off"
 		/>
@@ -194,13 +197,15 @@
 					Aucun résultat pour <span class="font-semibold text-assembly-text">{query}</span>.
 				</div>
 			{:else}
-				<!-- Députés -->
-				{#if results.deputes.length > 0}
-					<div class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50">
-						Députés
+				{#if results.personnes.length > 0}
+					<div
+						class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50"
+					>
+						Personnes
 					</div>
-					{#each results.deputes as d, i (d.id)}
+					{#each results.personnes as p, i (p.id)}
 						{@const flatIdx = i}
+						{@const circoLast = p.mandats.at(-1)?.circonscription ?? null}
 						<button
 							type="button"
 							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
@@ -209,10 +214,10 @@
 								: 'hover:bg-assembly-border/30'}"
 							onmouseenter={() => (activeIndex = flatIdx)}
 							onclick={() =>
-								selectItem({ kind: 'depute', href: `/deputes/${d.id}/`, data: d })}
+								selectItem({ kind: 'personne', href: `/deputes/${p.id}/`, data: p })}
 						>
 							<img
-								src={d.photoUrl}
+								src={p.identite.photoUrl}
 								alt=""
 								class="w-8 h-8 rounded-full object-cover bg-assembly-border flex-shrink-0"
 								loading="lazy"
@@ -220,32 +225,34 @@
 							/>
 							<div class="min-w-0 flex-1">
 								<div class="text-sm font-semibold truncate">
-									{@html highlightMatch(`${d.prenom} ${d.nom}`, query)}
+									{@html highlightMatch(`${p.identite.prenom} ${p.identite.nom}`, query)}
 								</div>
 								<div class="flex items-center gap-1.5 text-[10px] text-assembly-muted">
-									{#if d.groupe}
+									{#if p.groupePrincipal}
 										<span
 											class="w-1.5 h-1.5 rounded-full"
-											style="background-color: {d.groupe.couleur}"
+											style="background-color: {p.groupePrincipal.couleur}"
 										></span>
-										<span>{d.groupe.libelleAbrege}</span>
+										<span>{p.groupePrincipal.libelleAbrege}</span>
 									{/if}
-									{#if d.circo}
-										<span>· {d.circo.dep}</span>
+									{#if circoLast}
+										<span>· {circoLast.dep}</span>
 									{/if}
+									<span>· {p.carriere.legislatures.map((l) => `${l}ᵉ`).join('+')}</span>
 								</div>
 							</div>
 						</button>
 					{/each}
 				{/if}
 
-				<!-- Groupes -->
 				{#if results.groupes.length > 0}
-					<div class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50">
+					<div
+						class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50"
+					>
 						Groupes
 					</div>
-					{#each results.groupes as g, i (g.id)}
-						{@const flatIdx = results.deputes.length + i}
+					{#each results.groupes as g, i (g.legislature + ':' + g.id)}
+						{@const flatIdx = results.personnes.length + i}
 						<button
 							type="button"
 							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
@@ -254,7 +261,11 @@
 								: 'hover:bg-assembly-border/30'}"
 							onmouseenter={() => (activeIndex = flatIdx)}
 							onclick={() =>
-								selectItem({ kind: 'groupe', href: `/groupes/${g.id}/`, data: g })}
+								selectItem({
+									kind: 'groupe',
+									href: `/groupes/${g.legislature}/${g.id}/`,
+									data: g
+								})}
 						>
 							<div
 								class="w-8 h-8 rounded-md flex items-center justify-center title-display text-[10px] flex-shrink-0"
@@ -267,20 +278,24 @@
 									{@html highlightMatch(g.libelle, query)}
 								</div>
 								<div class="text-[10px] text-assembly-muted">
-									{g.libelleAbrege} · {g.effectif} député{g.effectif > 1 ? 's' : ''}
+									{g.libelleAbrege} · {g.legislature}<sup>e</sup> lég. · {g.effectifFin} député{g.effectifFin >
+									1
+										? 's'
+										: ''}
 								</div>
 							</div>
 						</button>
 					{/each}
 				{/if}
 
-				<!-- Scrutins -->
 				{#if results.scrutins.length > 0}
-					<div class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50">
+					<div
+						class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50"
+					>
 						Scrutins
 					</div>
 					{#each results.scrutins as s, i (s.uid)}
-						{@const flatIdx = results.deputes.length + results.groupes.length + i}
+						{@const flatIdx = results.personnes.length + results.groupes.length + i}
 						<button
 							type="button"
 							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
@@ -300,7 +315,7 @@
 									{@html highlightMatch(truncate(s.titre, 100), query)}
 								</div>
 								<div class="text-[10px] text-assembly-muted mt-0.5">
-									{formatDate(s.date)} ·
+									{formatDate(s.date)} · {s.legislature}<sup>e</sup> ·
 									<span
 										class={s.sort === 'adopté'
 											? 'text-vote-pour'
@@ -314,7 +329,6 @@
 					{/each}
 				{/if}
 
-				<!-- Footer hint -->
 				<div
 					class="px-3 py-2 border-t border-assembly-border/50 text-[10px] text-assembly-muted flex items-center gap-3"
 				>

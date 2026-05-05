@@ -1,46 +1,62 @@
 <script lang="ts">
-	import InfoTip from '$lib/components/InfoTip.svelte';
 	import { POLITICAL_ORDER } from '$lib/political-order';
+	import type { Groupe } from '$lib/types';
 
 	let { data } = $props();
 
-	const statsById = $derived.by(() => {
-		const m = new Map<string, (typeof data.stats)[number]>();
-		for (const s of data.stats) m.set(s.id, s);
-		return m;
+	const legSorted = $derived([...data.legislatures].sort((a, b) => b.num - a.num));
+
+	let scope = $state([...data.legislatures].sort((a, b) => b.num - a.num)[0]?.num ?? 17);
+
+	const groupesScope = $derived.by(() => {
+		const idx = data.legislatures.findIndex((l) => l.num === scope);
+		const list = idx >= 0 ? data.groupesByLeg[idx] : [];
+		return [...list].sort(
+			(a, b) =>
+				(POLITICAL_ORDER[a.libelleAbrege]?.rank ?? 99) -
+				(POLITICAL_ORDER[b.libelleAbrege]?.rank ?? 99)
+		);
 	});
-
-	const enriched = $derived(
-		data.groupes
-			.map((g) => ({
-				groupe: g,
-				stats: statsById.get(g.id),
-				rank: POLITICAL_ORDER[g.libelleAbrege]?.rank ?? 99
-			}))
-			.sort((a, b) => a.rank - b.rank)
-	);
-
-	function pct(n: number | null | undefined): string {
-		if (n === null || n === undefined) return 'N/A';
-		return `${Math.round(n * 100)} %`;
-	}
 </script>
 
 <svelte:head>
-	<title>Groupes politiques — Hémicycle Manager</title>
+	<title>Groupes politiques — PolitiDex</title>
 </svelte:head>
 
 <section class="max-w-7xl mx-auto px-6 py-8">
-	<h1 class="title-display text-4xl mb-2">Groupes politiques</h1>
-	<p class="text-assembly-muted text-sm mb-6">
-		Les 12 groupes de la 17ᵉ législature, classés de gauche à droite (selon les scores
-		<a class="underline hover:text-assembly-accent" href="https://www.chesdata.eu/2024-chapel-hill-expert-survey-ches" target="_blank" rel="noopener">CHES 2024</a>).
-	</p>
+	<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+		<div>
+			<h1 class="title-display text-4xl">Groupes politiques</h1>
+			<p class="text-assembly-muted text-sm mt-1">
+				Classés de gauche à droite (selon les scores
+				<a
+					class="underline hover:text-assembly-accent"
+					href="https://www.chesdata.eu/2024-chapel-hill-expert-survey-ches"
+					target="_blank"
+					rel="noopener">CHES 2024</a
+				>).
+			</p>
+		</div>
+		<div class="flex items-center gap-1 text-xs">
+			<span class="text-assembly-muted">Législature :</span>
+			{#each legSorted as l (l.num)}
+				<button
+					class="px-3 py-1 rounded {scope === l.num
+						? 'bg-assembly-accent text-assembly-bg font-semibold'
+						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+					onclick={() => (scope = l.num)}
+				>
+					{l.num}<sup>e</sup>
+				</button>
+			{/each}
+		</div>
+	</div>
 
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-		{#each enriched as { groupe, stats, rank } (groupe.id)}
+		{#each groupesScope as groupe (groupe.id)}
+			{@const rank = POLITICAL_ORDER[groupe.libelleAbrege]?.rank ?? 99}
 			<a
-				href="/groupes/{groupe.id}/"
+				href="/groupes/{groupe.legislature}/{groupe.id}/"
 				class="card p-4 hover:border-assembly-accent/60 transition-colors flex items-start gap-4"
 				style="border-left: 4px solid {groupe.couleur}"
 			>
@@ -58,32 +74,7 @@
 						{/if}
 					</div>
 					<div class="text-xs text-assembly-muted mt-0.5">
-						{groupe.libelleAbrege} · {groupe.effectif} député{groupe.effectif > 1 ? 's' : ''}
-					</div>
-					<div class="grid grid-cols-3 gap-3 mt-3 text-xs">
-						<div>
-							<div class="text-assembly-muted flex items-center gap-1">
-								Cohésion
-								<InfoTip title="Cohésion" size="xs">
-									Part moyenne des membres alignés sur la majorité du groupe.
-								</InfoTip>
-							</div>
-							<div class="title-display text-base" style="color: {groupe.couleur}">
-								{stats ? pct(stats.cohesion) : 'N/A'}
-							</div>
-						</div>
-						<div>
-							<div class="text-assembly-muted">Présence</div>
-							<div class="title-display text-base text-blue-400">
-								{stats ? pct(stats.tauxPresenceMoyen) : 'N/A'}
-							</div>
-						</div>
-						<div>
-							<div class="text-assembly-muted">Frondes</div>
-							<div class="title-display text-base text-rose-400">
-								{stats?.frondesTotales ?? 'N/A'}
-							</div>
-						</div>
+						{groupe.libelleAbrege} · {groupe.effectifFin} député{groupe.effectifFin > 1 ? 's' : ''}
 					</div>
 				</div>
 			</a>

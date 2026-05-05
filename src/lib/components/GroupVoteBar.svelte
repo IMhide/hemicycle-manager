@@ -9,7 +9,7 @@
 
 	let { groupe, decompte, positionMajoritaire }: Props = $props();
 
-	const total = $derived(groupe.effectif);
+	const total = $derived(groupe.effectifFin);
 	const expressed = $derived(decompte.pour + decompte.contre + decompte.abstention);
 	const absent = $derived(Math.max(0, total - expressed - decompte.nonVotant));
 

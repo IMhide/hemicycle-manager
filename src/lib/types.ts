@@ -1,35 +1,172 @@
 // Types partagés entre le pipeline data et le front-end.
 // Doivent rester en phase avec scripts/fetch-data.ts.
+//
+// Modèle Phase 1 : Personne unique cross-législature avec mandats[] (cf ADR 0015).
+// Une personne politique = une fiche, indépendamment du nombre de législatures.
 
-export interface Depute {
-	id: string;
-	prenom: string;
-	nom: string;
-	civ: string;
-	groupeId: string | null;
-	circo: { dep: string; depNum: string; num: string; region: string } | null;
-	place: number | null;
-	dateNaissance: string | null;
-	profession: string | null;
-	photoUrl: string;
-	datePriseFonction: string | null;
-	premiereElection: boolean;
+// ────────────────────────────────────────────────────────────────────────────
+// Identité
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Une personne politique, identifiée par son PA-id stable cross-législature (cf ADR 0018). */
+export interface Personne {
+	id: string; // PA-id (ex: "PA1592")
+	identite: PersonneIdentite;
+	mandats: Mandat[]; // chronologique croissant, ≥ 1
+	carriere: CarriereAggregee;
 }
 
+export interface PersonneIdentite {
+	civ: string; // "M.", "Mme"
+	prenom: string;
+	nom: string;
+	sexe: 'F' | 'M';
+	dateNaissance: string | null; // ISO 8601
+	villeNaissance: string | null;
+	photoUrl: string;
+	professionDeclaree: string | null;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Mandat parlementaire (1 par législature où la personne a siégé)
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface Mandat {
+	legislature: number; // ex: 16, 17
+	datePriseFonction: string; // ISO
+	dateFinFonction: string | null; // null = mandat en cours
+	premiereElection: boolean;
+	circonscription: Circonscription | null;
+	place: number | null; // numéro de siège dans l'hémicycle (placeHemicycle officielle)
+	appartenancesGroupe: AppartenanceGroupe[]; // chronologique, ≥ 1, cf ADR 0016
+	scrutinsEligibles: number;
+	stats: MandatStats;
+	rangs: MandatRangs;
+	badgesMandat: BadgeMandat[];
+}
+
+export interface Circonscription {
+	dep: string;
+	depNum: string;
+	num: string;
+	region: string;
+}
+
+/** Une appartenance datée à un groupe politique au sein d'un mandat (cf ADR 0016). */
+export interface AppartenanceGroupe {
+	groupeId: string; // PO-id du groupe
+	dateDebut: string; // ISO
+	dateFin: string | null; // null = en cours
+	qualite: string; // "Membre", "Président", "Vice-Président", "Député non-inscrit"…
+	/** True pour les appartenances NI transitoires (≤ 7 jours en début de législature
+	 *  avant inscription au groupe officiel). À ignorer pour les badges Transfuge. */
+	isTransitoireNI: boolean;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Stats par mandat (cf ADR 0017)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Une métrique brute exposant numerator + denominator + rate.
+ *  Permet le cumul carrière en moyenne pondérée (cf ADR 0017). */
+export interface RatioStat {
+	numerator: number;
+	denominator: number;
+	rate: number; // entre 0 et 1
+}
+
+/** Variant de RatioStat où le rate peut être null (groupes sans majorité claire). */
+export interface NullableRatioStat {
+	numerator: number;
+	denominator: number;
+	rate: number | null;
+}
+
+export interface MandatStats {
+	presence: RatioStat;
+	participation: RatioStat;
+	loyaute: NullableRatioStat;
+	frondes: { count: number; rate: number };
+}
+
+export interface MandatRangs {
+	presence: { rank: number; total: number };
+	participation: { rank: number; total: number };
+	loyaute: { rank: number | null; total: number };
+	frondes: { rank: number; total: number };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Carrière agrégée (cumul tous mandats, sans rang — cf ADR 0017)
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface CarriereAggregee {
+	presence: RatioStat;
+	participation: RatioStat;
+	loyaute: NullableRatioStat;
+	frondes: { count: number; rate: number };
+	nbMandats: number;
+	legislatures: number[]; // ex: [16, 17]
+	badgesCarriere: BadgeCarriere[];
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Badges (cf ADR 0017)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Badges calculés sur un mandat (visibles uniquement dans la tab du mandat). */
+export type BadgeMandat =
+	| 'top-loyaliste'
+	| 'frondeur'
+	| 'presence-or'
+	| 'absent-remarquable';
+
+/** Badges calculés sur la carrière entière (visibles dans toutes les vues). */
+export type BadgeCarriere =
+	| 'recomposition' // ≥ 2 mandats avec groupes différents (cf ADR 0016)
+	| 'transfuge' // ≥ 1 mandat avec ≥ 2 appartenances groupe (hors NI-bridge)
+	| 'veteran' // ≥ 3 législatures (pertinent à partir de Phase 2)
+	| 'reelu'; // ≥ 2 mandats consécutifs
+
+// ────────────────────────────────────────────────────────────────────────────
+// Groupes politiques (scopés par législature, cf ADR 0015 + ADR 0016)
+// ────────────────────────────────────────────────────────────────────────────
+
 export interface Groupe {
-	id: string;
+	id: string; // PO-id
+	legislature: number;
 	libelle: string;
 	libelleAbrege: string;
 	couleur: string;
-	effectif: number;
 	preseance: number;
-	presidentId: string | null;
+	presidentId: string | null; // PA-id du président de groupe
+	dateDebut: string;
+	dateFin: string | null; // null = encore actif (groupes 17e en cours)
+	/** Effectif final du groupe (à la fin de la législature, ou à ce jour si en cours). */
+	effectifFin: number;
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Législatures (méta)
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface LegislatureMeta {
+	num: number;
+	dateDebut: string;
+	dateFin: string | null; // null = en cours
+	nbPersonnes: number; // nb de personnes ayant siégé dans cette législature
+	nbScrutins: number;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Scrutins (uids déjà uniques cross-législature, cf ADR 0015)
+// ────────────────────────────────────────────────────────────────────────────
 
 export type VotePosition = 'pour' | 'contre' | 'abstention' | 'nonVotant' | 'absent';
 
 export interface ScrutinIndex {
 	uid: string;
+	legislature: number;
 	numero: number;
 	date: string;
 	titre: string;
@@ -43,6 +180,7 @@ export interface ScrutinIndex {
 export interface ScrutinDetail extends ScrutinIndex {
 	objet: string;
 	typeVote: string;
+	/** Vote par personne (PA-id → position). */
 	votes: Record<string, VotePosition>;
 	groupes: Array<{
 		id: string;
@@ -50,52 +188,30 @@ export interface ScrutinDetail extends ScrutinIndex {
 		positionMajoritaire: string;
 		decompte: { pour: number; contre: number; abstention: number; nonVotant: number };
 	}>;
+	/** PA-ids des frondeurs (vote opposé à la majoritaire de leur groupe au moment du vote). */
 	frondeurs: string[];
 }
 
-export interface DeputeStats {
-	id: string;
-	scrutinsEligibles: number;
-	pour: number;
-	contre: number;
-	abstention: number;
-	nonVotant: number;
-	absent: number;
-	frondes: number;
-	tauxPresence: number;
-	tauxParticipation: number;
-	tauxLoyaute: number | null;
-	activite: number;
-	rangs: {
-		presence: number;
-		participation: number;
-		loyaute: number | null;
-		frondes: number;
-		activite: number;
-	};
-}
+// ────────────────────────────────────────────────────────────────────────────
+// Historiques compacts (cf ADR 0012)
+// ────────────────────────────────────────────────────────────────────────────
 
-export interface GroupeStats {
-	id: string;
-	cohesion: number | null;
-	scrutinsConsideres: number;
-	tauxPresenceMoyen: number;
-	frondesTotales: number;
-	topLoyalistes: Array<{ id: string; tauxLoyaute: number }>;
-	topFrondeurs: Array<{ id: string; frondes: number }>;
-	rangs: {
-		cohesion: number | null;
-		presence: number;
-		frondes: number;
-	};
-}
+/** Compact: [scrutinUid, position, isFronde 0|1, legislature]
+ *  legislature ajoutée Phase 1 pour permettre le filtrage sans cross-ref index. */
+export type VoteHistoryItem = [string, VotePosition, 0 | 1, number];
 
-/** Compact: [scrutinUid, position, isFronde 0|1] */
-export type VoteHistoryItem = [string, VotePosition, 0 | 1];
+// ────────────────────────────────────────────────────────────────────────────
+// Build metadata
+// ────────────────────────────────────────────────────────────────────────────
 
 export interface BuildMeta {
 	generatedAt: string;
-	legislature: number;
-	counts: { deputes: number; groupes: number; scrutins: number; historiques?: number };
+	legislatures: number[]; // ex: [16, 17]
+	counts: {
+		personnes: number;
+		mandats: number;
+		groupes: number;
+		scrutins: number;
+	};
 	sources: Record<string, string>;
 }

@@ -1,19 +1,21 @@
 import type { PageLoad } from './$types';
 import {
-	loadDeputes,
+	loadPersonnes,
 	loadGroupes,
 	loadScrutinsIndex,
 	loadMeta,
-	loadDeputeStats
+	loadLegislatures
 } from '$lib/data';
 
 export const load: PageLoad = async ({ fetch }) => {
-	const [deputes, groupes, scrutins, meta, stats] = await Promise.all([
-		loadDeputes(fetch),
-		loadGroupes(fetch),
+	const legislatures = await loadLegislatures(fetch);
+	const legCourante = [...legislatures].sort((a, b) => b.num - a.num)[0]?.num ?? 17;
+
+	const [personnes, groupes, scrutins, meta] = await Promise.all([
+		loadPersonnes(fetch),
+		loadGroupes(fetch, legCourante),
 		loadScrutinsIndex(fetch),
-		loadMeta(fetch),
-		loadDeputeStats(fetch)
+		loadMeta(fetch)
 	]);
-	return { deputes, groupes, scrutins, meta, stats };
+	return { personnes, groupes, scrutins, meta, legislatures, legCourante };
 };

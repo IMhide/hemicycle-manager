@@ -9,11 +9,11 @@
 		<div class="max-w-7xl mx-auto px-6 py-3 flex items-center gap-4">
 			<a href="/" class="flex items-center gap-3 flex-shrink-0">
 				<div class="w-9 h-9 rounded-lg bg-gradient-to-br from-assembly-accent to-orange-500 flex items-center justify-center">
-					<span class="text-assembly-bg font-display text-xl">H</span>
+					<span class="text-assembly-bg font-display text-xl">P</span>
 				</div>
 				<div class="leading-tight hidden sm:block">
-					<div class="title-display text-xl text-assembly-text">Hémicycle Manager</div>
-					<div class="text-[10px] uppercase tracking-widest text-assembly-muted">17e législature</div>
+					<div class="title-display text-xl text-assembly-text">PolitiDex</div>
+					<div class="text-[10px] uppercase tracking-widest text-assembly-muted">Élus nationaux</div>
 				</div>
 			</a>
 

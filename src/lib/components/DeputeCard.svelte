@@ -1,25 +1,34 @@
 <script lang="ts">
-	import type { Depute, Groupe, DeputeStats } from '$lib/types';
+	/**
+	 * Fiche FIFA d'une personne politique (cf ADR 0015, 0017).
+	 *
+	 * Modèle Phase 1 :
+	 *   - vue carrière (mandat = null) : stats cumulées pondérées, badges carrière, pas de rang
+	 *   - vue mandat (mandat fourni) : stats du mandat, rangs scopés législature, badges mandat + carrière
+	 */
+	import type { Personne, Groupe, Mandat, RatioStat, NullableRatioStat } from '$lib/types';
 	import { POLITICAL_ORDER } from '$lib/political-order';
 	import StatRadar from './StatRadar.svelte';
 	import Badge from './Badge.svelte';
 	import InfoTip from './InfoTip.svelte';
 	import Rank from './Rank.svelte';
-	import { computeBadges } from '$lib/badges';
-
-	const TOTAL_DEPUTES = 577;
 
 	interface Props {
-		depute: Depute;
+		personne: Personne;
 		groupe: Groupe | null;
-		stats: DeputeStats;
+		/** null = vue carrière, sinon vue mandat */
+		mandat: Mandat | null;
 	}
 
-	let { depute, groupe, stats }: Props = $props();
+	let { personne, groupe, mandat }: Props = $props();
+
+	const stats = $derived(mandat ? mandat.stats : personne.carriere);
+	const rangs = $derived(mandat ? mandat.rangs : null);
+	const circo = $derived(mandat?.circonscription ?? personne.mandats.at(-1)?.circonscription ?? null);
 
 	const age = $derived.by(() => {
-		if (!depute.dateNaissance) return null;
-		const birth = new Date(depute.dateNaissance);
+		if (!personne.identite.dateNaissance) return null;
+		const birth = new Date(personne.identite.dateNaissance);
 		const now = new Date();
 		let a = now.getFullYear() - birth.getFullYear();
 		const md = now.getMonth() - birth.getMonth() || now.getDate() - birth.getDate();
@@ -28,41 +37,33 @@
 	});
 
 	const radarAxes = $derived([
-		{
-			label: 'Présence',
-			value: stats.tauxPresence,
-			color: '#60a5fa'
-		},
-		{
-			label: 'Participation',
-			value: stats.tauxParticipation,
-			color: '#a78bfa'
-		},
-		{
-			label: 'Loyauté',
-			value: stats.tauxLoyaute ?? 0,
-			color: '#34d399'
-		},
+		{ label: 'Présence', value: stats.presence.rate, color: '#60a5fa' },
+		{ label: 'Participation', value: stats.participation.rate, color: '#a78bfa' },
+		{ label: 'Loyauté', value: stats.loyaute.rate ?? 0, color: '#34d399' },
 		{
 			label: 'Activité',
-			value: Math.min(1, (stats.pour + stats.contre + stats.abstention) / 3000),
+			value: Math.min(1, stats.participation.numerator / 3000),
 			color: '#fbbf24'
 		}
 	]);
 
-	const badges = $derived(computeBadges(depute, stats));
+	// Badges affichés : badges carrière toujours visibles + badges mandat seulement en vue mandat
+	const badgeIds = $derived.by(() => {
+		const ids: { id: string; kind: 'mandat' | 'carriere' }[] = [];
+		for (const b of personne.carriere.badgesCarriere) ids.push({ id: b, kind: 'carriere' });
+		if (mandat) for (const b of mandat.badgesMandat) ids.push({ id: b, kind: 'mandat' });
+		return ids;
+	});
 
-	const groupeRank = $derived(
-		groupe?.libelleAbrege ? POLITICAL_ORDER[groupe.libelleAbrege] : null
-	);
+	const groupeRank = $derived(groupe?.libelleAbrege ? POLITICAL_ORDER[groupe.libelleAbrege] : null);
 
-	// "Overall" rating à la FIFA — moyenne pondérée des 4 stats radar.
+	// Overall FIFA — moyenne pondérée
 	const overall = $derived(
 		Math.round(
-			(stats.tauxPresence * 0.3 +
-				stats.tauxParticipation * 0.2 +
-				(stats.tauxLoyaute ?? 0) * 0.3 +
-				Math.min(1, (stats.pour + stats.contre + stats.abstention) / 3000) * 0.2) *
+			(stats.presence.rate * 0.3 +
+				stats.participation.rate * 0.2 +
+				(stats.loyaute.rate ?? 0) * 0.3 +
+				Math.min(1, stats.participation.numerator / 3000) * 0.2) *
 				99
 		)
 	);
@@ -71,6 +72,8 @@
 		if (n === null) return 'N/A';
 		return `${Math.round(n * 100)} %`;
 	}
+
+	const totalCohorte = $derived(rangs?.presence.total ?? 0);
 </script>
 
 <div
@@ -80,10 +83,15 @@
 	<!-- Top bar: overall + group -->
 	<div class="flex items-start justify-between gap-3 mb-4">
 		<div>
-			<div class="title-display text-5xl leading-none" style="color: {groupe?.couleur ?? '#fbbf24'}">
+			<div
+				class="title-display text-5xl leading-none"
+				style="color: {groupe?.couleur ?? '#fbbf24'}"
+			>
 				{overall}
 			</div>
-			<div class="text-[10px] uppercase tracking-widest text-assembly-muted mt-1">Overall</div>
+			<div class="text-[10px] uppercase tracking-widest text-assembly-muted mt-1">
+				{mandat ? `Overall · ${mandat.legislature}ᵉ` : 'Overall · Carrière'}
+			</div>
 		</div>
 		{#if groupe}
 			<div class="text-right">
@@ -105,30 +113,43 @@
 	<div class="flex items-end gap-4 mb-5">
 		<div class="relative">
 			<img
-				src={depute.photoUrl}
-				alt="{depute.prenom} {depute.nom}"
+				src={personne.identite.photoUrl}
+				alt="{personne.identite.prenom} {personne.identite.nom}"
 				class="w-28 h-36 object-cover rounded-md border-2 border-assembly-border bg-assembly-border"
 				loading="lazy"
 				referrerpolicy="no-referrer"
 			/>
 		</div>
 		<div class="flex-1 min-w-0 pb-1">
-			<div class="text-[10px] uppercase tracking-widest text-assembly-muted">{depute.civ ?? ''}</div>
-			<div class="title-display text-2xl leading-tight">{depute.prenom}</div>
-			<div class="title-display text-3xl leading-tight">{depute.nom}</div>
+			<div class="text-[10px] uppercase tracking-widest text-assembly-muted">
+				{personne.identite.civ}
+			</div>
+			<div class="title-display text-2xl leading-tight">{personne.identite.prenom}</div>
+			<div class="title-display text-3xl leading-tight">{personne.identite.nom}</div>
 			<div class="text-xs text-assembly-muted mt-2 space-y-0.5">
 				{#if age !== null}<div>{age} ans</div>{/if}
-				{#if depute.circo}
-					<div>{depute.circo.dep} · {depute.circo.depNum}-{depute.circo.num}</div>
+				{#if circo}
+					<div>{circo.dep} · {circo.depNum}-{circo.num}</div>
 				{/if}
-				{#if depute.profession}<div class="italic truncate">{depute.profession}</div>{/if}
+				{#if personne.identite.professionDeclaree}
+					<div class="italic truncate">{personne.identite.professionDeclaree}</div>
+				{/if}
+				{#if !mandat}
+					<div class="text-assembly-accent/80">
+						{personne.carriere.nbMandats} mandat{personne.carriere.nbMandats > 1 ? 's' : ''}
+						· {personne.carriere.legislatures.map((l) => `${l}ᵉ`).join(' + ')}
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>
 
 	<!-- Radar -->
 	<div class="mb-5 max-w-[280px] mx-auto">
-		<StatRadar axes={radarAxes} size={260} strokeColor={groupe?.couleur ?? '#fbbf24'}
+		<StatRadar
+			axes={radarAxes}
+			size={260}
+			strokeColor={groupe?.couleur ?? '#fbbf24'}
 			fillColor="{groupe?.couleur ?? '#fbbf24'}33"
 		/>
 	</div>
@@ -141,80 +162,99 @@
 				<InfoTip title="Taux de présence" size="xs">
 					Part des scrutins où le député était <strong>physiquement présent</strong> (vote exprimé,
 					abstention ou non-votant). Calculé sur les scrutins postérieurs à sa prise de fonction.
-					<br /><br />
-					⚠️ Mesure la présence aux <em>scrutins publics nominatifs</em> uniquement.
-					Beaucoup de scrutins ne mobilisent qu'une partie des députés ; le maximum observé
-					est ~80 %.
+					{#if !mandat}
+						<br /><br />
+						En vue carrière, la moyenne est <strong>pondérée par les scrutins éligibles</strong>
+						de chaque mandat (cf ADR 0017).
+					{/if}
 				</InfoTip>
 			</span>
 			<span class="flex items-center gap-2">
-				<span class="title-display text-base text-blue-400 tabular-nums">{pct(stats.tauxPresence)}</span>
-				<Rank rank={stats.rangs.presence} total={TOTAL_DEPUTES} />
+				<span class="title-display text-base text-blue-400 tabular-nums"
+					>{pct(stats.presence.rate)}</span
+				>
+				{#if rangs}
+					<Rank rank={rangs.presence.rank} total={rangs.presence.total} />
+				{/if}
 			</span>
 		</div>
 		<div class="flex justify-between items-center gap-2">
 			<span class="flex items-center gap-1 text-assembly-muted">
 				Participation
 				<InfoTip title="Taux de participation" size="xs">
-					Part des scrutins où le député a <strong>exprimé un vote</strong> (pour, contre ou abstention).
-					Plus exigeant que la présence : un président de séance présent mais non-votant n'est pas inclus.
+					Part des scrutins où le député a <strong>exprimé un vote</strong> (pour, contre ou
+					abstention). Plus exigeant que la présence : un président de séance présent mais
+					non-votant n'est pas inclus.
 				</InfoTip>
 			</span>
 			<span class="flex items-center gap-2">
-				<span class="title-display text-base text-purple-400 tabular-nums">{pct(stats.tauxParticipation)}</span>
-				<Rank rank={stats.rangs.participation} total={TOTAL_DEPUTES} />
+				<span class="title-display text-base text-purple-400 tabular-nums"
+					>{pct(stats.participation.rate)}</span
+				>
+				{#if rangs}
+					<Rank rank={rangs.participation.rank} total={rangs.participation.total} />
+				{/if}
 			</span>
 		</div>
 		<div class="flex justify-between items-center gap-2">
 			<span class="flex items-center gap-1 text-assembly-muted">
 				Loyauté
 				<InfoTip title="Taux de loyauté au groupe" size="xs">
-					Part des votes <strong>alignés sur la majorité du groupe</strong>, parmi les scrutins où le député
-					a exprimé un vote pour ou contre et où le groupe avait une majorité claire.
+					Part des votes <strong>alignés sur la majorité du groupe</strong>, parmi les scrutins où
+					le député a exprimé un vote pour ou contre et où le groupe avait une majorité claire.
+					Calculée par rapport au groupe d'appartenance <em>au moment du vote</em> (cf ADR 0016).
 				</InfoTip>
 			</span>
 			<span class="flex items-center gap-2">
-				<span class="title-display text-base text-emerald-400 tabular-nums">{pct(stats.tauxLoyaute)}</span>
-				<Rank rank={stats.rangs.loyaute} total={TOTAL_DEPUTES} />
+				<span class="title-display text-base text-emerald-400 tabular-nums"
+					>{pct(stats.loyaute.rate)}</span
+				>
+				{#if rangs}
+					<Rank rank={rangs.loyaute.rank} total={rangs.loyaute.total} />
+				{/if}
 			</span>
 		</div>
 		<div class="flex justify-between items-center gap-2">
 			<span class="flex items-center gap-1 text-assembly-muted">
 				Frondes
 				<InfoTip title="Frondes" size="xs">
-					Nombre de votes <em>exprimés</em> opposés à la position majoritaire de son groupe.
-					Indicateur d'indépendance vis-à-vis de la ligne du parti. Rang 1 = le plus de frondes.
+					Nombre de votes <em>exprimés</em> opposés à la position majoritaire du groupe d'appartenance
+					au moment du vote. Indicateur d'indépendance vis-à-vis de la ligne du parti.
 				</InfoTip>
 			</span>
 			<span class="flex items-center gap-2">
-				<span class="title-display text-base text-rose-400 tabular-nums">{stats.frondes}</span>
-				<Rank rank={stats.rangs.frondes} total={TOTAL_DEPUTES} />
+				<span class="title-display text-base text-rose-400 tabular-nums">{stats.frondes.count}</span>
+				{#if rangs}
+					<Rank rank={rangs.frondes.rank} total={rangs.frondes.total} />
+				{/if}
 			</span>
 		</div>
 
-		<div class="grid grid-cols-3 gap-2 pt-3 mt-3 border-t border-assembly-border/30 text-center">
+		<div
+			class="grid grid-cols-3 gap-2 pt-3 mt-3 border-t border-assembly-border/30 text-center"
+		>
 			<div>
-				<div class="title-display text-lg text-vote-pour">{stats.pour}</div>
-				<div class="text-[10px] text-assembly-muted uppercase">Pour</div>
+				<div class="title-display text-lg text-vote-pour">{stats.presence.numerator}</div>
+				<div class="text-[10px] text-assembly-muted uppercase">Présents</div>
 			</div>
 			<div>
-				<div class="title-display text-lg text-vote-contre">{stats.contre}</div>
-				<div class="text-[10px] text-assembly-muted uppercase">Contre</div>
+				<div class="title-display text-lg text-vote-contre">{stats.participation.numerator}</div>
+				<div class="text-[10px] text-assembly-muted uppercase">Votés</div>
 			</div>
 			<div>
-				<div class="title-display text-lg text-vote-abstention">{stats.abstention}</div>
-				<div class="text-[10px] text-assembly-muted uppercase">Abst.</div>
+				<div class="title-display text-lg text-vote-abstention">{stats.presence.denominator}</div>
+				<div class="text-[10px] text-assembly-muted uppercase">Éligibles</div>
 			</div>
 		</div>
 	</div>
 
 	<!-- Badges -->
-	{#if badges.length > 0}
+	{#if badgeIds.length > 0}
 		<div class="mt-5 pt-4 border-t border-assembly-border/50">
 			<div class="text-[10px] uppercase tracking-widest text-assembly-muted mb-2">🏆 Badges</div>
 			<div class="flex flex-wrap gap-1.5">
-				{#each badges as b (b.id)}
-					<Badge badge={b} />
+				{#each badgeIds as b (b.kind + ':' + b.id)}
+					<Badge id={b.id} kind={b.kind} />
 				{/each}
 			</div>
 		</div>
