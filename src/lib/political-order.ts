@@ -325,3 +325,58 @@ export function gradientColorFor(groupeAbrege: string | null): string {
 	if (!groupeAbrege) return GRADIENT_BY_RANK[12];
 	return POLITICAL_ORDER[groupeAbrege]?.gradientColor ?? GRADIENT_BY_RANK[12];
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Blocs politiques (5 blocs basés sur CHES 2024, cf ADR 0007)
+// Découpage utilisé pour les agrégats par bloc dans /classements/.
+// Bornes inclusives à gauche, exclusives à droite (ex: gauche = [2.5, 4.5[).
+// ────────────────────────────────────────────────────────────────────────────
+
+export type Bloc =
+	| 'extreme-gauche'
+	| 'gauche'
+	| 'centre'
+	| 'droite'
+	| 'extreme-droite'
+	| 'ni'; // hors gradient
+
+export interface BlocMeta {
+	id: Bloc;
+	label: string;
+	emoji: string;
+	color: string; // couleur d'affichage (palette gradient)
+	chesRange: [number, number] | null; // null pour NI
+}
+
+/** Méta des blocs, dans l'ordre gauche→droite. NI à part. */
+export const BLOCS: BlocMeta[] = [
+	{ id: 'extreme-gauche', label: 'Extrême gauche', emoji: '🚩', color: GRADIENT_BY_RANK[1], chesRange: [0, 2.5] },
+	{ id: 'gauche', label: 'Gauche', emoji: '🌹', color: GRADIENT_BY_RANK[4], chesRange: [2.5, 4.5] },
+	{ id: 'centre', label: 'Centre', emoji: '🟡', color: GRADIENT_BY_RANK[7], chesRange: [4.5, 6.5] },
+	{ id: 'droite', label: 'Droite', emoji: '🔵', color: GRADIENT_BY_RANK[9], chesRange: [6.5, 8.0] },
+	{ id: 'extreme-droite', label: 'Extrême droite', emoji: '⚓', color: GRADIENT_BY_RANK[11], chesRange: [8.0, 10.01] },
+	{ id: 'ni', label: 'Non-inscrits', emoji: '⚪', color: GRADIENT_BY_RANK[12], chesRange: null }
+];
+
+const BLOC_BY_ID: Record<Bloc, BlocMeta> = Object.fromEntries(
+	BLOCS.map((b) => [b.id, b])
+) as Record<Bloc, BlocMeta>;
+
+export function blocMeta(id: Bloc): BlocMeta {
+	return BLOC_BY_ID[id];
+}
+
+/** Détermine le bloc d'un groupe à partir de son score CHES.
+ *  Sans score (NI, groupes hétérogènes type LIOT à null) → 'ni'. */
+export function blocOf(groupeAbrege: string | null): Bloc {
+	if (!groupeAbrege) return 'ni';
+	const entry = POLITICAL_ORDER[groupeAbrege];
+	if (!entry || entry.chesScore === null) return 'ni';
+	const s = entry.chesScore;
+	for (const b of BLOCS) {
+		if (b.chesRange === null) continue;
+		const [lo, hi] = b.chesRange;
+		if (s >= lo && s < hi) return b.id;
+	}
+	return 'ni';
+}

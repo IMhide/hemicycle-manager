@@ -87,6 +87,13 @@ export interface MandatStats {
 	participation: RatioStat;
 	loyaute: NullableRatioStat;
 	frondes: { count: number; rate: number };
+	/** Score Overall 0-99 du mandat. Formule cf ADR 0022 :
+	 *  round((0.55 * participation + 0.35 * volume + 0.10 * presence) * 99)
+	 *  avec volume = min(1, participation.numerator / volumeRef) et volumeRef = centile 95 cohorte législature. */
+	overall: number;
+	/** Volume normalisé 0-1 (= min(1, participation.numerator / volumeRef)).
+	 *  Exposé pour permettre l'affichage radar sans recalcul (cf ADR 0022). */
+	volume: number;
 }
 
 export interface MandatRangs {
@@ -108,6 +115,11 @@ export interface CarriereAggregee {
 	nbMandats: number;
 	legislatures: number[]; // ex: [16, 17]
 	badgesCarriere: BadgeCarriere[];
+	/** Score Overall 0-99 sur la carrière entière. Formule cf ADR 0022.
+	 *  volume normalisé sur centile 95 de la cohorte tous-mandats-cumulés (toutes légis confondues). */
+	overall: number;
+	/** Volume normalisé 0-1 sur la carrière (cf ADR 0022). */
+	volume: number;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -144,6 +156,12 @@ export interface Groupe {
 	dateFin: string | null; // null = encore actif (groupes 17e en cours)
 	/** Effectif final du groupe (à la fin de la législature, ou à ce jour si en cours). */
 	effectifFin: number;
+	/** Moyenne d'overall des membres rattachés à ce groupe comme groupe principal
+	 *  (cf ADR 0022 + ADR 0016). Calculé pipeline. 0 si aucun membre. */
+	overallMoyen: number;
+	/** Nb de personnes prises en compte dans `overallMoyen` (= membres ayant un mandat
+	 *  dans cette législature et pour qui ce groupe est le principal). */
+	overallEffectif: number;
 }
 
 // ────────────────────────────────────────────────────────────────────────────

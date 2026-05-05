@@ -28,14 +28,25 @@
 				<a href="/classements" class="btn-ghost hidden md:inline-block">🏆</a>
 				<a href="/groupes" class="btn-ghost">Groupes</a>
 				<a href="/scrutins" class="btn-ghost hidden md:inline-block">Scrutins</a>
+				<a href="/faq" class="btn-ghost" title="FAQ — Comment ça marche ?">📚</a>
 			</nav>
 		</div>
 	</header>
 	<main class="flex-1">
 		{@render children()}
 	</main>
-	<footer class="border-t border-assembly-border/60 mt-12 py-6 text-center text-xs text-assembly-muted">
-		Données : <a class="underline hover:text-assembly-accent" href="https://data.assemblee-nationale.fr" target="_blank" rel="noopener">Open Data Assemblée nationale</a>
-		— Licence Ouverte (Etalab)
+	<footer class="border-t border-assembly-border/60 mt-12 py-6 text-center text-xs text-assembly-muted space-y-2">
+		<div>
+			<a class="underline hover:text-assembly-accent" href="/faq">📚 FAQ — Comment ça marche ?</a>
+			· <a class="underline hover:text-assembly-accent" href="https://github.com/IMhide/hemicycle-manager" target="_blank" rel="noopener">⭐ Code source sur GitHub</a>
+		</div>
+		<div>
+			Données : <a class="underline hover:text-assembly-accent" href="https://data.assemblee-nationale.fr" target="_blank" rel="noopener">Open Data Assemblée nationale</a>
+			— Licence Ouverte (Etalab) · Code sous <a class="underline hover:text-assembly-accent" href="https://github.com/IMhide/hemicycle-manager/blob/main/LICENSE" target="_blank" rel="noopener">Unlicense</a>
+		</div>
+		<div class="text-[11px] italic">
+			Projet open source bénévole. Une idée, un bug, une feature ?
+			<a class="underline hover:text-assembly-accent" href="https://github.com/IMhide/hemicycle-manager/issues" target="_blank" rel="noopener">Viens nous aider sur GitHub</a> 🙌
+		</div>
 	</footer>
 </div>
