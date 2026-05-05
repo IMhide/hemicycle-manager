@@ -298,6 +298,44 @@
 	</div>
 
 	{#if mode === 'championship'}
+		<!-- Bloc explicatif Overall (visible sur tout le mode Championnat) -->
+		<details class="card p-4 mb-4 group">
+			<summary class="cursor-pointer flex items-center gap-2 list-none">
+				<span class="text-assembly-accent text-lg leading-none transition-transform group-open:rotate-90 select-none" aria-hidden="true">▸</span>
+				<span class="title-display text-lg">🎮 Comment se calcule l'Overall&nbsp;?</span>
+				<span class="ml-auto text-[10px] uppercase tracking-widest text-assembly-muted">Note 0–99</span>
+			</summary>
+			<div class="mt-3 text-sm leading-relaxed text-slate-300 space-y-3">
+				<p>
+					Postulat&nbsp;: un député est un <i>employé du peuple</i>, payé pour voter des lois.
+					Donc on récompense surtout l'acte de voter Pour ou Contre.
+				</p>
+				<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+					<div class="p-3 rounded border border-assembly-border bg-purple-400/5">
+						<div class="title-display text-2xl text-purple-300">55&nbsp;%</div>
+						<div class="text-xs font-semibold mt-0.5">✋ Participation</div>
+						<div class="text-[11px] text-assembly-muted mt-1">% des scrutins votés <b>Pour</b> ou <b>Contre</b></div>
+					</div>
+					<div class="p-3 rounded border border-assembly-border bg-amber-400/5">
+						<div class="title-display text-2xl text-amber-300">35&nbsp;%</div>
+						<div class="text-xs font-semibold mt-0.5">📈 Volume</div>
+						<div class="text-[11px] text-assembly-muted mt-1">Nb total de votes, normalisé sur le centile&nbsp;95 de la cohorte</div>
+					</div>
+					<div class="p-3 rounded border border-assembly-border bg-blue-400/5">
+						<div class="title-display text-2xl text-blue-300">10&nbsp;%</div>
+						<div class="text-xs font-semibold mt-0.5">🎯 Présence</div>
+						<div class="text-[11px] text-assembly-muted mt-1">Idem participation mais l'<b>abstention</b> compte aussi</div>
+					</div>
+				</div>
+				<p class="text-xs text-assembly-muted">
+					La <b>Loyauté</b> n'entre <b>pas</b> dans la note&nbsp;: c'est un signal politique, pas un signal d'exemplarité.
+					Pas de prétention de neutralité scientifique, juste un postulat assumé.
+					<a href="/faq#overall" class="underline hover:text-assembly-accent">Plus d'explications</a>
+					· <a href="https://github.com/IMhide/hemicycle-manager/blob/main/decisions/0022-score-overall.md" target="_blank" rel="noopener" class="underline hover:text-assembly-accent">ADR 0022</a>.
+				</p>
+			</div>
+		</details>
+
 		<!-- Onglets sous-vues du Championnat -->
 		<div class="flex flex-wrap gap-2 mb-4">
 			{#each [{ id: 'deputes', label: 'Top députés', emoji: '👤' }, { id: 'groupes', label: 'Top groupes', emoji: '🎽' }, { id: 'blocs', label: 'Top blocs', emoji: '🗺️' }] as v (v.id)}
