@@ -24,14 +24,8 @@
 	const rangs = $derived(mandat ? mandat.rangs : null);
 	const frondes = $derived(stats.frondes.count);
 
-	const overall = $derived(
-		Math.round(
-			(stats.presence.rate * 0.4 +
-				stats.participation.rate * 0.2 +
-				(stats.loyaute.rate ?? 0) * 0.4) *
-				99
-		)
-	);
+	// Overall — calculé côté pipeline, cf ADR 0022 (aligné avec DeputeCard).
+	const overall = $derived(stats.overall);
 
 	const href = $derived(mandat ? `/deputes/${personne.id}/?leg=${mandat.legislature}` : `/deputes/${personne.id}/`);
 

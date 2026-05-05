@@ -4,9 +4,9 @@
 
 Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque décision est un fichier dédié au format [ADR](https://adr.github.io). Pour ajouter une décision : créer `decisions/NNNN-slug.md` avec la trame de `TEMPLATE.md`, puis lancer `npm run decisions:index`.
 
-**21 décisions** consignées.
+**22 décisions** consignées.
 
-**Tags** : `data`(8) · `déploiement`(4) · `métriques`(4) · `sémantique`(3) · `pipeline-data`(2) · `ux`(2) · `sourcing`(2) · `gouvernance`(2) · `build`(2) · `scope`(2) · `roadmap`(2) · `modèle`(2) · `identité`(2) · `badges`(2) · `pipeline`(2) · `etalab`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `hémicycle`(1) · `layout`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `routes`(1) · `groupes`(1) · `phase-1`(1) · `sources`(1) · `ches`(1) · `multi-legislature`(1) · `performance`(1)
+**Tags** : `data`(8) · `déploiement`(4) · `métriques`(4) · `sémantique`(4) · `ux`(3) · `pipeline-data`(2) · `sourcing`(2) · `gouvernance`(2) · `build`(2) · `scope`(2) · `roadmap`(2) · `modèle`(2) · `identité`(2) · `badges`(2) · `pipeline`(2) · `etalab`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `hémicycle`(1) · `layout`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `routes`(1) · `groupes`(1) · `phase-1`(1) · `sources`(1) · `ches`(1) · `multi-legislature`(1) · `performance`(1) · `métrique`(1) · `overall`(1) · `exemplarité`(1)
 
 ## Index chronologique
 
@@ -33,6 +33,7 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 | 0019 | [Priorité de sources AMO Etalab : AMO10/AMO20 prioritaires sur AMO30](0019-priorite-sources-amo.md) | ✅ accepté | `data` `pipeline` `sources` `etalab` | 2026-05-05 |
 | 0020 | [Phase 2 : ajout de la 15ᵉ législature (ère Macron complète)](0020-phase2-15e-legislature.md) | ✅ accepté | `data` `scope` `roadmap` `ches` `multi-legislature` | 2026-05-05 |
 | 0021 | [Cache HTTP conditionnel + cache mount BuildKit pour les sources Etalab](0021-cache-conditionnel-sources.md) | ✅ accepté | `data` `déploiement` `build` `performance` `etalab` | 2026-05-05 |
+| 0022 | [Score Overall (sémantique d'exemplarité du parlementaire)](0022-score-overall.md) | ✅ accepté | `métrique` `sémantique` `overall` `exemplarité` `ux` | 2026-05-05 |
 
 ## Résumés
 
@@ -161,3 +162,9 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 > Cache HTTP conditionnel côté script + cache mount BuildKit côté Dockerfile, deux mécanismes complémentaires :
 
 📄 [Lire la décision complète](0021-cache-conditionnel-sources.md)
+
+### 0022 — Score Overall (sémantique d'exemplarité du parlementaire)
+
+> L'Overall est un score 0-99 calculé dans le pipeline (`scripts/fetch-data.ts`) et exposé sur `MandatStats.overall` et `CarriereAggregee.overall`. Sa formule unique est :
+
+📄 [Lire la décision complète](0022-score-overall.md)

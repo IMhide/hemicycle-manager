@@ -40,11 +40,7 @@
 		{ label: 'Présence', value: stats.presence.rate, color: '#60a5fa' },
 		{ label: 'Participation', value: stats.participation.rate, color: '#a78bfa' },
 		{ label: 'Loyauté', value: stats.loyaute.rate ?? 0, color: '#34d399' },
-		{
-			label: 'Activité',
-			value: Math.min(1, stats.participation.numerator / 3000),
-			color: '#fbbf24'
-		}
+		{ label: 'Volume', value: stats.volume, color: '#fbbf24' }
 	]);
 
 	// Badges affichés : badges carrière toujours visibles + badges mandat seulement en vue mandat
@@ -57,16 +53,8 @@
 
 	const groupeRank = $derived(groupe?.libelleAbrege ? POLITICAL_ORDER[groupe.libelleAbrege] : null);
 
-	// Overall FIFA — moyenne pondérée
-	const overall = $derived(
-		Math.round(
-			(stats.presence.rate * 0.3 +
-				stats.participation.rate * 0.2 +
-				(stats.loyaute.rate ?? 0) * 0.3 +
-				Math.min(1, stats.participation.numerator / 3000) * 0.2) *
-				99
-		)
-	);
+	// Overall — calculé côté pipeline, cf ADR 0022 (formule unique, neutre, sans loyauté).
+	const overall = $derived(stats.overall);
 
 	function pct(n: number | null): string {
 		if (n === null) return 'N/A';
@@ -89,8 +77,21 @@
 			>
 				{overall}
 			</div>
-			<div class="text-[10px] uppercase tracking-widest text-assembly-muted mt-1">
-				{mandat ? `Overall · ${mandat.legislature}ᵉ` : 'Overall · Carrière'}
+			<div class="text-[10px] uppercase tracking-widest text-assembly-muted mt-1 inline-flex items-center gap-1">
+				<span>{mandat ? `Overall · ${mandat.legislature}ᵉ` : 'Overall · Carrière'}</span>
+				<InfoTip title="Comment se calcule l'Overall ?" placement="bottom">
+					Note 0–99 mesurant l'assiduité d'un parlementaire à voter les lois
+					(<a href="/faq#overall" class="underline text-assembly-accent">détails</a>) :
+					<ul class="list-disc pl-4 mt-1 space-y-0.5">
+						<li><b>55 %</b> Participation (votes Pour ou Contre exprimés)</li>
+						<li><b>35 %</b> Volume (nb de scrutins votés, normalisé sur le centile 95 de la cohorte)</li>
+						<li><b>10 %</b> Présence (compte aussi l'abstention)</li>
+					</ul>
+					<div class="mt-2 text-assembly-muted">
+						La loyauté à un groupe n'entre pas dans la note.
+						Décision figée en <a href="https://github.com/IMhide/hemicycle-manager/blob/main/decisions/0022-score-overall.md" class="underline">ADR 0022</a>.
+					</div>
+				</InfoTip>
 			</div>
 		</div>
 		{#if groupe}

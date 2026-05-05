@@ -794,7 +794,9 @@ function emptyStats(): MandatStats {
 		presence: { numerator: 0, denominator: 0, rate: 0 },
 		participation: { numerator: 0, denominator: 0, rate: 0 },
 		loyaute: { numerator: 0, denominator: 0, rate: null },
-		frondes: { count: 0, rate: 0 }
+		frondes: { count: 0, rate: 0 },
+		overall: 0,
+		volume: 0
 	};
 }
 
@@ -988,6 +990,77 @@ function computeBadgesMandat(legislature: number, personnes: Map<string, Partial
 	}
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// Score Overall (cf ADR 0022) — sémantique d'exemplarité du parlementaire
+// ────────────────────────────────────────────────────────────────────────────
+
+const OVERALL_W_PARTICIPATION = 0.55;
+const OVERALL_W_VOLUME = 0.35;
+const OVERALL_W_PRESENCE = 0.10;
+
+/** Centile 95 d'une série de nombres (≥ 0). Retourne 0 si la série est vide. */
+function percentile95(values: number[]): number {
+	if (values.length === 0) return 0;
+	const sorted = [...values].sort((a, b) => a - b);
+	// Index linéaire : floor(0.95 * (n - 1)). Pour n=20 → 18ᵉ (index 18, soit la 19ᵉ valeur).
+	const idx = Math.floor(0.95 * (sorted.length - 1));
+	return sorted[idx];
+}
+
+function overallScore(
+	participationRate: number,
+	presenceRate: number,
+	scrutinsVotes: number,
+	volumeRef: number
+): { overall: number; volume: number } {
+	const volume = volumeRef > 0 ? Math.min(1, scrutinsVotes / volumeRef) : 0;
+	const score =
+		OVERALL_W_PARTICIPATION * participationRate +
+		OVERALL_W_VOLUME * volume +
+		OVERALL_W_PRESENCE * presenceRate;
+	return { overall: Math.round(score * 99), volume };
+}
+
+/** Calcul des overalls par législature (mandats). volumeRef = centile 95
+ *  du nb de scrutins votés (participation.numerator) sur la cohorte de la législature. */
+function computeOverallsForLegislature(
+	legislature: number,
+	personnes: Map<string, PartialPersonne>
+) {
+	const cohort: Mandat[] = [];
+	for (const p of personnes.values()) {
+		const m = p.mandatsByLeg.get(legislature);
+		if (m) cohort.push(m);
+	}
+	const volumeRef = percentile95(cohort.map((m) => m.stats.participation.numerator));
+	for (const m of cohort) {
+		const { overall, volume } = overallScore(
+			m.stats.participation.rate,
+			m.stats.presence.rate,
+			m.stats.participation.numerator,
+			volumeRef
+		);
+		m.stats.overall = overall;
+		m.stats.volume = volume;
+	}
+}
+
+/** Calcul des overalls carrière. volumeRef = centile 95 du nb de scrutins votés
+ *  cumulés (toutes législatures confondues) sur l'ensemble des personnes. */
+function computeOverallsCarriere(personnes: Personne[]) {
+	const volumeRef = percentile95(personnes.map((p) => p.carriere.participation.numerator));
+	for (const p of personnes) {
+		const { overall, volume } = overallScore(
+			p.carriere.participation.rate,
+			p.carriere.presence.rate,
+			p.carriere.participation.numerator,
+			volumeRef
+		);
+		p.carriere.overall = overall;
+		p.carriere.volume = volume;
+	}
+}
+
 /** Calcul de la carrière agrégée (cumul pondéré, cf ADR 0017) + badges carrière. */
 function computeCarriere(personne: PartialPersonne): CarriereAggregee {
 	const mandats = [...personne.mandatsByLeg.values()];
@@ -998,7 +1071,9 @@ function computeCarriere(personne: PartialPersonne): CarriereAggregee {
 		frondes: { count: 0, rate: 0 },
 		nbMandats: mandats.length,
 		legislatures: mandats.map((m) => m.legislature).sort((a, b) => a - b),
-		badgesCarriere: []
+		badgesCarriere: [],
+		overall: 0,
+		volume: 0
 	};
 
 	for (const m of mandats) {
@@ -1203,11 +1278,12 @@ async function main() {
 		computeStatsForLegislature(leg, personnes, index, details, historiques);
 	}
 
-	// Finalisation des stats puis rangs et badges par législature
+	// Finalisation des stats puis rangs, badges et overalls mandat par législature
 	for (const p of personnes.values()) finalizeMandatStats(p);
 	for (const leg of LEGISLATURES) {
 		computeRangsForLegislature(leg, personnes);
 		computeBadgesMandat(leg, personnes);
+		computeOverallsForLegislature(leg, personnes);
 	}
 
 	// Carrière agrégée + badges carrière
@@ -1223,6 +1299,9 @@ async function main() {
 		});
 	}
 	personnesFull.sort((a, b) => a.identite.nom.localeCompare(b.identite.nom));
+
+	// Overall carrière (cohorte = toutes personnes, volumeRef = centile 95 cumulé)
+	computeOverallsCarriere(personnesFull);
 
 	// Finalisation des groupes (effectif + président) — utilise les appartenances déjà calculées
 	finalizeGroupes(groupesByLeg, personnes);

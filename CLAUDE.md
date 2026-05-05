@@ -40,6 +40,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 - les **sources de données AMO Etalab** (priorité AMO10/AMO20 > AMO30 pour `placeHemicycle` notamment) → vérifie ADR 0019
 - l'ajout de la **15ᵉ législature** ou du **mapping CHES** (groupes, libellés Etalab exacts, suffixe `_XV`) → vérifie ADR 0020
 - la **sémantique d'une métrique** (présence, participation, loyauté, frondes, cohésion) → vérifie les ADR `métriques` et `sémantique` (0004, 0005, 0006, 0017)
+- le **score Overall** (formule, pondération, ajout/retrait d'un axe, magic numbers) → vérifie ADR 0022 (figé : 0.55 Participation + 0.35 Volume centile-95 + 0.10 Présence ; loyauté **exclue** ; calcul **pipeline only**, lu par les cartes)
 - la **stack** (Node, Svelte, Tailwind…) → vérifie ADR 0001 et 0010
 - le **déploiement** (Dockerfile, healthcheck, Coolify) → vérifie ADR 0002 et 0011
 - les **données** (fetch, format, gitignore) → vérifie ADR 0003 et 0012
