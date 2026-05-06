@@ -13,11 +13,12 @@
 	const triennatsSorted = $derived(
 		[...data.triennats].sort((a, b) => b.dateDebut.localeCompare(a.dateDebut))
 	);
-	const triennatCourant = $derived<TriennatId>(
-		(data.triennats.find((t) => t.enCours)?.id ??
-			triennatsSorted[0]?.id ??
-			'2023-2026') as TriennatId
-	);
+
+	function pickTriennatCourant(triennats: typeof data.triennats): TriennatId {
+		return (triennats.find((t) => t.enCours)?.id ??
+			[...triennats].sort((a, b) => b.dateDebut.localeCompare(a.dateDebut))[0]?.id ??
+			'2023-2026') as TriennatId;
+	}
 
 	let search = $state('');
 	let sortKey: SortKey = $state('nom');
@@ -25,15 +26,8 @@
 	let civFilter = $state<'all' | 'M.' | 'Mme'>('all');
 	let etatFilter: EtatFilter = $state('all');
 	let visibleCount = $state(60);
-	/** null = vue carrière (cross-triennat), sinon scope par triennat */
-	let scopeTriennat: TriennatId | null = $state(null);
-
-	// Initialise scopeTriennat sur le triennat en cours dès qu'il est connu
-	$effect(() => {
-		if (scopeTriennat === null && triennatCourant) {
-			scopeTriennat = triennatCourant;
-		}
-	});
+	/** null = vue carrière (cross-triennat), sinon scope par triennat. Init = triennat en cours. */
+	let scopeTriennat: TriennatId | null = $state(pickTriennatCourant(data.triennats));
 
 	const groupesByCode = $derived.by(() => {
 		const m = new Map<string, GroupeSenat>();
@@ -254,7 +248,7 @@
 						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
 					onclick={() => (scopeTriennat = tri.id as TriennatId)}
 				>
-					{tri.id}{#if tri.enCours} ⚡{/if}
+					{tri.id}
 				</button>
 			{/each}
 		</div>

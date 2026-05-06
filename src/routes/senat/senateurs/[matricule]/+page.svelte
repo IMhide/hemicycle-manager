@@ -32,9 +32,12 @@
 		return null; // Carrière
 	});
 
-	/** Tab actif : null = carrière, sinon TriennatId. */
+	/** Tab actif : null = carrière, sinon TriennatId.
+	 *  URL `?triennat=carriere` = vue Carrière explicite (clic utilisateur).
+	 *  URL sans param = default (triennat en cours si le sénateur y siège, sinon Carrière). */
 	const selectedTriennat = $derived.by((): TriennatId | null => {
 		const q = $page.url.searchParams.get('triennat');
+		if (q === 'carriere') return null;
 		if (!q) return defaultTriennat;
 		if (isTriennatId(q) && data.senateur.carriere.triennats.includes(q)) return q;
 		return defaultTriennat;
@@ -42,7 +45,7 @@
 
 	function selectTab(triennat: TriennatId | null) {
 		const url = new URL($page.url);
-		if (triennat === null) url.searchParams.delete('triennat');
+		if (triennat === null) url.searchParams.set('triennat', 'carriere');
 		else url.searchParams.set('triennat', triennat);
 		goto(url.toString(), { replaceState: false, keepFocus: true, noScroll: true });
 	}
