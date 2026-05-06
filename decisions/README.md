@@ -4,9 +4,9 @@
 
 Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque décision est un fichier dédié au format [ADR](https://adr.github.io). Pour ajouter une décision : créer `decisions/NNNN-slug.md` avec la trame de `TEMPLATE.md`, puis lancer `npm run decisions:index`.
 
-**27 décisions** consignées.
+**28 décisions** consignées.
 
-**Tags** : `data`(11) · `métriques`(5) · `sémantique`(5) · `senat`(5) · `déploiement`(4) · `pipeline`(4) · `ux`(3) · `sourcing`(3) · `scope`(3) · `roadmap`(3) · `identité`(3) · `pipeline-data`(2) · `hémicycle`(2) · `layout`(2) · `gouvernance`(2) · `build`(2) · `modèle`(2) · `badges`(2) · `sources`(2) · `etalab`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `routes`(1) · `groupes`(1) · `phase-1`(1) · `ches`(1) · `multi-legislature`(1) · `performance`(1) · `métrique`(1) · `overall`(1) · `exemplarité`(1) · `multi-chambre`(1) · `v1`(1) · `à-revisiter`(1)
+**Tags** : `data`(12) · `senat`(6) · `métriques`(5) · `sémantique`(5) · `déploiement`(4) · `ux`(4) · `scope`(4) · `pipeline`(4) · `sourcing`(3) · `roadmap`(3) · `identité`(3) · `pipeline-data`(2) · `hémicycle`(2) · `layout`(2) · `gouvernance`(2) · `build`(2) · `modèle`(2) · `badges`(2) · `sources`(2) · `etalab`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `routes`(1) · `groupes`(1) · `phase-1`(1) · `ches`(1) · `multi-legislature`(1) · `performance`(1) · `métrique`(1) · `overall`(1) · `exemplarité`(1) · `multi-chambre`(1) · `v1`(1) · `à-revisiter`(1) · `granularite-temporelle`(1) · `classements`(1)
 
 ## Index chronologique
 
@@ -34,11 +34,12 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 | 0020 | [Phase 2 : ajout de la 15ᵉ législature (ère Macron complète)](0020-phase2-15e-legislature.md) | ✅ accepté | `data` `scope` `roadmap` `ches` `multi-legislature` | 2026-05-05 |
 | 0021 | [Cache HTTP conditionnel + cache mount BuildKit pour les sources Etalab](0021-cache-conditionnel-sources.md) | ✅ accepté | `data` `déploiement` `build` `performance` `etalab` | 2026-05-05 |
 | 0022 | [Score Overall (sémantique d'exemplarité du parlementaire)](0022-score-overall.md) | ✅ accepté | `métrique` `sémantique` `overall` `exemplarité` `ux` | 2026-05-05 |
-| 0023 | [Phase 3 Sénat : scope, granularité temporelle, sources](0023-phase3-senat-scope.md) | ✅ accepté | `data` `scope` `roadmap` `senat` `multi-chambre` | 2026-05-06 |
+| 0023 | [Phase 3 Sénat : scope, granularité temporelle, sources](0023-phase3-senat-scope.md) | 🔄 partiellement remplacée par #0028 (volet *granularité temporelle*) ; reste en vigueur sur *scope*, *sources*, *pipeline séparé* | `data` `scope` `roadmap` `senat` `multi-chambre` | 2026-05-06 |
 | 0024 | [Identifiant stable Sénat = `Matricule`](0024-identifiant-senat-matricule.md) | ✅ accepté | `data` `identité` `pipeline` `senat` | 2026-05-06 |
 | 0025 | [Priorité de sources Sénat : api-senat → ODSEN_* → dosleg](0025-priorite-sources-senat.md) | ✅ accepté | `data` `pipeline` `sources` `senat` | 2026-05-06 |
 | 0026 | [Hémicycle Sénat 348 sièges adapté de Kurea/visu_senat](0026-hemicycle-senat-kurea.md) | ✅ accepté | `sourcing` `hémicycle` `layout` `senat` | 2026-05-06 |
 | 0027 | [Délégations de vote au Sénat : ignorées en v1](0027-delegations-vote-senat-v1.md) | ✅ accepté | `sémantique` `métriques` `senat` `v1` `à-revisiter` | 2026-05-06 |
+| 0028 | [Sénat : triennat comme unité de regroupement (remplace session annuelle)](0028-senat-triennat-unite-regroupement.md) | ✅ accepté | `data` `scope` `senat` `ux` `granularite-temporelle` `classements` | 2026-05-06 |
 
 ## Résumés
 
@@ -203,3 +204,9 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 > Pour la v1 de Phase 3 Sénat, le champ `senmatdel` est ignoré :
 
 📄 [Lire la décision complète](0027-delegations-vote-senat-v1.md)
+
+### 0028 — Sénat : triennat comme unité de regroupement (remplace session annuelle)
+
+> Le triennat sénatorial est l'unité de regroupement principale Sénat. Il joue côté Sénat le rôle de la législature côté AN : navigation, fiches, classements, cohortes. La session annuelle demeure brique data interne, plus exposée en UI.
+
+📄 [Lire la décision complète](0028-senat-triennat-unite-regroupement.md)

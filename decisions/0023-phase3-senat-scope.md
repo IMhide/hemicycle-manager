@@ -1,8 +1,10 @@
 # 0023 — Phase 3 Sénat : scope, granularité temporelle, sources
 
 **Date** : 2026-05-06
-**Statut** : accepté
+**Statut** : partiellement remplacée par #0028 (volet *granularité temporelle*) ; reste en vigueur sur *scope*, *sources*, *pipeline séparé*
 **Tags** : data, scope, roadmap, senat, multi-chambre
+
+> ℹ️ **Granularité temporelle remplacée par ADR #0028 (2026-05-06)** — La décision initiale "session annuelle = analogue de la législature" a été remplacée par "**triennat = analogue de la législature**" (période de 3 ans entre 2 renouvellements sénatoriaux). La session annuelle reste **brique data** sous-jacente, plus exposée en UI. Voir `decisions/0028-senat-triennat-unite-regroupement.md` pour les détails. Le reste de cette ADR (couverture exhaustive depuis 2006, pas de fusion bicamérale en v1, pipeline séparé) **reste en vigueur**.
 
 ## Contexte
 
