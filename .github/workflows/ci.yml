@@ -26,9 +26,11 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       # Le pipeline data n'est pas requis pour type-check ni build, mais les
-      # pages prérendues (/, /deputes, /groupes, /classements, /scrutins)
-      # font des `fetch` au build. On mock le minimum nécessaire pour le
-      # nouveau modèle multi-législature (cf ADR 0015-0020).
+      # pages prérendues (/, /deputes, /groupes, /classements, /scrutins,
+      # /senat, /senat/senateurs, /senat/scrutins, /senat/classements) font
+      # des `fetch` au build. On mock le minimum nécessaire pour les modèles
+      # multi-législature AN (cf ADR 0015-0020) et multi-session Sénat
+      # (cf ADR 0023-0027).
       - name: Generate placeholder static data
         run: |
           mkdir -p static/data/scrutins static/data/historique static/data/groupes
@@ -39,6 +41,13 @@ jobs:
           echo '[]' > static/data/groupes/16.json
           echo '[]' > static/data/groupes/17.json
           echo '{"generatedAt":"1970-01-01T00:00:00Z","legislatures":[15,16,17],"counts":{"personnes":0,"mandats":0,"groupes":0,"scrutins":0},"sources":{}}' > static/data/meta.json
+          # Sénat (Phase 3) : placeholders symétriques.
+          mkdir -p static/data/senat/scrutins static/data/senat/historique static/data/senat/groupes
+          echo '[]' > static/data/senat/senateurs.json
+          echo '[]' > static/data/senat/scrutins-index.json
+          echo '[{"sesann":2024,"libelle":"2024-2025","dateDebut":"2024-10-01","dateFin":"2025-09-30","nbSenateursActifs":0,"nbScrutins":0}]' > static/data/senat/sessions.json
+          echo '[]' > static/data/senat/groupes/2024.json
+          echo '{"generatedAt":"1970-01-01T00:00:00Z","sessions":[2024],"counts":{"senateurs":0,"mandats":0,"groupesUniques":0,"sessions":1,"scrutins":0,"votesNominatifs":0},"sources":{}}' > static/data/senat/meta.json
 
       - name: Sync SvelteKit
         run: npx svelte-kit sync
