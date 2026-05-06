@@ -23,11 +23,11 @@
 			</div>
 
 			<nav class="flex items-center gap-1 text-sm flex-shrink-0">
-				<a href="/" class="btn-ghost hidden md:inline-block">Hémicycle</a>
-				<a href="/deputes" class="btn-ghost">Députés</a>
-				<a href="/classements" class="btn-ghost hidden md:inline-block">🏆</a>
-				<a href="/groupes" class="btn-ghost">Groupes</a>
-				<a href="/scrutins" class="btn-ghost hidden md:inline-block">Scrutins</a>
+				<a href="/" class="btn-ghost hidden md:inline-block" title="Hémicycle">Hémicycle</a>
+				<a href="/deputes" class="btn-ghost" title="Députés">Députés</a>
+				<a href="/groupes" class="btn-ghost" title="Groupes">Groupes</a>
+				<a href="/scrutins" class="btn-ghost hidden md:inline-block" title="Scrutins">Scrutins</a>
+				<a href="/classements" class="btn-ghost hidden md:inline-block" title="Classements">🏆</a>
 				<a href="/faq" class="btn-ghost" title="FAQ — Comment ça marche ?">📚</a>
 			</nav>
 		</div>

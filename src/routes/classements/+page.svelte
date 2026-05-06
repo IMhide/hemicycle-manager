@@ -133,6 +133,13 @@
 		return groupeById.get(stable.groupeId) ?? null;
 	}
 
+	/** Groupes principaux par législature pour la vue Carrière (cf ADR 0016). */
+	function groupesCarriere(p: Personne): Array<{ leg: number; groupe: Groupe | null }> {
+		return [...p.mandats]
+			.sort((a, b) => a.legislature - b.legislature)
+			.map((m) => ({ leg: m.legislature, groupe: groupePrincipal(m) }));
+	}
+
 	const coupesByGroup = $derived.by(() => {
 		const grouped = new Map<string, Array<{ personne: Personne; mandat: Mandat }>>();
 		for (const entry of coupesSorted) {
@@ -415,14 +422,20 @@
 								{personne.identite.prenom}
 								{personne.identite.nom}
 							</div>
-							<div class="flex items-center gap-2 mt-0.5">
-								{#if groupe}
-									<GroupBadge {groupe} size="sm" linked={false} />
-								{/if}
+							<div class="flex items-center flex-wrap gap-x-2 gap-y-1 mt-0.5">
 								{#if scopeLeg === 0}
-									<span class="text-[10px] text-assembly-muted">
-										Légis : {personne.carriere.legislatures.map((l) => `${l}ᵉ`).join(' · ')}
-									</span>
+									{#each groupesCarriere(personne) as { leg, groupe: g } (leg)}
+										<span class="inline-flex items-center gap-1 text-[10px]">
+											<span class="text-assembly-muted tabular-nums">{leg}<sup>e</sup></span>
+											{#if g}
+												<GroupBadge groupe={g} size="sm" linked={false} />
+											{:else}
+												<span class="text-assembly-muted italic">—</span>
+											{/if}
+										</span>
+									{/each}
+								{:else if groupe}
+									<GroupBadge {groupe} size="sm" linked={false} />
 								{/if}
 							</div>
 						</div>
