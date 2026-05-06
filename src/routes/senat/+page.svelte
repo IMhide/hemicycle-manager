@@ -123,8 +123,8 @@
 		<div>
 			<h1 class="title-display text-4xl sm:text-5xl tracking-wider">Hémicycle Sénat</h1>
 			<p class="text-assembly-muted mt-1">
-				Triennat {data.triennatCourant}{#if triennatMeta?.enCours} ⚡{/if} · 348 sièges · Survolez
-				un siège pour voir la fiche, cliquez pour ouvrir.
+				Triennat {data.triennatCourant} · 348 sièges · Survolez un siège pour voir la fiche,
+				cliquez pour ouvrir.
 			</p>
 		</div>
 		<div class="flex flex-col items-end gap-2 text-xs">
@@ -137,7 +137,7 @@
 							: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
 						onclick={() => basculerTriennat(tri.id as TriennatId)}
 					>
-						{tri.id}{#if tri.enCours} ⚡{/if}
+						{tri.id}
 					</button>
 				{/each}
 			</div>

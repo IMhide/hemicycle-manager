@@ -3,8 +3,7 @@
 	 * Tabs sélecteur "Carrière" + un onglet par triennat couvert par le sénateur
 	 * (cf ADR 0028). Le triennat est l'analogue de la législature côté AN.
 	 *
-	 * Ordre antichronologique : `[Carrière] [2023-2026 ⚡] [2020-2023] [2017-2020] …`
-	 * Le triennat en cours porte un indicateur `⚡`.
+	 * Ordre antichronologique : `[Carrière] [2023-2026] [2020-2023] [2017-2020]`.
 	 *
 	 * Émet la valeur sélectionnée via callback `onSelect`. Le parent gère le
 	 * routing — ce composant ne pousse pas l'URL, il rend juste la barre.
@@ -28,10 +27,6 @@
 			.slice()
 			.reverse()
 	);
-
-	function isEnCours(id: TriennatId): boolean {
-		return TRIENNATS.find((t) => t.id === id)?.enCours ?? false;
-	}
 </script>
 
 <div class="flex flex-wrap items-center gap-1 border-b border-assembly-border/50">
@@ -54,7 +49,7 @@
 			onclick={() => onSelect(t.id)}
 			title={`Triennat ${t.id}`}
 		>
-			{t.id}{#if isEnCours(t.id)} <span class="opacity-80">⚡</span>{/if}
+			{t.id}
 		</button>
 	{/each}
 	<div class="ml-auto pr-1">

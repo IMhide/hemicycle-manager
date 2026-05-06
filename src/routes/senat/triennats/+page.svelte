@@ -45,7 +45,7 @@
 			>
 				<div class="flex items-baseline justify-between gap-2">
 					<div class="title-display text-2xl">
-						{t.id}{#if t.enCours} <span class="text-base align-middle opacity-80">⚡</span>{/if}
+						{t.id}
 					</div>
 					<div class="text-xs text-assembly-muted">
 						{#if t.enCours}En cours{:else}Terminé{/if}

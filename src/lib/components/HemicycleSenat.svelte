@@ -22,7 +22,7 @@
 		HEMICYCLE_VIEWBOX_SENAT,
 		SEAT_RADIUS_SENAT
 	} from '$lib/hemicycle-senat';
-	import { gradientColorFor } from '$lib/political-order';
+	import { gradientColorFor, POLITICAL_ORDER } from '$lib/political-order';
 
 	const VOTE_COLORS = {
 		pour: '#22c55e',
@@ -62,10 +62,14 @@
 	});
 
 	function mandatCouvrantTriennat(s: Senateur): MandatSenat | null {
-		for (const m of s.mandats) {
-			if (m.triennats.some((t) => t.triennat === triennat)) return m;
-		}
-		return null;
+		// Préférer un mandat encore actif (dateFinFonction null) pour éviter de
+		// dupliquer un sénateur qui a fini puis recommencé un mandat dans le même
+		// triennat. À défaut, prendre le premier mandat couvrant.
+		const actif = s.mandats.find(
+			(m) => m.dateFinFonction === null && m.triennats.some((t) => t.triennat === triennat)
+		);
+		if (actif) return actif;
+		return s.mandats.find((m) => m.triennats.some((t) => t.triennat === triennat)) ?? null;
 	}
 
 	function appartenanceALaDate(
@@ -115,21 +119,79 @@
 		return 1;
 	}
 
-	const layout = $derived.by(() => {
-		const seated: Array<{ senateur: Senateur; mandat: MandatSenat; x: number; y: number }> = [];
-		let nonPlaces = 0;
+	function rankOfMandat(m: MandatSenat): number {
+		const app = appartenanceContextuelle(m);
+		const code = app?.groupeCode;
+		// On utilise libelleAbrege via groupeByCode (clé canonique POLITICAL_ORDER) ;
+		// les codes Sénat (UMP, UC, SOC…) sont eux-mêmes mappés directement.
+		const fromGroupes = code ? groupeByCode.get(code)?.libelleAbrege : null;
+		const key = fromGroupes ?? code ?? '';
+		return POLITICAL_ORDER[key]?.rank ?? 12;
+	}
 
+	const layout = $derived.by(() => {
+		// 1. Cohorte du triennat (1 entrée par sénateur) avec le mandat couvrant.
+		//    `mandatCouvrantTriennat` privilégie déjà le mandat actif quand il existe.
+		const cohorte: Array<{ senateur: Senateur; mandat: MandatSenat }> = [];
 		for (const s of senateurs) {
 			const m = mandatCouvrantTriennat(s);
-			if (!m) continue;
+			if (m) cohorte.push({ senateur: s, mandat: m });
+		}
 
-			if (m.place && SEAT_MAP_SENAT.has(m.place)) {
+		// 2. Sièges occupés par les `place` réelles (api-senat, mandats actifs).
+		const seated: Array<{ senateur: Senateur; mandat: MandatSenat; x: number; y: number }> = [];
+		const usedPlaces = new Set<number>();
+		const sansPlace: Array<{ senateur: Senateur; mandat: MandatSenat }> = [];
+
+		for (const entry of cohorte) {
+			const m = entry.mandat;
+			if (m.place && SEAT_MAP_SENAT.has(m.place) && !usedPlaces.has(m.place)) {
 				const pos = SEAT_MAP_SENAT.get(m.place)!;
-				seated.push({ senateur: s, mandat: m, x: pos.x, y: pos.y });
+				seated.push({ senateur: entry.senateur, mandat: m, x: pos.x, y: pos.y });
+				usedPlaces.add(m.place);
 			} else {
-				nonPlaces++;
+				sansPlace.push(entry);
 			}
 		}
+
+		// 3. Cas spécial : si la salle est déjà entièrement remplie par des
+		//    `place` réelles (348/348), pas de fallback — les sénateurs partis
+		//    en cours de triennat resteraient en surplus. C'est le cas du
+		//    triennat en cours (2023-2026) : les 348 mandats actifs aujourd'hui
+		//    occupent toutes les places, les 183 mandats clos chevauchant le
+		//    triennat ne sont pas redessinés par-dessus.
+		if (usedPlaces.size >= SEAT_MAP_SENAT.size) {
+			return { seated, nonPlaces: sansPlace.length };
+		}
+
+		// 4. Sièges libres triés par x croissant (gauche → droite). Le siège est
+		//    une approximation de "position politique" par sa coordonnée x ; on
+		//    aligne donc le rank groupe (1=gauche, 11=droite) sur ce gradient.
+		const siegesLibres = [...SEAT_MAP_SENAT.values()]
+			.filter((s) => !usedPlaces.has(s.place))
+			.sort((a, b) => a.x - b.x);
+
+		// 5. Sénateurs sans place triés par (rank groupe, nom). Tous les sans-place
+		//    de la cohorte sont éligibles (mandats actifs ET clos chevauchant le
+		//    triennat), pour ne pas vider l'hémicycle des triennats anciens.
+		const sansPlaceSorted = [...sansPlace].sort((a, b) => {
+			const rA = rankOfMandat(a.mandat);
+			const rB = rankOfMandat(b.mandat);
+			if (rA !== rB) return rA - rB;
+			return a.senateur.identite.nom.localeCompare(b.senateur.identite.nom);
+		});
+
+		let nonPlaces = 0;
+		for (let i = 0; i < sansPlaceSorted.length; i++) {
+			const seat = siegesLibres[i];
+			if (!seat) {
+				nonPlaces++;
+				continue;
+			}
+			const entry = sansPlaceSorted[i];
+			seated.push({ senateur: entry.senateur, mandat: entry.mandat, x: seat.x, y: seat.y });
+		}
+
 		return { seated, nonPlaces };
 	});
 
@@ -190,8 +252,8 @@
 	</svg>
 	{#if layout.nonPlaces > 0}
 		<div class="text-[10px] text-assembly-muted text-center mt-2 italic">
-			{layout.nonPlaces} sénateur·rice·s sans siège attribué pour ce triennat (renouvellement
-			récent, fin de mandat). Visibles dans la liste des sénateurs.
+			{layout.nonPlaces} sénateur·rice·s en surplus (cohorte cumulée &gt; 348 sièges via
+			suppléances et renouvellements). Visibles dans la liste des sénateurs.
 		</div>
 	{/if}
 </div>

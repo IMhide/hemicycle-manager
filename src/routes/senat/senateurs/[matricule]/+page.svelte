@@ -2,7 +2,7 @@
 	/**
 	 * Fiche détail d'un sénateur (cf ADR 0023..0028).
 	 *
-	 * Tabs : [Carrière] [2023-2026 ⚡] [2020-2023] … via `TriennatTabs`.
+	 * Tabs : [Carrière] [2023-2026] [2020-2023] [2017-2020] via `TriennatTabs`.
 	 * Default tab : Carrière si pas de mandat sur triennat en cours, sinon triennat en cours.
 	 * Le filtre fronde/position et la pagination sont alignés sur la fiche AN
 	 * pour cohérence UX (cf /deputes/[id]/).

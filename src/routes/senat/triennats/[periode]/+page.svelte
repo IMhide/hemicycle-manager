@@ -126,7 +126,7 @@
 	<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
 		<div>
 			<h1 class="title-display text-4xl sm:text-5xl tracking-wider">
-				Sénat · {data.triennatCourant}{#if triennatMeta?.enCours} <span class="text-base align-middle opacity-80">⚡</span>{/if}
+				Sénat · {data.triennatCourant}
 			</h1>
 			<p class="text-assembly-muted mt-1">
 				{senateursTriennat.length} sénateurs ayant siégé sur ce triennat.
@@ -142,7 +142,7 @@
 							: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
 						onclick={() => basculerTriennat(tri.id as TriennatId)}
 					>
-						{tri.id}{#if tri.enCours} ⚡{/if}
+						{tri.id}
 					</button>
 				{/each}
 			</div>

@@ -226,7 +226,7 @@
 					id: 'senat-triennat',
 					question: 'Pourquoi vous parlez de "<b>triennat</b>" et plus de "législature" ?',
 					answer: `<p>Côté Sénat, le <b>triennat</b> (3 ans entre 2 renouvellements) joue le rôle de la législature AN. C'est l'unité naturelle du Sénat : entre 2 renouvellements, la moitié des sièges qui vient d'être renouvelée siège tout du long, et l'autre moitié (renouvelée 3 ans plus tôt) aussi. La cohorte est <b>strictement stable</b> (sauf décès/démissions/suppléances).</p>
-<p class="mt-2">3 triennats sont couverts (scope ère Macron, à parité avec les 3 législatures AN) : <code>2017-2020</code>, <code>2020-2023</code>, <code>2023-2026</code> (en cours ⚡, fin théorique sept. 2026).</p>
+<p class="mt-2">3 triennats sont couverts (scope ère Macron, à parité avec les 3 législatures AN) : <code>2017-2020</code>, <code>2020-2023</code>, <code>2023-2026</code> (en cours, fin théorique sept. 2026).</p>
 <p class="mt-2">Le mandat individuel sénatorial dure <b>6 ans = 2 triennats consécutifs</b> (mandat complet). Un mandat fragmenté ou partiel peut chevaucher 1, 2 ou 3 triennats. Sur la fiche d'un sénateur, l'onglet "Carrière" agrège tous les triennats de sa carrière.</p>
 <p class="mt-2">Default tab à l'arrivée sur une fiche : <b>triennat en cours</b> si le sénateur y siège, sinon <b>Carrière</b>. Cf ${ADR(28, 'senat-triennat-unite-regroupement')} et ${ADR(29, 'senat-scope-ere-macron')}.</p>`
 				},
