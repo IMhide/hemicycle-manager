@@ -9,8 +9,10 @@
 	let { data } = $props();
 
 	type Filter = 'tous' | 'pour' | 'contre' | 'abstention' | 'frondes';
+	const PAGE_SIZE = 10;
 	let filter: Filter = $state('tous');
-	let visibleCount = $state(50);
+	let visibleCount = $state(PAGE_SIZE);
+	let scrollEl = $state<HTMLDivElement | null>(null);
 
 	/** Tab actif : null = carrière, sinon numéro de législature */
 	const selectedLeg = $derived.by(() => {
@@ -94,16 +96,18 @@
 
 	function setFilter(f: Filter) {
 		filter = f;
-		visibleCount = 50;
+		visibleCount = PAGE_SIZE;
+		scrollEl?.scrollTo({ top: 0 });
 	}
 
 	function showMore() {
-		visibleCount += 100;
+		visibleCount += PAGE_SIZE;
 	}
 
 	$effect(() => {
 		void selectedLeg;
-		visibleCount = 50;
+		visibleCount = PAGE_SIZE;
+		scrollEl?.scrollTo({ top: 0 });
 	});
 
 	/** Timeline des appartenances de groupe (cf ADR 0016).
@@ -261,19 +265,29 @@
 						Aucun vote dans cette catégorie.
 					</div>
 				{:else}
-					<div class="space-y-1.5">
-						{#each visibleHistory as h (h.scrutin.uid)}
-							<VoteHistoryItem scrutin={h.scrutin} position={h.position} isFronde={h.isFronde} />
-						{/each}
+					<div
+						bind:this={scrollEl}
+						class="vote-scroll overflow-y-auto pr-1 -mr-1 border-y border-assembly-border/40"
+					>
+						<div class="space-y-1.5 py-1.5">
+							{#each visibleHistory as h (h.scrutin.uid)}
+								<VoteHistoryItem scrutin={h.scrutin} position={h.position} isFronde={h.isFronde} />
+							{/each}
+						</div>
+
+						{#if visibleCount < filteredHistory.length}
+							<div class="py-3 text-center">
+								<button class="btn-ghost text-sm" onclick={showMore}>
+									Charger {Math.min(PAGE_SIZE, filteredHistory.length - visibleCount)} de plus
+									({filteredHistory.length - visibleCount} restants)
+								</button>
+							</div>
+						{/if}
 					</div>
 
-					{#if visibleCount < filteredHistory.length}
-						<div class="mt-4 text-center">
-							<button class="btn-ghost text-sm" onclick={showMore}>
-								Charger 100 de plus ({filteredHistory.length - visibleCount} restants)
-							</button>
-						</div>
-					{/if}
+					<div class="mt-2 text-[10px] text-assembly-muted text-right tabular-nums">
+						{Math.min(visibleCount, filteredHistory.length)} / {filteredHistory.length} affichés
+					</div>
 				{/if}
 			</div>
 		</div>

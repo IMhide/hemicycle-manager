@@ -39,6 +39,14 @@
 	.depute-history-col {
 		min-width: 0;
 	}
+
+	/* Historique de vote : viewport interne ~10 items + scroll dedans + load-more interne.
+	 * Hauteur calibrée sur ~10 lignes de VoteHistoryItem (carte ~64px + gap 6px).
+	 * Plafonnée à 70vh pour ne jamais dépasser la fenêtre. */
+	.vote-scroll {
+		max-height: min(700px, 70vh);
+		scrollbar-gutter: stable;
+	}
 	@media (min-width: 1024px) {
 		.depute-layout {
 			grid-template-columns: 400px minmax(0, 1fr);
