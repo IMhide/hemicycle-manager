@@ -113,6 +113,14 @@ Mergée en une seule PR cumulant Phase 1 (16ᵉ+17ᵉ) et Phase 2 (15ᵉ).
 - [x] Axe radar `Activité (/3000)` → `Volume (centile 95 cohorte)`
 - [x] Smoke-test 40/40 ✅, type-check 0 erreur, distribution overalls saine
 
+## ✅ Polish UX (mergé 2026-05-06, PR #7)
+
+- [x] **Menu** : 🏆 Classements déplacé en avant-dernier (juste avant 📚 FAQ) — l'ordre suit la logique « contenu → outils de navigation/aide »
+- [x] **Menu** : tooltip natif `title=""` ajouté sur chaque entrée pour révéler le nom de la route au survol des icônes (🏆, 📚)
+- [x] **Classements → Championnat → Top députés (vue Carrière)** : un badge groupe coloré par législature au lieu d'une simple liste numérique (`15ᵉ • LFI · 16ᵉ • LFI-NUPES · 17ᵉ • LFI-NFP`). Helper `groupesCarriere(personne)` aligné sur ADR 0016 (groupe principal = premier non-NI)
+- [x] **`/deputes/[id]`** : historique de vote dans une box à hauteur **fixe** (~10 votes visibles, plafonnée à `min(700px, 70vh)`), scroll **interne**. Bouton « Charger 10 de plus » désormais **à l'intérieur** du scroll (on découvre les nouveaux votes en continuant à scroller). PAGE_SIZE constant = 10 (anciennement 50/+100). Compteur `X / N affichés` sous la box. Reset du `scrollTop` + `visibleCount` au changement de filtre ou de législature
+- [x] Classe utilitaire `.vote-scroll` ajoutée dans `app.css` (max-height + scrollbar-gutter stable)
+
 ## 🌐 Phase 3 — Au-delà de l'AN (Sénat, ministres, président)
 
 À démarrer une fois Phases 1+2 stabilisées. Implique probablement de **généraliser le type `Mandat`** (ajout d'un champ `chambre: 'AN' | 'Senat'` ou similaire) et d'introduire un type `MandatGouvernemental` pour les ministres. Mini-ADR de cadrage à prévoir au démarrage.
