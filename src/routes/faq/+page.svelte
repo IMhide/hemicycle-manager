@@ -211,6 +211,51 @@
 			]
 		},
 		{
+			id: 'senat',
+			title: 'Le Sénat (Phase 3)',
+			emoji: '🏛️',
+			intro: 'Le Sénat couvre 1 935 sénateurs, 4 662 scrutins et 20 sessions parlementaires (2006-2007 → 2025-2026). Quelques particularités à connaître.',
+			items: [
+				{
+					id: 'senat-overall',
+					question: 'L\'<b>Overall</b> au Sénat, c\'est calculé pareil ?',
+					answer: `<p>Oui, exactement la même formule que côté AN (cf <a class="underline hover:text-assembly-accent" href="#overall-formule">détails</a>) : 55 % Participation + 35 % Volume (centile 95 cohorte) + 10 % Présence. Les Overall des deux chambres ne se comparent pas directement, parce que les <b>cohortes sont distinctes</b> : un Sénat de 348 places avec une activité différente de l'AN n'a pas la même distribution naturelle.</p>
+<p class="mt-2">En pratique, la moyenne d'Overall au Sénat est plus haute (~80) qu'à l'AN (~50–70), parce que la cohorte sénatoriale est quasi exclusivement composée de présents en séance (pas de ministres, peu d'absents systématiques). Cf ${ADR(22, 'score-overall')}.</p>`
+				},
+				{
+					id: 'senat-cohorte',
+					question: 'Pourquoi vous parlez de "<b>session</b>" et plus de "législature" ?',
+					answer: `<p>Côté Sénat, la <b>session parlementaire annuelle</b> (sept→sept) joue le rôle d'unité de cohorte pour les classements, badges et rangs. C'est l'analogue naturel de la "législature" AN : durée comparable, cohorte stable, classements qui restent pertinents.</p>
+<p class="mt-2">Le mandat individuel sénatorial reste le conteneur d'éligibilité (peut couvrir plusieurs sessions). Le Sénat se renouvelle par moitié — un mandat dure 6 ans = ~6 sessions. Cf ${ADR(23, 'phase3-senat-scope')}.</p>`
+				},
+				{
+					id: 'senat-loyaute',
+					question: 'La <b>loyauté</b> et les <b>frondes</b> Sénat, c\'est calculé comment ?',
+					answer: `<p>Pareil qu'à l'AN : on regarde la position majoritaire du groupe d'appartenance <b>au moment du vote</b>. Un sénateur qui vote contre est un frondeur, un sénateur qui vote avec est loyaliste. Pas de jugement de valeur — juste un constat.</p>
+<p class="mt-2">Le groupe au moment du vote est résolu via la table des appartenances historiques (<code>HISTOGROUPES</code>) qui date chaque entrée et sortie de groupe. Cf ${ADR(16, 'groupes-multi-appartenance')} (transposée).</p>`
+				},
+				{
+					id: 'senat-delegations',
+					question: 'Et les <b>délégations de vote</b> ?',
+					answer: `<p>Au Sénat, un sénateur peut <b>déléguer son vote</b> à un collègue (typique en commission, ou pendant des absences brèves). Le système de délégation est une particularité institutionnelle sans équivalent côté AN.</p>
+<p class="mt-2">En v1 PolitiDex, on <b>ignore les délégations</b>. Tous les votes sont attribués au sénateur enregistré sur la ligne (le délégataire), comme s'il s'agissait d'un vote propre. Conséquence : le taux d'abstention/non-votant des sénateurs qui délèguent souvent est légèrement gonflé.</p>
+<p class="mt-2">Simplification consciente. Une ADR future pourra revisiter (badge "Délégant fréquent" ? décote ?). Cf ${ADR(27, 'delegations-vote-senat-v1')}.</p>`
+				},
+				{
+					id: 'senat-bicamerale',
+					question: 'Pourquoi un député ET un sénateur ne sont pas <b>fusionnés</b> dans une même fiche ?',
+					answer: `<p>Parce qu'on n'a pas (encore) implémenté le matching cross-chambre. En v1 Phase 3, l'AN et le Sénat sont deux datasets <b>strictement disjoints</b> : un sénateur a un <code>matricule</code> (ex. <code>08061X</code>), un député a un <code>PA-id</code>, et on n'essaie pas de réconcilier les deux.</p>
+<p class="mt-2">Conséquence : si quelqu'un est passé de l'AN au Sénat (ou inversement), il a deux fiches, une par chambre. La fusion bicamérale viendra en Phase 3c (politique de matching <code>(nom + dateNaissance)</code> à statuer dans une ADR future). Cf ${ADR(23, 'phase3-senat-scope')} et ${ADR(24, 'identifiant-senat-matricule')}.</p>`
+				},
+				{
+					id: 'senat-hemicycle',
+					question: 'D\'où vient le layout de l\'<b>hémicycle Sénat</b> à 348 sièges ?',
+					answer: `<p>Adapté du projet open-source <a class="underline hover:text-assembly-accent" target="_blank" rel="noopener" href="https://github.com/Kurea/visu_senat">Kurea/visu_senat</a> (MIT). 9 couches concentriques, places 1..348 alignées avec le champ <code>siege</code> de l'API live du Sénat.</p>
+<p class="mt-2">Crédit MIT préservé dans le fichier <code>senat-seats.json</code>. Cf ${ADR(26, 'hemicycle-senat-kurea')}.</p>`
+				}
+			]
+		},
+		{
 			id: 'meta',
 			title: 'Méta',
 			emoji: '🛠',
@@ -234,7 +279,8 @@
 				{
 					id: 'phase-3',
 					question: 'Y aura-t-il les <b>sénateurs</b> et les <b>ministres</b> ?',
-					answer: `<p>C'est prévu en Phase 3. Pour l'instant on couvre les députés des 15ᵉ, 16ᵉ et 17ᵉ législatures (toute l'ère Macron à l'Assemblée nationale). Cf ${ADR(14, 'pivot-politidex')}.</p>`
+					answer: `<p><b>Les sénateurs sont là !</b> Phase 3 PolitiDex couvre 1 935 sénateurs, 4 662 scrutins et 20 sessions (2006-2007 → 2025-2026). Voir la <a class="underline hover:text-assembly-accent" href="/senat">home Sénat</a> et la section <a class="underline hover:text-assembly-accent" href="#senat">FAQ Sénat</a> ci-dessus.</p>
+<p class="mt-2">Côté <b>ministres</b> et <b>présidents de la République</b>, c'est la suite de la Phase 3. Pour l'instant on couvre députés (15ᵉ + 16ᵉ + 17ᵉ législatures) et sénateurs en séparé — la fusion bicamérale (Phase 3c) viendra ensuite. Cf ${ADR(14, 'pivot-politidex')}.</p>`
 				}
 			]
 		}

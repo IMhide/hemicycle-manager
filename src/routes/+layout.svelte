@@ -29,7 +29,8 @@
 				<a href="/senat/senateurs" class="btn-ghost" title="Sénateurs">Sénateurs</a>
 				<a href="/groupes" class="btn-ghost" title="Groupes">Groupes</a>
 				<a href="/scrutins" class="btn-ghost hidden md:inline-block" title="Scrutins">Scrutins</a>
-				<a href="/classements" class="btn-ghost hidden md:inline-block" title="Classements">🏆</a>
+				<a href="/classements" class="btn-ghost hidden md:inline-block" title="Classements AN">🏆 AN</a>
+				<a href="/senat/classements" class="btn-ghost hidden md:inline-block" title="Classements Sénat">🏆 Sénat</a>
 				<a href="/faq" class="btn-ghost" title="FAQ — Comment ça marche ?">📚</a>
 			</nav>
 		</div>
