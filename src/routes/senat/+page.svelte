@@ -1,10 +1,8 @@
 <script lang="ts">
 	import HemicycleSenat from '$lib/components/HemicycleSenat.svelte';
 	import MiniSenateurCard from '$lib/components/MiniSenateurCard.svelte';
-	import HemicycleColorToggle from '$lib/components/HemicycleColorToggle.svelte';
 	import { POLITICAL_ORDER } from '$lib/political-order';
 	import { TRIENNATS, type TriennatId } from '$lib/triennats';
-	import { colorMode } from '$lib/color-mode.svelte';
 	import { goto } from '$app/navigation';
 	import type { Senateur, GroupeSenat, MandatSenat } from '$lib/types';
 
@@ -127,21 +125,18 @@
 				cliquez pour ouvrir.
 			</p>
 		</div>
-		<div class="flex flex-col items-end gap-2 text-xs">
-			<div class="flex items-center gap-1 flex-wrap justify-end max-w-md">
-				<span class="text-assembly-muted">Triennat :</span>
-				{#each triennatsSorted as tri (tri.id)}
-					<button
-						class="px-2 py-1 rounded text-[11px] {tri.id === data.triennatCourant
-							? 'bg-assembly-accent text-assembly-bg font-semibold'
-							: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
-						onclick={() => basculerTriennat(tri.id as TriennatId)}
-					>
-						{tri.id}
-					</button>
-				{/each}
-			</div>
-			<HemicycleColorToggle />
+		<div class="flex items-center gap-1 flex-wrap justify-end max-w-md text-xs">
+			<span class="text-assembly-muted">Triennat :</span>
+			{#each triennatsSorted as tri (tri.id)}
+				<button
+					class="px-2 py-1 rounded text-[11px] {tri.id === data.triennatCourant
+						? 'bg-assembly-accent text-assembly-bg font-semibold'
+						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+					onclick={() => basculerTriennat(tri.id as TriennatId)}
+				>
+					{tri.id}
+				</button>
+			{/each}
 		</div>
 	</div>
 
@@ -149,7 +144,7 @@
 		<HemicycleSenat
 			senateurs={senateursTriennat}
 			triennat={data.triennatCourant}
-			mode={{ kind: colorMode.current, groupes: data.groupes }}
+			mode={{ kind: 'gradient', groupes: data.groupes }}
 			{hovered}
 			onhover={(id) => (hovered = id)}
 			onselect={(id) => selectSenateur(id)}
