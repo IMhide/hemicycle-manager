@@ -1,14 +1,16 @@
 <script lang="ts">
 	/**
-	 * Fiche détail d'un sénateur (cf ADR 0023..0024).
+	 * Fiche détail d'un sénateur (cf ADR 0023..0028).
 	 *
-	 * Tabs : [Carrière] [2024-25] [2023-24] … (cf SessionTabs).
+	 * Tabs : [Carrière] [2023-2026 ⚡] [2020-2023] … via `TriennatTabs`.
+	 * Default tab : Carrière si pas de mandat sur triennat en cours, sinon triennat en cours.
 	 * Le filtre fronde/position et la pagination sont alignés sur la fiche AN
 	 * pour cohérence UX (cf /deputes/[id]/).
 	 */
 	import SenateurCard from '$lib/components/SenateurCard.svelte';
-	import SessionTabs from '$lib/components/SessionTabs.svelte';
+	import TriennatTabs from '$lib/components/TriennatTabs.svelte';
 	import VoteHistoryItemSenat from '$lib/components/VoteHistoryItemSenat.svelte';
+	import { TRIENNATS, isTriennatId, triennatOfDate, type TriennatId } from '$lib/triennats';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import type { GroupeSenat, VotePosition, MandatSenat } from '$lib/types';
@@ -21,18 +23,27 @@
 	let visibleCount = $state(PAGE_SIZE);
 	let scrollEl = $state<HTMLDivElement | null>(null);
 
-	/** Tab actif : null = carrière, sinon sesann */
-	const selectedSession = $derived.by(() => {
-		const q = $page.url.searchParams.get('session');
-		if (!q) return null;
-		const n = parseInt(q, 10);
-		return Number.isFinite(n) && data.senateur.carriere.sessions.includes(n) ? n : null;
+	/** Default tab : Carrière si pas de mandat sur triennat en cours, sinon triennat en cours. */
+	const defaultTriennat = $derived.by((): TriennatId | null => {
+		const enCours = TRIENNATS.find((t) => t.enCours)?.id;
+		if (enCours && data.senateur.carriere.triennats.includes(enCours)) {
+			return enCours as TriennatId;
+		}
+		return null; // Carrière
 	});
 
-	function selectTab(sesann: number | null) {
+	/** Tab actif : null = carrière, sinon TriennatId. */
+	const selectedTriennat = $derived.by((): TriennatId | null => {
+		const q = $page.url.searchParams.get('triennat');
+		if (!q) return defaultTriennat;
+		if (isTriennatId(q) && data.senateur.carriere.triennats.includes(q)) return q;
+		return defaultTriennat;
+	});
+
+	function selectTab(triennat: TriennatId | null) {
 		const url = new URL($page.url);
-		if (sesann === null) url.searchParams.delete('session');
-		else url.searchParams.set('session', String(sesann));
+		if (triennat === null) url.searchParams.delete('triennat');
+		else url.searchParams.set('triennat', triennat);
 		goto(url.toString(), { replaceState: false, keepFocus: true, noScroll: true });
 	}
 
@@ -46,27 +57,27 @@
 		return m;
 	});
 
-	/** Mandat couvrant la session sélectionnée (sinon : dernier mandat). */
+	/** Mandat couvrant le triennat sélectionné (sinon : dernier mandat). */
 	const mandatActif = $derived.by((): MandatSenat | null => {
-		if (selectedSession === null) return null;
+		if (selectedTriennat === null) return null;
 		for (const m of data.senateur.mandats) {
-			if (m.sessions.some((s) => s.sesann === selectedSession)) return m;
+			if (m.triennats.some((t) => t.triennat === selectedTriennat)) return m;
 		}
 		return null;
 	});
 
-	/** Groupe principal selon la vue (cf ADR 0016 transposée). */
+	/** Groupe principal selon la vue (cf ADR 0016 transposée + ADR 0028). */
 	const groupePrincipal = $derived.by((): GroupeSenat | null => {
 		const target = mandatActif ?? data.senateur.mandats.at(-1);
 		const lastApp = target?.appartenancesGroupe.at(-1);
 		if (!lastApp) return null;
 		const candidats = groupesByCode.get(lastApp.groupeCode);
 		if (!candidats || candidats.length === 0) return null;
-		if (selectedSession !== null) {
-			const exact = candidats.find((g) => g.sesann === selectedSession);
+		if (selectedTriennat !== null) {
+			const exact = candidats.find((g) => g.triennat === selectedTriennat);
 			if (exact) return exact;
 		}
-		return [...candidats].sort((a, b) => b.sesann - a.sesann)[0];
+		return [...candidats].sort((a, b) => b.triennat.localeCompare(a.triennat))[0];
 	});
 
 	const scrutinByUid = $derived.by(() => {
@@ -80,13 +91,15 @@
 			scrutin: (typeof data.scrutinsIndex)[number];
 			position: VotePosition;
 			isFronde: boolean;
-			sesann: number;
 		}> = [];
-		for (const [uid, position, isFronde, sesann] of data.historique) {
-			if (selectedSession !== null && sesann !== selectedSession) continue;
+		for (const [uid, position, isFronde] of data.historique) {
 			const scrutin = scrutinByUid.get(uid);
 			if (!scrutin) continue;
-			list.push({ scrutin, position, isFronde: isFronde === 1, sesann });
+			if (selectedTriennat !== null) {
+				const tri = triennatOfDate(scrutin.date);
+				if (tri?.id !== selectedTriennat) continue;
+			}
+			list.push({ scrutin, position, isFronde: isFronde === 1 });
 		}
 		list.sort((a, b) => b.scrutin.date.localeCompare(a.scrutin.date));
 		return list;
@@ -119,15 +132,15 @@
 	}
 
 	$effect(() => {
-		void selectedSession;
+		void selectedTriennat;
 		visibleCount = PAGE_SIZE;
 		scrollEl?.scrollTo({ top: 0 });
 	});
 
 	const scrutinsEligibles = $derived.by(() => {
-		if (selectedSession !== null && mandatActif) {
-			const sess = mandatActif.sessions.find((s) => s.sesann === selectedSession);
-			return sess?.scrutinsEligibles ?? 0;
+		if (selectedTriennat !== null && mandatActif) {
+			const tri = mandatActif.triennats.find((t) => t.triennat === selectedTriennat);
+			return tri?.scrutinsEligibles ?? 0;
 		}
 		return data.senateur.carriere.presence.denominator;
 	});
@@ -138,10 +151,6 @@
 			month: 'short',
 			year: 'numeric'
 		});
-	}
-
-	function libelleSession(sesann: number): string {
-		return `${sesann}-${(sesann + 1).toString().slice(-2)}`;
 	}
 
 	/** Timeline des appartenances de groupe par mandat. */
@@ -157,7 +166,7 @@
 			appartenances: m.appartenancesGroupe.map((a) => {
 				const candidats = groupesByCode.get(a.groupeCode);
 				const grp = candidats
-					? [...candidats].sort((x, y) => y.sesann - x.sesann)[0]
+					? [...candidats].sort((x, y) => y.triennat.localeCompare(x.triennat))[0]
 					: null;
 				return { ...a, groupe: grp };
 			})
@@ -165,9 +174,7 @@
 	});
 
 	const showTimeline = $derived(
-		mandatActif
-			? mandatActif.appartenancesGroupe.length > 1
-			: data.senateur.mandats.length >= 1
+		mandatActif ? mandatActif.appartenancesGroupe.length > 1 : data.senateur.mandats.length >= 1
 	);
 </script>
 
@@ -184,11 +191,7 @@
 	</a>
 
 	<div class="mb-6">
-		<SessionTabs
-			senateur={data.senateur}
-			selected={selectedSession}
-			onSelect={selectTab}
-		/>
+		<TriennatTabs senateur={data.senateur} selected={selectedTriennat} onSelect={selectTab} />
 	</div>
 
 	<div class="depute-layout">
@@ -196,14 +199,14 @@
 			<SenateurCard
 				senateur={data.senateur}
 				groupe={groupePrincipal}
-				sesann={selectedSession}
+				triennat={selectedTriennat}
 			/>
 
 			{#if showTimeline}
 				<div class="card p-4 mt-3 text-xs">
 					<div class="text-[10px] uppercase tracking-widest text-assembly-muted mb-3">
 						{#if mandatActif}
-							Appartenances de groupe — {libelleSession(selectedSession ?? 0)}
+							Appartenances de groupe — Triennat {selectedTriennat}
 						{:else}
 							Carrière sénatoriale
 						{/if}
@@ -212,7 +215,9 @@
 						{#each appartenancesTimeline as m (m.eluId)}
 							<div>
 								{#if !mandatActif}
-									<div class="flex items-baseline justify-between gap-2 mb-1.5 pb-1 border-b border-assembly-border/40">
+									<div
+										class="flex items-baseline justify-between gap-2 mb-1.5 pb-1 border-b border-assembly-border/40"
+									>
 										<div class="font-semibold">
 											Mandat
 											{#if m.motifDebut}
@@ -266,9 +271,9 @@
 				<div class="flex items-center justify-between gap-3 mb-4">
 					<h2 class="title-display text-xl">
 						Historique de vote
-						{#if selectedSession !== null}
+						{#if selectedTriennat !== null}
 							<span class="text-sm text-assembly-muted">
-								— session {libelleSession(selectedSession)}
+								— triennat {selectedTriennat}
 							</span>
 						{:else}
 							<span class="text-sm text-assembly-muted">— toute la carrière</span>

@@ -276,17 +276,28 @@ export interface MandatSenat {
 	/** Série 1 ou 2 (renouvellement par moitié). Non-null pour les actifs. */
 	serie: 1 | 2 | null;
 	appartenancesGroupe: AppartenanceGroupeSenat[]; // chronologique
-	sessions: SessionStats[]; // toutes les sessions chevauchant le mandat
+	sessions: SessionStats[]; // brique data : toutes les sessions chevauchant le mandat (cf ADR 0028)
+	triennats: TriennatStats[]; // unité de regroupement exposée UI (cf ADR 0028)
 	cumul: MandatStats; // cumul pondéré des sessions du mandat
 	badgesMandat: BadgeMandat[]; // réutilisé tel quel (presence-or, frondeur, …)
 }
 
-/** Stats d'un mandat pour une session particulière (cohorte par session, cf ADR 0023). */
+/** Stats d'un mandat pour une session particulière. Brique data sous-jacente,
+ *  plus exposée en UI v1 (cf ADR 0028). Conservée pour souplesse future. */
 export interface SessionStats {
 	sesann: number; // ex. 2024 (= "2024-2025")
 	scrutinsEligibles: number;
 	stats: MandatStats; // réutilisé du bloc AN
 	rangs: MandatRangs; // réutilisé du bloc AN
+}
+
+/** Stats d'un mandat pour un triennat (cohorte par triennat, cf ADR 0028).
+ *  Unité de regroupement principale Sénat — analogue de la législature côté AN. */
+export interface TriennatStats {
+	triennat: string; // TriennatId, ex. "2023-2026"
+	scrutinsEligibles: number;
+	stats: MandatStats;
+	rangs: MandatRangs;
 }
 
 /** Une appartenance datée à un groupe politique au sein d'un mandat sénatorial.
@@ -308,16 +319,17 @@ export interface CarriereSenatAggregee {
 	loyaute: NullableRatioStat;
 	frondes: { count: number; rate: number };
 	nbMandats: number;
-	sessions: number[]; // toutes les sessions touchées (asc)
+	sessions: number[]; // brique data : toutes les sessions touchées (asc)
+	triennats: string[]; // TriennatId[] — triennats touchés (asc), exposé UI (cf ADR 0028)
 	badgesCarriere: BadgeCarriere[]; // réutilisé (recomposition / transfuge / veteran / reelu)
 	overall: number;
 	volume: number;
 }
 
-/** Groupe politique au Sénat, scopé par session (analogue à Groupe AN par leg). */
+/** Groupe politique au Sénat, scopé par triennat (analogue à Groupe AN par leg, cf ADR 0028). */
 export interface GroupeSenat {
 	code: string; // grppolcod (clé)
-	sesann: number;
+	triennat: string; // TriennatId, ex. "2023-2026"
 	libelle: string; // grppollib (long)
 	libelleAbrege: string; // grppollibcou (court, ex. "SOC", "UMP")
 	couleur: string; // mappée via political-order si présent, sinon gris
@@ -330,13 +342,27 @@ export interface GroupeSenat {
 	overallEffectif: number;
 }
 
-/** Métadonnées d'une session parlementaire annuelle (sept→sept). */
+/** Métadonnées d'une session parlementaire annuelle (sept→sept).
+ *  Brique data sous-jacente, plus exposée en UI v1 (cf ADR 0028). */
 export interface SessionMeta {
 	sesann: number;
 	libelle: string; // ex. "2024-2025"
 	dateDebut: string; // 1er octobre N (heuristique)
 	dateFin: string; // 30 septembre N+1
 	nbSenateursActifs: number;
+	nbScrutins: number;
+}
+
+/** Métadonnées d'un triennat (cf ADR 0028) — unité de regroupement principale Sénat. */
+export interface TriennatMeta {
+	id: string; // TriennatId, ex. "2023-2026"
+	libelle: string; // ex. "2023-2026"
+	dateDebut: string; // ISO, début du triennat
+	dateFin: string; // ISO, fin du triennat
+	enCours: boolean;
+	tronque: boolean;
+	sessions: number[]; // sesann couvertes par le triennat
+	nbSenateursActifs: number; // nombre distinct de sénateurs ayant siégé sur le triennat
 	nbScrutins: number;
 }
 
@@ -373,12 +399,14 @@ export type VoteHistoryItemSenat = [string, VotePosition, 0 | 1, number];
 
 export interface BuildMetaSenat {
 	generatedAt: string;
-	sessions: number[];
+	sessions: number[]; // sesann couvertes (brique data)
+	triennats: string[]; // TriennatId[] — triennats couverts (cf ADR 0028)
 	counts: {
 		senateurs: number;
 		mandats: number;
 		groupesUniques: number;
 		sessions: number;
+		triennats: number;
 		scrutins: number;
 		votesNominatifs: number;
 	};

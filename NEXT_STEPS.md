@@ -149,48 +149,31 @@ Phase 3a+3b démarre 2026-05-06 par le **pipeline Sénat** (PR A `feat/senat-pip
 - [x] Dockerfile : 2ᵉ cache mount BuildKit `politidex-senat`
 - [x] Pipeline cold ~2 min / warm ~3 s (parsing SQL streaming 124 MB en 0.9s — 70× plus rapide que la cible)
 
-### 🔄 Changement de direction (2026-05-06) — Triennat remplace Session
+### ✅ Refacto Triennat (2026-05-07, branche `feat/senat-pipeline`)
 
-**Décision** : la **session annuelle** ne sera **pas** l'unité de regroupement principale Sénat. On la remplace par le **triennat** (période de 3 ans entre 2 renouvellements sénatoriaux), qui devient l'analogue de la **législature** côté AN.
+**ADR 0028 implémentée** : le **triennat** (3 ans entre 2 renouvellements) remplace la session annuelle comme unité de regroupement principale Sénat. Pas de double niveau triennat/session (trop d'impact UX). 7 triennats figés depuis 2006.
 
-**Pourquoi** :
-- La session annuelle (1 an) crée trop d'onglets sur les fiches (20+ onglets cumulés vs ~7 triennats depuis 2006)
-- Le triennat est la cohorte **naturelle** du Sénat : entre 2 renouvellements, la composition est figée (sauf décès/démissions). C'est la "législature sénatoriale".
-- Récit politique plus lisible : un triennat = une "ère" du Sénat (ex. triennat 2020-2023 = "Macron 1 finissant + Macron 2 débutant")
-- Cohérence AN ↔ Sénat : tabs niveau 1 ≈ même grain (5 ans législature ≈ 3 ans triennat)
-- **Pas de double niveau** Triennat/Session (trop d'impact UX, peu d'intérêt) → triennat seul comme unité de regroupement
+- [x] Types `TriennatId`, `Triennat`, `TriennatStats`, `TriennatMeta` + table figée 7 triennats (`src/lib/triennats.ts`)
+- [x] 26 tests unitaires triennats (128/128 ✅ au total)
+- [x] Pipeline `fetch-data-senat.ts` calcule les **deux niveaux** (`sessionsStats` data-only + `triennatStats` exposé UI) : output `triennats.json` + `groupes/{periode}.json`
+- [x] Smoke-test étendu : assertions ADR 0028 § "Garde anti-régression" (62/62 ✅)
+- [x] Loaders `loadTriennats`, `loadGroupesSenat(periode)` + `search-index.ts` adapté
+- [x] Composant `TriennatTabs.svelte` (remplace `SessionTabs`) — ordre antichrono, `⚡` sur en cours, InfoTip vers FAQ
+- [x] Routes : `/senat/triennats/`, `/senat/triennats/[periode]/`, `/senat/groupes/[periode]/[code]/`
+- [x] Fiche détail sénateur : default tab = Carrière si pas de mandat sur triennat en cours, sinon triennat en cours ⚡
+- [x] Classements (Championnat + Coupes) par triennat
+- [x] FAQ : ancre `#senat-triennat` (renommée depuis `#senat-cohorte`)
+- [x] Pipeline run : 1935 sénateurs, 4662 scrutins, **7 triennats**, 348 places hémicycle
+- [x] Type-check : 0 erreurs, 3 warnings préexistants (côté AN)
 
-**Impact** :
-- ADR 0023 doit être **révisée** : remplacer "session annuelle = analogue législature" par "triennat = analogue législature"
-- Champ data `triennat` à dériver dans le pipeline (regroupement de 3 sesann consécutifs entre renouvellements)
-- Composant `TriennatTabs` (et non `SessionTabs`)
-- Routes : `/senat/triennats/[periode]/` (et non `/senat/sessions/[sesann]/`)
-- Classements : par triennat (et non par session) → simplifie aussi PR D
-- À trancher : bornes exactes des triennats (sept→sept ?) et libellé (`2023-2026` ?)
+### 🔮 Suite (différée — UX first, score plus tard)
 
-### 🚧 PR B — Routes UI Sénat (home + listes filtrables)
-
-- [ ] Composants : `SenateurCard.svelte`, `MiniSenateurCard.svelte`, `HemicycleSenat.svelte`, `TriennatTabs.svelte`, `hemicycle-senat.ts`
-- [ ] Routes : `/senat/`, `/senat/senateurs/`, `/senat/scrutins/`, `/senat/triennats/[periode]/`
-- [ ] Nav : entrée header `🏛️ Sénat` + footer enrichi
-- [ ] Recherche globale : étendre `search-index.ts` aux sénateurs et groupes Sénat
-
-### 🚧 PR C — Fiches détail Sénat
-
-- [ ] `/senat/senateurs/[matricule]/` (avec TriennatTabs — `[Carrière] [Triennat 2023-2026] [Triennat 2020-2023] …`)
-- [ ] `/senat/scrutins/[uid]/` (uid = `${sesann}-${scrnum}`)
-- [ ] `/senat/groupes/[periode]/[code]/` (avec highlight hémicycle, scopé triennat)
-
-### 🚧 PR D — Classements Sénat + FAQ + polish
-
-- [ ] **Adapter le score Overall pour les sénateurs** (à creuser avant PR D) — la formule ADR 0022 (`0.55·Participation + 0.35·Volume(centile95) + 0.10·Présence`) a été calibrée sur l'AN. Points à instruire pour le Sénat :
-  - Volume : centile 95 **par triennat** (vs par leg côté AN) — vérifier la distribution sur les 7 triennats depuis 2006
+- [ ] **Recalibrer le score Overall pour les sénateurs** — la formule ADR 0022 reste applicable mais à valider empiriquement. Points à instruire si recalibration nécessaire :
+  - Volume : centile 95 **par triennat** — vérifier la distribution empiriquement
   - Présence : sémantique différente côté Sénat (délégations de vote ignorées en v1, cf ADR 0027) — impact sur le dénominateur ?
   - Participation : transposable telle quelle, mais à valider sur les scrutins sénatoriaux (publics solennels vs ordinaires ?)
-  - Loyauté : reste hors score (cohérent ADR 0022) mais utile sur radar + badges
   - Décider si on garde la même pondération `0.55 / 0.35 / 0.10` ou si le Sénat justifie une recalibration (et écrire une ADR si oui)
-- [ ] `/senat/classements/` (Le Championnat + Les Coupes Sénat, **par triennat**)
-- [ ] FAQ : section `📍 Sénat` (`#senat-overall`, `#senat-loyaute`, `#senat-delegations`, `#senat-triennat`)
+- [ ] Tests UI manuels : `npm run dev` puis vérifier les routes Sénat (home, triennats, sénateurs, scrutins, groupes, classements, FAQ)
 
 ### 🚧 Phase 3c — fusion bicamérale (différée)
 

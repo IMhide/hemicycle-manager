@@ -9,6 +9,7 @@
 	import GroupVoteBarSenat from '$lib/components/GroupVoteBarSenat.svelte';
 	import FrondeurSenatCard from '$lib/components/FrondeurSenatCard.svelte';
 	import InfoTip from '$lib/components/InfoTip.svelte';
+	import { triennatOfDate } from '$lib/triennats';
 	import type {
 		Senateur,
 		GroupeSenat,
@@ -32,16 +33,20 @@
 	});
 
 	const detail = $derived(data.detail);
+	const triennatId = $derived(triennatOfDate(detail.date)?.id ?? null);
 
-	function mandatPourSession(s: Senateur): MandatSenat | null {
+	/** Mandat couvrant la date du scrutin (cf ADR 0028 transposée). */
+	function mandatPourScrutin(s: Senateur): MandatSenat | null {
 		for (const m of s.mandats) {
-			if (m.sessions.some((sess) => sess.sesann === detail.sesann)) return m;
+			if (m.datePriseFonction <= detail.date && (m.dateFinFonction ?? '9999-12-31') >= detail.date) {
+				return m;
+			}
 		}
 		return null;
 	}
 
 	function appartenanceAuVote(s: Senateur): AppartenanceGroupeSenat | null {
-		const m = mandatPourSession(s);
+		const m = mandatPourScrutin(s);
 		if (!m) return null;
 		for (const a of m.appartenancesGroupe) {
 			if (a.dateDebut <= detail.date && (a.dateFin === null || a.dateFin >= detail.date)) {
@@ -92,7 +97,10 @@
 
 	const senateursPourHemicycle = $derived(
 		data.senateurs.filter((s) =>
-			s.mandats.some((m) => m.sessions.some((sess) => sess.sesann === detail.sesann))
+			s.mandats.some(
+				(m) =>
+					m.datePriseFonction <= detail.date && (m.dateFinFonction ?? '9999-12-31') >= detail.date
+			)
 		)
 	);
 
@@ -106,10 +114,6 @@
 			month: 'long',
 			year: 'numeric'
 		});
-	}
-
-	function libelleSession(sesann: number): string {
-		return `${sesann}-${(sesann + 1).toString().slice(-2)}`;
 	}
 
 	const navigation = $derived.by(() => {
@@ -149,7 +153,7 @@
 		<div class="flex items-start justify-between gap-4 mb-3">
 			<div class="min-w-0 flex-1">
 				<div class="text-xs uppercase tracking-widest text-assembly-muted mb-1">
-					Scrutin n°{detail.scrnum} · Session {libelleSession(detail.sesann)} ·
+					Scrutin n°{detail.scrnum}{#if triennatId} · Triennat {triennatId}{/if} ·
 					{formatDate(detail.date)}
 				</div>
 				<h1 class="text-xl sm:text-2xl leading-snug font-semibold">{detail.titre}</h1>
@@ -167,7 +171,7 @@
 	<div class="card p-4 sm:p-6 relative">
 		<HemicycleSenat
 			senateurs={senateursPourHemicycle}
-			sesann={detail.sesann}
+			triennat={triennatId ?? '2023-2026'}
 			mode={{
 				kind: 'vote',
 				votes: detail.votes,

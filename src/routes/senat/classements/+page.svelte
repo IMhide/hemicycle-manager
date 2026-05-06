@@ -1,31 +1,32 @@
 <script lang="ts">
 	/**
-	 * Classements Sénat (cf ADR 0017 transposée + ADR 0022).
+	 * Classements Sénat (cf ADR 0017 transposée + ADR 0022 + ADR 0028).
 	 *
 	 * Deux modes inspirés du football, comme côté AN :
 	 *
 	 * - 🏆 LE CHAMPIONNAT (overall, cf ADR 0022)
-	 *   - Top sénateurs (par session ou carrière)
+	 *   - Top sénateurs (par triennat ou carrière)
 	 *   - Top groupes (overallMoyen pré-calculé pipeline)
 	 *   - Top blocs (5 blocs CHES, cf political-order)
 	 *
-	 * - ⚽ Les Coupes (présence/participation/loyauté/frondes, par session)
+	 * - ⚽ Les Coupes (présence/participation/loyauté/frondes, par triennat)
 	 *   - Vues Global / Par groupe
 	 *
-	 * Au Sénat, l'unité de cohorte est la **session annuelle** (sept→sept), pas
-	 * la législature (cf ADR 0023). La carrière n'existe que sur Le Championnat.
+	 * Au Sénat, l'unité de cohorte est le **triennat** (3 ans entre 2 renouvellements),
+	 * cf ADR 0028. La carrière n'existe que sur Le Championnat.
 	 */
 	import InfoTip from '$lib/components/InfoTip.svelte';
-	import type { Senateur, MandatSenat, GroupeSenat, SessionStats } from '$lib/types';
+	import type { Senateur, MandatSenat, GroupeSenat, TriennatStats } from '$lib/types';
 	import { BLOCS, blocOf, type Bloc } from '$lib/political-order';
+	import { type TriennatId } from '$lib/triennats';
 
 	let { data } = $props();
 
 	type Mode = 'championship' | 'coupes';
 	type ChampView = 'senateurs' | 'groupes' | 'blocs';
 	type Metric = 'presence' | 'participation' | 'loyaute' | 'frondes';
-	/** scopeSession = 0 → Carrière (uniquement valide sur Top sénateurs). */
-	type ScopeSession = number;
+	/** scopeTriennat = "" → Carrière (uniquement valide sur Top sénateurs). */
+	type ScopeTriennat = TriennatId | '';
 
 	let mode: Mode = $state('championship');
 	let champView: ChampView = $state('senateurs');
@@ -33,8 +34,24 @@
 	let coupeView: 'global' | 'by-group' = $state('global');
 	let topN = $state(20);
 
-	const sessionsSorted = $derived([...data.sessions].sort((a, b) => b.sesann - a.sesann));
-	let scopeSession: ScopeSession = $state(sessionsSorted[0]?.sesann ?? 2024);
+	const triennatsSorted = $derived(
+		[...data.triennats].sort((a, b) => b.dateDebut.localeCompare(a.dateDebut))
+	);
+	const triennatCourant = $derived<TriennatId>(
+		(data.triennats.find((t) => t.enCours)?.id ??
+			triennatsSorted[0]?.id ??
+			'2023-2026') as TriennatId
+	);
+
+	let scopeTriennat: ScopeTriennat = $state('');
+
+	$effect(() => {
+		if (scopeTriennat === '' && triennatCourant && mode === 'coupes') {
+			scopeTriennat = triennatCourant;
+		} else if (scopeTriennat === '' && triennatCourant && champView !== 'senateurs') {
+			scopeTriennat = triennatCourant;
+		}
+	});
 
 	const groupesByCode = $derived.by(() => {
 		const m = new Map<string, GroupeSenat[]>();
@@ -46,11 +63,9 @@
 		return m;
 	});
 
-	const groupesScope = $derived(data.groupes.filter((g) => g.sesann === scopeSession));
-
-	function libelleSession(sesann: number): string {
-		return `${sesann}-${(sesann + 1).toString().slice(-2)}`;
-	}
+	const groupesScope = $derived(
+		scopeTriennat === '' ? [] : data.groupes.filter((g) => g.triennat === scopeTriennat)
+	);
 
 	// ────────────────────────────────────────────────────────────────────
 	// Coupes (métriques)
@@ -60,39 +75,39 @@
 		presence: {
 			label: 'Présence',
 			emoji: '🎯',
-			format: (sess: SessionStats) => `${(sess.stats.presence.rate * 100).toFixed(1)} %`,
-			value: (sess: SessionStats) => sess.stats.presence.rate,
-			rank: (sess: SessionStats) => sess.rangs.presence.rank,
+			format: (t: TriennatStats) => `${(t.stats.presence.rate * 100).toFixed(1)} %`,
+			value: (t: TriennatStats) => t.stats.presence.rate,
+			rank: (t: TriennatStats) => t.rangs.presence.rank,
 			info: 'Part des scrutins où le sénateur était physiquement présent.',
 			color: 'text-blue-400'
 		},
 		participation: {
 			label: 'Participation',
 			emoji: '✋',
-			format: (sess: SessionStats) => `${(sess.stats.participation.rate * 100).toFixed(1)} %`,
-			value: (sess: SessionStats) => sess.stats.participation.rate,
-			rank: (sess: SessionStats) => sess.rangs.participation.rank,
+			format: (t: TriennatStats) => `${(t.stats.participation.rate * 100).toFixed(1)} %`,
+			value: (t: TriennatStats) => t.stats.participation.rate,
+			rank: (t: TriennatStats) => t.rangs.participation.rank,
 			info: 'Part des scrutins où le sénateur a exprimé un vote pour, contre ou abstention.',
 			color: 'text-purple-400'
 		},
 		loyaute: {
 			label: 'Loyauté',
 			emoji: '🤝',
-			format: (sess: SessionStats) =>
-				sess.stats.loyaute.rate === null
+			format: (t: TriennatStats) =>
+				t.stats.loyaute.rate === null
 					? 'N/A'
-					: `${(sess.stats.loyaute.rate * 100).toFixed(1)} %`,
-			value: (sess: SessionStats) => sess.stats.loyaute.rate,
-			rank: (sess: SessionStats) => sess.rangs.loyaute.rank,
+					: `${(t.stats.loyaute.rate * 100).toFixed(1)} %`,
+			value: (t: TriennatStats) => t.stats.loyaute.rate,
+			rank: (t: TriennatStats) => t.rangs.loyaute.rank,
 			info: 'Part des votes alignés avec la majorité du groupe au moment du vote (cf ADR 0016 transposée).',
 			color: 'text-emerald-400'
 		},
 		frondes: {
 			label: 'Frondes',
 			emoji: '🔥',
-			format: (sess: SessionStats) => `${sess.stats.frondes.count}`,
-			value: (sess: SessionStats) => sess.stats.frondes.count,
-			rank: (sess: SessionStats) => sess.rangs.frondes.rank,
+			format: (t: TriennatStats) => `${t.stats.frondes.count}`,
+			value: (t: TriennatStats) => t.stats.frondes.count,
+			rank: (t: TriennatStats) => t.rangs.frondes.rank,
 			info: 'Nombre de votes exprimés opposés à la majorité du groupe.',
 			color: 'text-rose-400'
 		}
@@ -100,71 +115,72 @@
 
 	const currentMeta = $derived(metricMeta[metric]);
 
-	function mandatPourSession(s: Senateur, sesann: number): MandatSenat | null {
+	function mandatPourTriennat(s: Senateur, triennat: TriennatId): MandatSenat | null {
 		for (const m of s.mandats) {
-			if (m.sessions.some((sess) => sess.sesann === sesann)) return m;
+			if (m.triennats.some((t) => t.triennat === triennat)) return m;
 		}
 		return null;
 	}
 
-	function sessionStatsFor(s: Senateur, sesann: number): SessionStats | null {
-		const m = mandatPourSession(s, sesann);
-		return m?.sessions.find((sess) => sess.sesann === sesann) ?? null;
+	function triennatStatsFor(s: Senateur, triennat: TriennatId): TriennatStats | null {
+		const m = mandatPourTriennat(s, triennat);
+		return m?.triennats.find((t) => t.triennat === triennat) ?? null;
 	}
 
-	function groupePrincipal(m: MandatSenat, sesann: number): GroupeSenat | null {
+	function groupePrincipal(m: MandatSenat, triennat: TriennatId): GroupeSenat | null {
 		const lastApp = m.appartenancesGroupe.at(-1);
 		if (!lastApp) return null;
 		const candidats = groupesByCode.get(lastApp.groupeCode);
 		if (!candidats) return null;
-		const exact = candidats.find((g) => g.sesann === sesann);
-		return exact ?? [...candidats].sort((a, b) => b.sesann - a.sesann)[0];
+		const exact = candidats.find((g) => g.triennat === triennat);
+		return exact ?? [...candidats].sort((a, b) => b.triennat.localeCompare(a.triennat))[0];
 	}
 
-	/** Pour la vue carrière : groupe par session, dernière session avec mandat. */
-	function groupesCarriere(s: Senateur): Array<{ sesann: number; groupe: GroupeSenat | null }> {
-		const out: Array<{ sesann: number; groupe: GroupeSenat | null }> = [];
+	/** Pour la vue carrière : groupe par triennat, dernier triennat avec mandat. */
+	function groupesCarriere(s: Senateur): Array<{ triennat: TriennatId; groupe: GroupeSenat | null }> {
+		const out: Array<{ triennat: TriennatId; groupe: GroupeSenat | null }> = [];
 		const seen = new Set<string>();
-		for (const sesann of [...s.carriere.sessions].sort((a, b) => a - b)) {
-			const m = mandatPourSession(s, sesann);
+		for (const triId of s.carriere.triennats) {
+			const m = mandatPourTriennat(s, triId as TriennatId);
 			if (!m) continue;
 			const lastApp = m.appartenancesGroupe.at(-1);
 			if (!lastApp) continue;
-			const key = `${sesann}-${lastApp.groupeCode}`;
+			const key = `${triId}-${lastApp.groupeCode}`;
 			if (seen.has(key)) continue;
 			seen.add(key);
 			const candidats = groupesByCode.get(lastApp.groupeCode);
 			const grp = candidats
-				? candidats.find((g) => g.sesann === sesann) ??
-					[...candidats].sort((a, b) => b.sesann - a.sesann)[0]
+				? candidats.find((g) => g.triennat === triId) ??
+					[...candidats].sort((a, b) => b.triennat.localeCompare(a.triennat))[0]
 				: null;
-			out.push({ sesann, groupe: grp });
+			out.push({ triennat: triId as TriennatId, groupe: grp });
 		}
 		return out;
 	}
 
-	/** Sénateurs avec un mandat couvrant la session scope, avec leur SessionStats. */
-	const senateursSession = $derived.by(() => {
+	/** Sénateurs avec un mandat couvrant le triennat scope, avec leur TriennatStats. */
+	const senateursTriennat = $derived.by(() => {
 		const list: Array<{
 			senateur: Senateur;
 			mandat: MandatSenat;
-			session: SessionStats;
+			triennat: TriennatStats;
 		}> = [];
+		if (scopeTriennat === '') return list;
 		for (const s of data.senateurs) {
-			const m = mandatPourSession(s, scopeSession);
-			const sess = sessionStatsFor(s, scopeSession);
-			if (m && sess) list.push({ senateur: s, mandat: m, session: sess });
+			const m = mandatPourTriennat(s, scopeTriennat);
+			const tri = triennatStatsFor(s, scopeTriennat);
+			if (m && tri) list.push({ senateur: s, mandat: m, triennat: tri });
 		}
 		return list;
 	});
 
 	/** Tri Coupes par rang croissant. */
 	const coupesSorted = $derived(
-		[...senateursSession]
-			.filter(({ session }) => currentMeta.value(session) !== null)
+		[...senateursTriennat]
+			.filter(({ triennat }) => currentMeta.value(triennat) !== null)
 			.sort((a, b) => {
-				const ra = currentMeta.rank(a.session);
-				const rb = currentMeta.rank(b.session);
+				const ra = currentMeta.rank(a.triennat);
+				const rb = currentMeta.rank(b.triennat);
 				if (ra === null && rb === null) return 0;
 				if (ra === null) return 1;
 				if (rb === null) return -1;
@@ -176,8 +192,9 @@
 
 	const coupesByGroup = $derived.by(() => {
 		const grouped = new Map<string, typeof coupesSorted>();
+		if (scopeTriennat === '') return [];
 		for (const entry of coupesSorted) {
-			const g = groupePrincipal(entry.mandat, scopeSession);
+			const g = groupePrincipal(entry.mandat, scopeTriennat);
 			if (!g) continue;
 			if (!grouped.has(g.code)) grouped.set(g.code, []);
 			grouped.get(g.code)!.push(entry);
@@ -198,23 +215,23 @@
 		const list: Array<{
 			senateur: Senateur;
 			mandat: MandatSenat | null;
-			session: SessionStats | null;
+			triennat: TriennatStats | null;
 			overall: number;
 		}> = [];
 
-		if (scopeSession === 0) {
+		if (scopeTriennat === '') {
 			// Carrière
 			for (const s of data.senateurs) {
 				list.push({
 					senateur: s,
 					mandat: null,
-					session: null,
+					triennat: null,
 					overall: s.carriere.overall
 				});
 			}
 		} else {
-			for (const { senateur, mandat, session } of senateursSession) {
-				list.push({ senateur, mandat, session, overall: session.stats.overall });
+			for (const { senateur, mandat, triennat } of senateursTriennat) {
+				list.push({ senateur, mandat, triennat, overall: triennat.stats.overall });
 			}
 		}
 		return list.sort((a, b) => b.overall - a.overall);
@@ -285,16 +302,16 @@
 	function setMode(m: Mode) {
 		mode = m;
 		topN = 20;
-		if (m === 'coupes' && scopeSession === 0) {
-			scopeSession = sessionsSorted[0]?.sesann ?? 2024;
+		if (m === 'coupes' && scopeTriennat === '') {
+			scopeTriennat = triennatCourant;
 		}
 	}
 
 	function setChampView(v: ChampView) {
 		champView = v;
 		topN = 20;
-		if (v !== 'senateurs' && scopeSession === 0) {
-			scopeSession = sessionsSorted[0]?.sesann ?? 2024;
+		if (v !== 'senateurs' && scopeTriennat === '') {
+			scopeTriennat = triennatCourant;
 		}
 	}
 </script>
@@ -313,7 +330,7 @@
 					<a href="/faq#senat-overall" class="underline text-assembly-accent">Overall</a>
 					(cf ADR 0022).
 				{:else}
-					<b>Les Coupes</b> — classements thématiques par session (cf ADR 0023).
+					<b>Les Coupes</b> — classements thématiques par triennat (cf ADR 0028).
 				{/if}
 			</p>
 		</div>
@@ -409,31 +426,31 @@
 		<div class="flex items-center gap-1 text-xs mb-6 flex-wrap">
 			{#if champView === 'senateurs'}
 				<button
-					class="px-3 py-1 rounded {scopeSession === 0
+					class="px-3 py-1 rounded {scopeTriennat === ''
 						? 'bg-assembly-accent text-assembly-bg font-semibold'
 						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
-					onclick={() => (scopeSession = 0)}
+					onclick={() => (scopeTriennat = '')}
 				>
 					Carrière
 				</button>
 			{/if}
-			{#each sessionsSorted.slice(0, 8) as sess (sess.sesann)}
+			{#each triennatsSorted.slice(0, 8) as tri (tri.id)}
 				<button
-					class="px-2 py-1 rounded text-[11px] {scopeSession === sess.sesann
+					class="px-2 py-1 rounded text-[11px] {scopeTriennat === tri.id
 						? 'bg-assembly-accent text-assembly-bg font-semibold'
 						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
-					onclick={() => (scopeSession = sess.sesann)}
+					onclick={() => (scopeTriennat = tri.id as TriennatId)}
 				>
-					{libelleSession(sess.sesann)}
+					{tri.id}{#if tri.enCours} ⚡{/if}
 				</button>
 			{/each}
 		</div>
 
 		{#if champView === 'senateurs'}
 			<div class="text-sm text-assembly-muted flex items-center gap-1 mb-4">
-				{scopeSession === 0
-					? 'Top sénateurs sur leur carrière entière (overall agrégé toutes sessions).'
-					: `Top sénateurs de la session ${libelleSession(scopeSession)} (overall sur la session).`}
+				{scopeTriennat === ''
+					? 'Top sénateurs sur leur carrière entière (overall agrégé tous triennats).'
+					: `Top sénateurs du triennat ${scopeTriennat} (overall sur le triennat).`}
 				<InfoTip title="Overall" size="xs">
 					Note 0–99 : <b>55 %</b> Participation + <b>35 %</b> Volume (centile 95 cohorte) +
 					<b>10 %</b> Présence. La loyauté n'entre pas dans la note (cf ADR 0022).
@@ -441,13 +458,14 @@
 			</div>
 
 			<div class="space-y-1.5">
-				{#each championSenateursTop as { senateur, mandat, session, overall }, i (senateur.id + (mandat ? scopeSession : 'c'))}
-					{@const groupe = mandat ? groupePrincipal(mandat, scopeSession) : null}
+				{#each championSenateursTop as { senateur, mandat, overall }, i (senateur.id + (mandat ? scopeTriennat : 'c'))}
+					{@const groupe =
+						mandat && scopeTriennat !== '' ? groupePrincipal(mandat, scopeTriennat) : null}
 					{@const rank = i + 1}
 					{@const tier = tierFor(rank, championSenateurs.length)}
 					<a
-						href={mandat
-							? `/senat/senateurs/${senateur.id}/?session=${scopeSession}`
+						href={mandat && scopeTriennat !== ''
+							? `/senat/senateurs/${senateur.id}/?triennat=${scopeTriennat}`
 							: `/senat/senateurs/${senateur.id}/`}
 						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors {tier.cls}"
 					>
@@ -469,11 +487,11 @@
 								{senateur.identite.nom}
 							</div>
 							<div class="flex items-center flex-wrap gap-x-2 gap-y-1 mt-0.5">
-								{#if scopeSession === 0}
-									{#each groupesCarriere(senateur).slice(-4) as { sesann, groupe: g } (sesann + (g?.code ?? ''))}
+								{#if scopeTriennat === ''}
+									{#each groupesCarriere(senateur).slice(-4) as { triennat, groupe: g } (triennat + (g?.code ?? ''))}
 										<span class="inline-flex items-center gap-1 text-[10px]">
 											<span class="text-assembly-muted tabular-nums">
-												{libelleSession(sesann)}
+												{triennat}
 											</span>
 											{#if g}
 												<span class="inline-flex items-center gap-1">
@@ -515,8 +533,8 @@
 			{/if}
 		{:else if champView === 'groupes'}
 			<div class="text-sm text-assembly-muted flex items-center gap-1 mb-4">
-				Moyenne d'overall des membres de chaque groupe (session
-				{libelleSession(scopeSession)}).
+				Moyenne d'overall des membres de chaque groupe (triennat
+				{scopeTriennat}).
 				<InfoTip title="Top groupes" size="xs">
 					Chaque membre est rattaché à son groupe principal (dernière appartenance du mandat).
 				</InfoTip>
@@ -526,7 +544,7 @@
 				{#each championGroupes as g, i (g.code)}
 					{@const rank = i + 1}
 					<a
-						href="/senat/groupes/{scopeSession}/{g.code}/"
+						href="/senat/groupes/{scopeTriennat}/{g.code}/"
 						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
 						style="border-left: 4px solid {g.couleur}"
 					>
@@ -555,8 +573,8 @@
 			</div>
 		{:else}
 			<div class="text-sm text-assembly-muted flex items-center gap-1 mb-4">
-				Moyenne pondérée d'overall par bloc politique (session
-				{libelleSession(scopeSession)}).
+				Moyenne pondérée d'overall par bloc politique (triennat
+				{scopeTriennat}).
 				<InfoTip title="Top blocs" size="xs">
 					5 blocs basés sur les scores Chapel Hill 2024 (CHES). Les NI Sénat (`AUCUN`) sont
 					rattachés au bloc Non-inscrits (cf ADR 0007).
@@ -589,7 +607,7 @@
 						<div class="flex flex-wrap gap-1.5 pl-15">
 							{#each bloc.groupes as g (g.code)}
 								<a
-									href="/senat/groupes/{scopeSession}/{g.code}/"
+									href="/senat/groupes/{scopeTriennat}/{g.code}/"
 									class="text-[11px] px-2 py-1 rounded border border-assembly-border hover:border-assembly-accent transition-colors flex items-center gap-1.5"
 									style="border-left: 3px solid {g.couleur}"
 								>
@@ -606,18 +624,18 @@
 		<!-- ⚽ LES COUPES -->
 
 		<div class="flex items-center gap-1 text-xs mb-4 flex-wrap">
-			{#each sessionsSorted.slice(0, 8) as sess (sess.sesann)}
+			{#each triennatsSorted.slice(0, 8) as tri (tri.id)}
 				<button
-					class="px-2 py-1 rounded text-[11px] {scopeSession === sess.sesann
+					class="px-2 py-1 rounded text-[11px] {scopeTriennat === tri.id
 						? 'bg-assembly-accent text-assembly-bg font-semibold'
 						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
-					onclick={() => (scopeSession = sess.sesann)}
+					onclick={() => (scopeTriennat = tri.id as TriennatId)}
 				>
-					{libelleSession(sess.sesann)}
+					{tri.id}{#if tri.enCours} ⚡{/if}
 				</button>
 			{/each}
 			<span class="ml-3 text-[10px] text-assembly-muted italic">
-				Pas de cohorte cross-session (cf ADR 0023).
+				Pas de cohorte cross-triennat (cf ADR 0028).
 			</span>
 		</div>
 
@@ -662,12 +680,13 @@
 
 		{#if coupeView === 'global'}
 			<div class="space-y-1.5">
-				{#each coupesTopGlobal as { senateur, mandat, session }, i (senateur.id)}
-					{@const groupe = groupePrincipal(mandat, scopeSession)}
-					{@const rank = currentMeta.rank(session)!}
+				{#each coupesTopGlobal as { senateur, mandat, triennat }, i (senateur.id)}
+					{@const groupe =
+						scopeTriennat !== '' ? groupePrincipal(mandat, scopeTriennat) : null}
+					{@const rank = currentMeta.rank(triennat)!}
 					{@const tier = tierFor(rank, coupesSorted.length)}
 					<a
-						href="/senat/senateurs/{senateur.id}/?session={scopeSession}"
+						href="/senat/senateurs/{senateur.id}/?triennat={scopeTriennat}"
 						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors {tier.cls}"
 					>
 						<div
@@ -700,7 +719,7 @@
 						<div
 							class="title-display text-2xl tabular-nums flex-shrink-0 {currentMeta.color}"
 						>
-							{currentMeta.format(session)}
+							{currentMeta.format(triennat)}
 						</div>
 					</a>
 				{/each}
@@ -723,7 +742,7 @@
 								style="background-color: {groupe.couleur}"
 							></span>
 							<a
-								href="/senat/groupes/{scopeSession}/{groupe.code}/"
+								href="/senat/groupes/{scopeTriennat}/{groupe.code}/"
 								class="font-semibold hover:text-assembly-accent"
 							>
 								{groupe.libelleAbrege}
@@ -731,9 +750,9 @@
 							<span class="text-xs text-assembly-muted">— top {top.length}</span>
 						</div>
 						<div class="space-y-1.5">
-							{#each top as { senateur, session }, i (senateur.id)}
+							{#each top as { senateur, triennat }, i (senateur.id)}
 								<a
-									href="/senat/senateurs/{senateur.id}/?session={scopeSession}"
+									href="/senat/senateurs/{senateur.id}/?triennat={scopeTriennat}"
 									class="flex items-center gap-3 p-2 rounded hover:bg-assembly-border/30 transition-colors"
 								>
 									<div
@@ -754,11 +773,11 @@
 											{senateur.identite.nom}
 										</div>
 										<div class="text-[10px] text-assembly-muted">
-											rang global #{currentMeta.rank(session)}
+											rang global #{currentMeta.rank(triennat)}
 										</div>
 									</div>
 									<div class="title-display text-base tabular-nums {currentMeta.color}">
-										{currentMeta.format(session)}
+										{currentMeta.format(triennat)}
 									</div>
 								</a>
 							{/each}

@@ -3,6 +3,7 @@
 	import MiniSenateurCard from '$lib/components/MiniSenateurCard.svelte';
 	import HemicycleColorToggle from '$lib/components/HemicycleColorToggle.svelte';
 	import { POLITICAL_ORDER } from '$lib/political-order';
+	import { TRIENNATS, type TriennatId } from '$lib/triennats';
 	import { colorMode } from '$lib/color-mode.svelte';
 	import { goto } from '$app/navigation';
 	import type { Senateur, GroupeSenat, MandatSenat } from '$lib/types';
@@ -24,31 +25,36 @@
 		return m;
 	});
 
-	/** Sénateurs avec un mandat couvrant la session courante. */
-	const senateursSession = $derived(
+	/** Sénateurs avec un mandat couvrant le triennat courant. */
+	const senateursTriennat = $derived(
 		data.senateurs.filter((s) =>
-			s.mandats.some((m) => m.sessions.some((sess) => sess.sesann === data.sessionCourante))
+			s.mandats.some((m) => m.triennats.some((t) => t.triennat === data.triennatCourant))
 		)
 	);
 
-	function mandatPourSession(s: Senateur): MandatSenat | null {
+	function mandatPourTriennat(s: Senateur): MandatSenat | null {
 		for (const m of s.mandats) {
-			if (m.sessions.some((sess) => sess.sesann === data.sessionCourante)) return m;
+			if (m.triennats.some((t) => t.triennat === data.triennatCourant)) return m;
 		}
 		return null;
 	}
 
 	const hoveredSenateur = $derived(hovered ? senateurById.get(hovered) ?? null : null);
-	const hoveredMandat = $derived(hoveredSenateur ? mandatPourSession(hoveredSenateur) : null);
+	const hoveredMandat = $derived(hoveredSenateur ? mandatPourTriennat(hoveredSenateur) : null);
 	const hoveredGroupe = $derived.by((): GroupeSenat | null => {
 		if (!hoveredMandat) return null;
 		const lastApp = hoveredMandat.appartenancesGroupe.at(-1);
 		return lastApp ? groupeByCode.get(lastApp.groupeCode) ?? null : null;
 	});
 
+	const triennatMeta = $derived(TRIENNATS.find((t) => t.id === data.triennatCourant));
+
 	const recentScrutins = $derived.by(() => {
-		const scrutinsSession = data.scrutins.filter((s) => s.sesann === data.sessionCourante);
-		const sorted = [...scrutinsSession].sort((a, b) => b.date.localeCompare(a.date));
+		if (!triennatMeta) return [];
+		const inTriennat = data.scrutins.filter(
+			(s) => s.date >= triennatMeta.dateDebut && s.date < triennatMeta.dateFin
+		);
+		const sorted = [...inTriennat].sort((a, b) => b.date.localeCompare(a.date));
 		return sorted.slice(0, 8);
 	});
 
@@ -63,7 +69,11 @@
 			)
 	);
 
-	const sessionsSorted = $derived([...data.sessions].sort((a, b) => b.sesann - a.sesann));
+	const triennatsSorted = $derived(
+		[...data.triennats]
+			.filter((t) => t.nbScrutins > 0)
+			.sort((a, b) => b.dateDebut.localeCompare(a.dateDebut))
+	);
 
 	function trackCursor(e: MouseEvent) {
 		cursorX = e.clientX;
@@ -71,11 +81,11 @@
 	}
 
 	function selectSenateur(id: string) {
-		goto(`/senat/senateurs/${id}/?session=${data.sessionCourante}`);
+		goto(`/senat/senateurs/${id}/?triennat=${data.triennatCourant}`);
 	}
 
-	function basculerSession(sesann: number) {
-		goto(`/senat/sessions/${sesann}/`);
+	function basculerTriennat(periode: TriennatId) {
+		goto(`/senat/triennats/${periode}/`);
 	}
 
 	function formatDate(iso: string): string {
@@ -84,10 +94,6 @@
 
 	function truncate(s: string, n: number): string {
 		return s.length > n ? s.slice(0, n - 1) + '…' : s;
-	}
-
-	function libelleSession(sesann: number): string {
-		return `${sesann}-${(sesann + 1).toString().slice(-2)}`;
 	}
 
 	const tooltipPos = $derived.by(() => {
@@ -117,21 +123,21 @@
 		<div>
 			<h1 class="title-display text-4xl sm:text-5xl tracking-wider">Hémicycle Sénat</h1>
 			<p class="text-assembly-muted mt-1">
-				Session {libelleSession(data.sessionCourante)} · 348 sièges · Survolez un siège pour voir
-				la fiche, cliquez pour ouvrir.
+				Triennat {data.triennatCourant}{#if triennatMeta?.enCours} ⚡{/if} · 348 sièges · Survolez
+				un siège pour voir la fiche, cliquez pour ouvrir.
 			</p>
 		</div>
 		<div class="flex flex-col items-end gap-2 text-xs">
 			<div class="flex items-center gap-1 flex-wrap justify-end max-w-md">
-				<span class="text-assembly-muted">Session :</span>
-				{#each sessionsSorted.slice(0, 6) as sess (sess.sesann)}
+				<span class="text-assembly-muted">Triennat :</span>
+				{#each triennatsSorted.slice(0, 6) as tri (tri.id)}
 					<button
-						class="px-2 py-1 rounded text-[11px] {sess.sesann === data.sessionCourante
+						class="px-2 py-1 rounded text-[11px] {tri.id === data.triennatCourant
 							? 'bg-assembly-accent text-assembly-bg font-semibold'
 							: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
-						onclick={() => basculerSession(sess.sesann)}
+						onclick={() => basculerTriennat(tri.id as TriennatId)}
 					>
-						{libelleSession(sess.sesann)}
+						{tri.id}{#if tri.enCours} ⚡{/if}
 					</button>
 				{/each}
 			</div>
@@ -141,8 +147,8 @@
 
 	<div class="card p-4 sm:p-6 mb-6">
 		<HemicycleSenat
-			senateurs={senateursSession}
-			sesann={data.sessionCourante}
+			senateurs={senateursTriennat}
+			triennat={data.triennatCourant}
 			mode={{ kind: colorMode.current, groupes: data.groupes }}
 			{hovered}
 			onhover={(id) => (hovered = id)}
@@ -158,7 +164,7 @@
 			<MiniSenateurCard
 				senateur={hoveredSenateur}
 				groupe={hoveredGroupe}
-				sesann={data.sessionCourante}
+				triennat={data.triennatCourant}
 			/>
 		</div>
 	{/if}
@@ -192,7 +198,7 @@
 		</div>
 		{#if recentScrutins.length === 0}
 			<div class="card p-6 text-sm text-assembly-muted text-center italic">
-				Aucun scrutin disponible pour cette session.
+				Aucun scrutin disponible pour ce triennat.
 			</div>
 		{:else}
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-2">

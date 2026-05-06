@@ -2,15 +2,22 @@
 	import SenateurRow from '$lib/components/SenateurRow.svelte';
 	import InfoTip from '$lib/components/InfoTip.svelte';
 	import { POLITICAL_ORDER } from '$lib/political-order';
-	import type { Senateur, MandatSenat, GroupeSenat, SessionStats } from '$lib/types';
+	import { type TriennatId } from '$lib/triennats';
+	import type { Senateur, MandatSenat, GroupeSenat, TriennatStats } from '$lib/types';
 
 	let { data } = $props();
 
 	type SortKey = 'nom' | 'presence' | 'loyaute' | 'frondes' | 'participation';
 	type EtatFilter = 'all' | 'ACTIF' | 'ANCIEN';
 
-	const sessionsSorted = $derived([...data.sessions].sort((a, b) => b.sesann - a.sesann));
-	const sessionCourante = $derived(sessionsSorted[0]?.sesann ?? new Date().getFullYear());
+	const triennatsSorted = $derived(
+		[...data.triennats].sort((a, b) => b.dateDebut.localeCompare(a.dateDebut))
+	);
+	const triennatCourant = $derived<TriennatId>(
+		(data.triennats.find((t) => t.enCours)?.id ??
+			triennatsSorted[0]?.id ??
+			'2023-2026') as TriennatId
+	);
 
 	let search = $state('');
 	let sortKey: SortKey = $state('nom');
@@ -18,23 +25,30 @@
 	let civFilter = $state<'all' | 'M.' | 'Mme'>('all');
 	let etatFilter: EtatFilter = $state('all');
 	let visibleCount = $state(60);
-	/** null = vue carrière (cross-session), sinon scope par session */
-	let scopeSession: number | null = $state(sessionCourante);
+	/** null = vue carrière (cross-triennat), sinon scope par triennat */
+	let scopeTriennat: TriennatId | null = $state(null);
+
+	// Initialise scopeTriennat sur le triennat en cours dès qu'il est connu
+	$effect(() => {
+		if (scopeTriennat === null && triennatCourant) {
+			scopeTriennat = triennatCourant;
+		}
+	});
 
 	const groupesByCode = $derived.by(() => {
 		const m = new Map<string, GroupeSenat>();
-		for (const g of data.groupes) m.set(`${g.sesann}-${g.code}`, g);
+		for (const g of data.groupes) m.set(`${g.triennat}-${g.code}`, g);
 		return m;
 	});
 
 	const groupesScope = $derived.by(() => {
-		if (scopeSession === null) {
+		if (scopeTriennat === null) {
 			// dédupliquer par code (libellé du dernier groupe rencontré)
 			const seen = new Map<string, GroupeSenat>();
 			for (const g of data.groupes) seen.set(g.code, g);
 			return [...seen.values()];
 		}
-		return data.groupes.filter((g) => g.sesann === scopeSession);
+		return data.groupes.filter((g) => g.triennat === scopeTriennat);
 	});
 
 	const groupesSorted = $derived(
@@ -66,25 +80,25 @@
 		visibleCount = 60;
 	}
 
-	function mandatSession(s: Senateur): { mandat: MandatSenat; session: SessionStats } | null {
-		if (scopeSession === null) return null;
+	function mandatTriennat(s: Senateur): { mandat: MandatSenat; triennat: TriennatStats } | null {
+		if (scopeTriennat === null) return null;
 		for (const m of s.mandats) {
-			const sess = m.sessions.find((sess) => sess.sesann === scopeSession);
-			if (sess) return { mandat: m, session: sess };
+			const tri = m.triennats.find((t) => t.triennat === scopeTriennat);
+			if (tri) return { mandat: m, triennat: tri };
 		}
 		return null;
 	}
 
 	function groupePrincipal(s: Senateur, m: MandatSenat | null): GroupeSenat | null {
-		if (scopeSession === null) {
+		if (scopeTriennat === null) {
 			// dernier groupe connu (dernier mandat, dernière appartenance)
 			const lastM = s.mandats.at(-1);
 			const lastApp = lastM?.appartenancesGroupe.at(-1);
 			if (!lastApp) return null;
-			// chercher le groupe pour la session du dernier mandat
-			for (let y = lastM!.sessions.length - 1; y >= 0; y--) {
-				const sesann = lastM!.sessions[y].sesann;
-				const g = groupesByCode.get(`${sesann}-${lastApp.groupeCode}`);
+			// chercher le groupe pour le triennat le plus récent du dernier mandat
+			for (let y = lastM!.triennats.length - 1; y >= 0; y--) {
+				const triId = lastM!.triennats[y].triennat;
+				const g = groupesByCode.get(`${triId}-${lastApp.groupeCode}`);
 				if (g) return g;
 			}
 			return null;
@@ -92,19 +106,19 @@
 		const target = m ?? s.mandats.at(-1);
 		const lastApp = target?.appartenancesGroupe.at(-1);
 		if (!lastApp) return null;
-		return groupesByCode.get(`${scopeSession}-${lastApp.groupeCode}`) ?? null;
+		return groupesByCode.get(`${scopeTriennat}-${lastApp.groupeCode}`) ?? null;
 	}
 
 	const enriched = $derived.by(() => {
 		return data.senateurs
 			.map((s) => {
-				const ms = mandatSession(s);
-				if (scopeSession !== null && !ms) return null;
+				const mt = mandatTriennat(s);
+				if (scopeTriennat !== null && !mt) return null;
 				return {
 					senateur: s,
-					mandat: ms?.mandat ?? null,
-					session: ms?.session ?? null,
-					groupe: groupePrincipal(s, ms?.mandat ?? null)
+					mandat: mt?.mandat ?? null,
+					triennat: mt?.triennat ?? null,
+					groupe: groupePrincipal(s, mt?.mandat ?? null)
 				};
 			})
 			.filter(
@@ -113,7 +127,7 @@
 				): x is {
 					senateur: Senateur;
 					mandat: MandatSenat | null;
-					session: SessionStats | null;
+					triennat: TriennatStats | null;
 					groupe: GroupeSenat | null;
 				} => !!x
 			);
@@ -147,38 +161,38 @@
 				break;
 			case 'presence':
 				arr.sort((a, b) => {
-					const sa = a.session ? a.session.stats.presence.rate : a.senateur.carriere.presence.rate;
-					const sb = b.session ? b.session.stats.presence.rate : b.senateur.carriere.presence.rate;
+					const sa = a.triennat ? a.triennat.stats.presence.rate : a.senateur.carriere.presence.rate;
+					const sb = b.triennat ? b.triennat.stats.presence.rate : b.senateur.carriere.presence.rate;
 					return sb - sa;
 				});
 				break;
 			case 'loyaute':
 				arr.sort((a, b) => {
 					const sa =
-						(a.session ? a.session.stats.loyaute.rate : a.senateur.carriere.loyaute.rate) ?? 0;
+						(a.triennat ? a.triennat.stats.loyaute.rate : a.senateur.carriere.loyaute.rate) ?? 0;
 					const sb =
-						(b.session ? b.session.stats.loyaute.rate : b.senateur.carriere.loyaute.rate) ?? 0;
+						(b.triennat ? b.triennat.stats.loyaute.rate : b.senateur.carriere.loyaute.rate) ?? 0;
 					return sb - sa;
 				});
 				break;
 			case 'frondes':
 				arr.sort((a, b) => {
-					const sa = a.session
-						? a.session.stats.frondes.count
+					const sa = a.triennat
+						? a.triennat.stats.frondes.count
 						: a.senateur.carriere.frondes.count;
-					const sb = b.session
-						? b.session.stats.frondes.count
+					const sb = b.triennat
+						? b.triennat.stats.frondes.count
 						: b.senateur.carriere.frondes.count;
 					return sb - sa;
 				});
 				break;
 			case 'participation':
 				arr.sort((a, b) => {
-					const sa = a.session
-						? a.session.stats.participation.rate
+					const sa = a.triennat
+						? a.triennat.stats.participation.rate
 						: a.senateur.carriere.participation.rate;
-					const sb = b.session
-						? b.session.stats.participation.rate
+					const sb = b.triennat
+						? b.triennat.stats.participation.rate
 						: b.senateur.carriere.participation.rate;
 					return sb - sa;
 				});
@@ -195,7 +209,7 @@
 		void civFilter;
 		void etatFilter;
 		void sortKey;
-		void scopeSession;
+		void scopeTriennat;
 		visibleCount = 60;
 	});
 
@@ -204,10 +218,6 @@
 			? null
 			: (sortKey as 'presence' | 'loyaute' | 'frondes')
 	);
-
-	function libelleSession(sesann: number): string {
-		return `${sesann}-${(sesann + 1).toString().slice(-2)}`;
-	}
 </script>
 
 <svelte:head>
@@ -220,31 +230,31 @@
 			<h1 class="title-display text-4xl">Sénateurs</h1>
 			<p class="text-assembly-muted text-sm mt-1">
 				{enriched.length} sénateur{enriched.length > 1 ? 's' : ''}
-				{#if scopeSession !== null}
-					ayant siégé en {libelleSession(scopeSession)}
+				{#if scopeTriennat !== null}
+					ayant siégé sur le triennat {scopeTriennat}
 				{:else}
-					sur l'ensemble des sessions couvertes
+					sur l'ensemble des triennats couverts
 				{/if}
 			</p>
 		</div>
 		<div class="flex items-center gap-1 text-xs flex-wrap justify-end">
 			<span class="text-assembly-muted">Vue :</span>
 			<button
-				class="px-3 py-1 rounded {scopeSession === null
+				class="px-3 py-1 rounded {scopeTriennat === null
 					? 'bg-assembly-accent text-assembly-bg font-semibold'
 					: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
-				onclick={() => (scopeSession = null)}
+				onclick={() => (scopeTriennat = null)}
 			>
 				Carrière
 			</button>
-			{#each sessionsSorted.slice(0, 4) as sess (sess.sesann)}
+			{#each triennatsSorted.slice(0, 4) as tri (tri.id)}
 				<button
-					class="px-2 py-1 rounded text-[11px] {scopeSession === sess.sesann
+					class="px-2 py-1 rounded text-[11px] {scopeTriennat === tri.id
 						? 'bg-assembly-accent text-assembly-bg font-semibold'
 						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
-					onclick={() => (scopeSession = sess.sesann)}
+					onclick={() => (scopeTriennat = tri.id as TriennatId)}
 				>
-					{libelleSession(sess.sesann)}
+					{tri.id}{#if tri.enCours} ⚡{/if}
 				</button>
 			{/each}
 		</div>
@@ -331,7 +341,7 @@
 					{/if}
 				</div>
 				<div class="space-y-1 max-h-72 overflow-y-auto pr-1">
-					{#each groupesSorted as g (g.code + '-' + g.sesann)}
+					{#each groupesSorted as g (g.code + '-' + g.triennat)}
 						{@const isActive = groupFilter.has(g.code)}
 						<button
 							class="w-full flex items-center justify-between gap-2 px-2 py-1 rounded text-left transition-colors {isActive
@@ -346,7 +356,7 @@
 								></span>
 								<span class="text-xs font-medium truncate">{g.libelleAbrege}</span>
 							</span>
-							{#if scopeSession !== null}
+							{#if scopeTriennat !== null}
 								<span class="text-[10px] text-assembly-muted tabular-nums">{g.effectifFin}</span>
 							{/if}
 						</button>
@@ -388,11 +398,11 @@
 				</div>
 			{:else}
 				<div class="grid grid-cols-1 xl:grid-cols-2 gap-2">
-					{#each visible as { senateur, mandat, session } (senateur.id)}
+					{#each visible as { senateur, mandat, triennat } (senateur.id)}
 						<SenateurRow
 							{senateur}
 							{mandat}
-							{session}
+							{triennat}
 							{highlight}
 							isPresident={presidentMatricules.has(senateur.id)}
 						/>

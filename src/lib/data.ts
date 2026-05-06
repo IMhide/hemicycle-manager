@@ -17,11 +17,13 @@ import type {
 	Senateur,
 	GroupeSenat,
 	SessionMeta,
+	TriennatMeta,
 	ScrutinSenatIndex,
 	ScrutinSenatDetail,
 	BuildMetaSenat,
 	VoteHistoryItemSenat
 } from './types';
+import type { TriennatId } from './triennats';
 
 const BASE = '/data';
 
@@ -75,7 +77,7 @@ export function loadMeta(fetchFn: typeof fetch) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// SÉNAT (Phase 3, cf ADR 0023..0027) — loaders parallèles aux loaders AN.
+// SÉNAT (Phase 3, cf ADR 0023..0028) — loaders parallèles aux loaders AN.
 // Les datasets vivent sous static/data/senat/ (isolés du dossier AN).
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -105,13 +107,19 @@ export function loadHistoriqueSenat(fetchFn: typeof fetch, matricule: string) {
 	return fetchJsonSenat<VoteHistoryItemSenat[]>(fetchFn, `/historique/${matricule}.json`);
 }
 
-// ─────────────────── Groupes (scopés par session) ───────────────────
+// ─────────────────── Groupes (scopés par triennat, cf ADR 0028) ───────────────────
 
-export function loadGroupesSenat(fetchFn: typeof fetch, sesann: number) {
-	return fetchJsonSenat<GroupeSenat[]>(fetchFn, `/groupes/${sesann}.json`);
+export function loadGroupesSenat(fetchFn: typeof fetch, triennat: TriennatId) {
+	return fetchJsonSenat<GroupeSenat[]>(fetchFn, `/groupes/${triennat}.json`);
 }
 
-// ─────────────────── Sessions ───────────────────
+// ─────────────────── Triennats (unité de regroupement principale, cf ADR 0028) ─
+
+export function loadTriennats(fetchFn: typeof fetch) {
+	return fetchJsonSenat<TriennatMeta[]>(fetchFn, '/triennats.json');
+}
+
+// ─────────────────── Sessions (brique data, cf ADR 0028) ───────────────────
 
 export function loadSessions(fetchFn: typeof fetch) {
 	return fetchJsonSenat<SessionMeta[]>(fetchFn, '/sessions.json');

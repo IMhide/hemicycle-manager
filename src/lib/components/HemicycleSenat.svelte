@@ -45,14 +45,15 @@
 
 	interface Props {
 		senateurs: Senateur[];
-		sesann: number;
+		/** TriennatId (ex. "2023-2026"), cf ADR 0028. */
+		triennat: string;
 		mode: Mode;
 		hovered?: string | null;
 		onhover?: (matricule: string | null) => void;
 		onselect?: (matricule: string) => void;
 	}
 
-	let { senateurs, sesann, mode, hovered = null, onhover, onselect }: Props = $props();
+	let { senateurs, triennat, mode, hovered = null, onhover, onselect }: Props = $props();
 
 	const groupeByCode = $derived.by(() => {
 		const m = new Map<string, GroupeSenat>();
@@ -60,9 +61,9 @@
 		return m;
 	});
 
-	function mandatCouvrantSession(s: Senateur): MandatSenat | null {
+	function mandatCouvrantTriennat(s: Senateur): MandatSenat | null {
 		for (const m of s.mandats) {
-			if (m.sessions.some((sess) => sess.sesann === sesann)) return m;
+			if (m.triennats.some((t) => t.triennat === triennat)) return m;
 		}
 		return null;
 	}
@@ -119,7 +120,7 @@
 		let nonPlaces = 0;
 
 		for (const s of senateurs) {
-			const m = mandatCouvrantSession(s);
+			const m = mandatCouvrantTriennat(s);
 			if (!m) continue;
 
 			if (m.place && SEAT_MAP_SENAT.has(m.place)) {
@@ -143,7 +144,7 @@
 		class="w-full h-auto max-h-[60vh]"
 		preserveAspectRatio="xMidYMid meet"
 		role="img"
-		aria-label="Hémicycle du Sénat, session {sesann}-{sesann + 1}"
+		aria-label="Hémicycle du Sénat, triennat {triennat}"
 	>
 		<g opacity="0.5">
 			<rect
@@ -189,7 +190,7 @@
 	</svg>
 	{#if layout.nonPlaces > 0}
 		<div class="text-[10px] text-assembly-muted text-center mt-2 italic">
-			{layout.nonPlaces} sénateur·rice·s sans siège attribué pour cette session (renouvellement
+			{layout.nonPlaces} sénateur·rice·s sans siège attribué pour ce triennat (renouvellement
 			récent, fin de mandat). Visibles dans la liste des sénateurs.
 		</div>
 	{/if}

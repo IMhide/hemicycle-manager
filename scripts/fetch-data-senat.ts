@@ -1,10 +1,11 @@
 /**
- * PolitiDex — pipeline data Sénat (Phase 3, cf ADR 0023..0027).
+ * PolitiDex — pipeline data Sénat (Phase 3, cf ADR 0023..0028).
  *
  * Outputs (sous static/data/senat/) :
  *  - senateurs.json                : Senateur[] avec mandats[] et carriere
- *  - sessions.json                 : SessionMeta[] (toutes sessions avec scrutins)
- *  - groupes/{sesann}.json         : GroupeSenat[] par session
+ *  - triennats.json                : TriennatMeta[] (7 triennats, cf ADR 0028)
+ *  - sessions.json                 : SessionMeta[] (brique data sous-jacente)
+ *  - groupes/{periode}.json        : GroupeSenat[] par triennat (ex. "2023-2026.json")
  *  - scrutins-index.json           : ScrutinSenatIndex[] global
  *  - scrutins/{sesann}-{scrnum}.json : ScrutinSenatDetail
  *  - historique/{matricule}.json   : VoteHistoryItemSenat[] tous mandats confondus
@@ -16,7 +17,7 @@
  *  3. data.senat.fr dosleg.zip (scrutins + fallback identité)
  *
  * Logique pure factorisée dans scripts/lib/{cache,dosleg-parser,senat-transform}.ts
- * et couverte par des tests unitaires (`npm run test:unit`).
+ * et src/lib/triennats.ts, couverte par des tests unitaires (`npm run test:unit`).
  */
 
 import { readFile, writeFile } from 'node:fs/promises';
@@ -30,10 +31,12 @@ import type {
 	SenateurIdentite,
 	MandatSenat,
 	SessionStats,
+	TriennatStats,
 	AppartenanceGroupeSenat,
 	CarriereSenatAggregee,
 	GroupeSenat,
 	SessionMeta,
+	TriennatMeta,
 	ScrutinSenatIndex,
 	ScrutinSenatDetail,
 	VoteHistoryItemSenat,
@@ -45,6 +48,12 @@ import type {
 	BadgeCarriere
 } from '../src/lib/types.ts';
 import { POLITICAL_ORDER } from '../src/lib/political-order.ts';
+import {
+	TRIENNATS,
+	type TriennatId,
+	triennatOfDate,
+	triennatsOfPeriode
+} from '../src/lib/triennats.ts';
 import { downloadFile, downloadZip, ensureDir, extractIfNeeded } from './lib/cache.ts';
 import { parseOdsenCsv, streamCopyBlocks } from './lib/dosleg-parser.ts';
 import { sessionsCovering, groupeAuVote } from './lib/senat-transform.ts';
@@ -213,13 +222,14 @@ async function main() {
 	computeStatsAllSessions(senateurs, scrutinsIndex, scrutinsDetails);
 	console.log(`    → calcul terminé (${((Date.now() - t1) / 1000).toFixed(1)}s)`);
 
-	// 4.4 Rangs et badges par session, overalls par session
-	console.log('  • Rangs, badges, overalls par session…');
+	// 4.4 Rangs et badges par triennat, overalls par triennat (cf ADR 0028)
+	console.log('  • Rangs, badges, overalls par triennat…');
 	const allSesanns = collectAllSesanns(senateurs);
-	for (const sesann of allSesanns) {
-		computeRangsForSession(sesann, senateurs);
-		computeBadgesForSession(sesann, senateurs);
-		computeOverallsForSession(sesann, senateurs);
+	const allTriennats = collectAllTriennats(senateurs);
+	for (const triennatId of allTriennats) {
+		computeRangsForTriennat(triennatId, senateurs);
+		computeBadgesForTriennat(triennatId, senateurs);
+		computeOverallsForTriennat(triennatId, senateurs);
 	}
 
 	// 4.5 Cumuls mandat + carrière
@@ -230,21 +240,27 @@ async function main() {
 	}
 	computeOverallsCarriere(senateurs);
 
-	// 4.6 Groupes par session — uniquement pour les sessions avec scrutins
-	// (les sessions plus anciennes n'ont pas de classement utile)
-	console.log('  • Groupes par session…');
-	const sesannsWithScrutins = new Set(scrutinsIndex.map((s) => s.sesann));
-	const sesannsForGroupes = allSesanns.filter((s) => sesannsWithScrutins.has(s));
-	const groupesBySession = buildGroupesBySession(senateurs, sesannsForGroupes, apiByMat);
-	console.log(`    → ${groupesBySession.size} sessions de groupes (filtrées sur sessions avec scrutins)`);
+	// 4.6 Groupes par triennat — uniquement pour les triennats avec scrutins
+	console.log('  • Groupes par triennat…');
+	const triennatsWithScrutins = new Set<TriennatId>();
+	for (const s of scrutinsIndex) {
+		const t = triennatOfDate(s.date);
+		if (t) triennatsWithScrutins.add(t.id);
+	}
+	const triennatIdsForGroupes = allTriennats.filter((t) => triennatsWithScrutins.has(t));
+	const groupesByTriennat = buildGroupesByTriennat(senateurs, triennatIdsForGroupes, apiByMat);
+	console.log(
+		`    → ${groupesByTriennat.size} triennats de groupes (filtrés sur triennats avec scrutins)`
+	);
 
 	// 4.7 Historiques compacts
 	console.log('  • Historiques compacts par sénateur…');
 	const historiques = buildHistoriques(senateurs, scrutinsIndex, scrutinsDetails);
 
-	// 4.8 Sessions meta
-	console.log('  • Sessions meta…');
+	// 4.8 Sessions meta + triennats meta
+	console.log('  • Sessions meta + triennats meta…');
 	const sessionsMeta = buildSessionsMeta(scrutinsIndex, senateurs, sesLib);
+	const triennatsMeta = buildTriennatsMeta(scrutinsIndex, senateurs);
 
 	// ═══ 5/5 Write
 	console.log('\n5/5  Écriture des fichiers JSON');
@@ -252,15 +268,18 @@ async function main() {
 	console.log(`  ✓ senateurs.json (${senateurs.length} sénateurs)`);
 
 	await writeFile(join(OUT_DIR, 'sessions.json'), JSON.stringify(sessionsMeta));
-	console.log(`  ✓ sessions.json (${sessionsMeta.length} sessions)`);
+	console.log(`  ✓ sessions.json (${sessionsMeta.length} sessions, brique data)`);
+
+	await writeFile(join(OUT_DIR, 'triennats.json'), JSON.stringify(triennatsMeta));
+	console.log(`  ✓ triennats.json (${triennatsMeta.length} triennats, cf ADR 0028)`);
 
 	await writeFile(join(OUT_DIR, 'scrutins-index.json'), JSON.stringify(scrutinsIndex));
 	console.log(`  ✓ scrutins-index.json (${scrutinsIndex.length} scrutins)`);
 
-	for (const [sesann, groupes] of groupesBySession) {
-		await writeFile(join(OUT_DIR, 'groupes', `${sesann}.json`), JSON.stringify(groupes));
+	for (const [triennatId, groupes] of groupesByTriennat) {
+		await writeFile(join(OUT_DIR, 'groupes', `${triennatId}.json`), JSON.stringify(groupes));
 	}
-	console.log(`  ✓ groupes/{sesann}.json (${groupesBySession.size} fichiers)`);
+	console.log(`  ✓ groupes/{periode}.json (${groupesByTriennat.size} fichiers)`);
 
 	let scrutinWritten = 0;
 	for (const [uid, detail] of scrutinsDetails) {
@@ -282,12 +301,14 @@ async function main() {
 
 	const meta: BuildMetaSenat = {
 		generatedAt: new Date().toISOString(),
-		sessions: sessionsMeta.map((s) => s.sesann), // sessions avec scrutins uniquement
+		sessions: sessionsMeta.map((s) => s.sesann), // sessions avec scrutins (brique data)
+		triennats: triennatsMeta.map((t) => t.id), // triennats avec scrutins (cf ADR 0028)
 		counts: {
 			senateurs: senateurs.length,
 			mandats: senateurs.reduce((s, p) => s + p.mandats.length, 0),
 			groupesUniques: countDistinctGroupCodes(senateurs),
 			sessions: sessionsMeta.length,
+			triennats: triennatsMeta.length,
 			scrutins: scrutinsIndex.length,
 			votesNominatifs: scrutinWritten > 0 ? sumVotesIn(scrutinsDetails) : 0
 		},
@@ -484,6 +505,14 @@ function assembleMandats(
 			serie,
 			appartenancesGroupe: [...seen.values()],
 			sessions,
+			triennats: triennatsOfPeriode(datePriseFonction, dateFinFonction).map<TriennatStats>(
+				(t) => ({
+					triennat: t.id,
+					scrutinsEligibles: 0,
+					stats: emptyMandatStats(),
+					rangs: emptyMandatRangs()
+				})
+			),
 			cumul: emptyMandatStats(),
 			badgesMandat: []
 		});
@@ -565,6 +594,12 @@ function assembleMandats(
 			serie: api.serie ? (parseInt(api.serie, 10) as 1 | 2) : null,
 			appartenancesGroupe: appartenances,
 			sessions,
+			triennats: triennatsOfPeriode(nouveauDebut, null).map<TriennatStats>((t) => ({
+				triennat: t.id,
+				scrutinsEligibles: 0,
+				stats: emptyMandatStats(),
+				rangs: emptyMandatRangs()
+			})),
 			cumul: emptyMandatStats(),
 			badgesMandat: []
 		});
@@ -729,12 +764,21 @@ function computeStatsAllSessions(
 
 	for (const sen of senateurs) {
 		for (const mandat of sen.mandats) {
+			// Index pour additionner aussi côté triennat (cf ADR 0028)
+			const triennatById = new Map<TriennatId, TriennatStats>();
+			for (const t of mandat.triennats) triennatById.set(t.triennat, t);
+
 			for (const sessionStats of mandat.sessions) {
 				const scrutins = scrutinsBySesann.get(sessionStats.sesann) ?? [];
 				for (const idx of scrutins) {
 					if (mandat.datePriseFonction && idx.date < mandat.datePriseFonction) continue;
 					if (mandat.dateFinFonction && idx.date > mandat.dateFinFonction) continue;
 					sessionStats.scrutinsEligibles++;
+
+					// Triennat ciblé par la date du scrutin (cf ADR 0028)
+					const tri = triennatOfDate(idx.date);
+					const triStats = tri ? triennatById.get(tri.id) ?? null : null;
+					if (triStats) triStats.scrutinsEligibles++;
 
 					const detail = scrutinsDetails.get(idx.uid);
 					if (!detail) continue;
@@ -748,6 +792,15 @@ function computeStatsAllSessions(
 					}
 					if (isFronde) stats.frondes.count++;
 
+					// Idem côté triennat
+					if (triStats) {
+						if (position) triStats.stats.presence.numerator++;
+						if (position === 'pour' || position === 'contre' || position === 'abstention') {
+							triStats.stats.participation.numerator++;
+						}
+						if (isFronde) triStats.stats.frondes.count++;
+					}
+
 					// Loyauté : seuls votes exprimés vs position maj du groupe au moment du vote
 					if (position === 'pour' || position === 'contre') {
 						const grp = groupeAuVote(mandat.appartenancesGroupe, idx.date);
@@ -757,6 +810,10 @@ function computeStatsAllSessions(
 							if (maj === 'pour' || maj === 'contre') {
 								stats.loyaute.denominator++;
 								if (position === maj) stats.loyaute.numerator++;
+								if (triStats) {
+									triStats.stats.loyaute.denominator++;
+									if (position === maj) triStats.stats.loyaute.numerator++;
+								}
 							}
 						}
 					}
@@ -773,13 +830,27 @@ function computeStatsAllSessions(
 				s.frondes.rate =
 					s.participation.numerator > 0 ? s.frondes.count / s.participation.numerator : 0;
 			}
+
+			// Finaliser les ratios pour chaque triennat du mandat
+			for (const triStats of mandat.triennats) {
+				const s = triStats.stats;
+				const elig = triStats.scrutinsEligibles;
+				s.presence.denominator = elig;
+				s.presence.rate = elig > 0 ? s.presence.numerator / elig : 0;
+				s.participation.denominator = elig;
+				s.participation.rate = elig > 0 ? s.participation.numerator / elig : 0;
+				s.loyaute.rate =
+					s.loyaute.denominator > 0 ? s.loyaute.numerator / s.loyaute.denominator : null;
+				s.frondes.rate =
+					s.participation.numerator > 0 ? s.frondes.count / s.participation.numerator : 0;
+			}
 		}
 	}
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Rangs / badges / overalls — par session (cohorte = sénateurs ayant ≥ 1 mandat
-// avec une SessionStats sur cette session) — cf ADR 0017+0022 transposées
+// Rangs / badges / overalls — par triennat (cohorte = sénateurs ayant ≥ 1 mandat
+// avec une TriennatStats sur ce triennat) — cf ADR 0028
 // ────────────────────────────────────────────────────────────────────────────
 
 function collectAllSesanns(senateurs: Senateur[]): number[] {
@@ -792,37 +863,48 @@ function collectAllSesanns(senateurs: Senateur[]): number[] {
 	return [...set].sort((a, b) => a - b);
 }
 
-interface SessionPair {
-	senateur: Senateur;
-	mandat: MandatSenat;
-	session: SessionStats;
+function collectAllTriennats(senateurs: Senateur[]): TriennatId[] {
+	const set = new Set<TriennatId>();
+	for (const s of senateurs) {
+		for (const m of s.mandats) {
+			for (const t of m.triennats) set.add(t.triennat);
+		}
+	}
+	// Tri chronologique sur la table figée (ordre des renouvellements)
+	return TRIENNATS.filter((t) => set.has(t.id)).map((t) => t.id);
 }
 
-function cohortForSession(senateurs: Senateur[], sesann: number): SessionPair[] {
-	const pairs: SessionPair[] = [];
+interface TriennatPair {
+	senateur: Senateur;
+	mandat: MandatSenat;
+	triennat: TriennatStats;
+}
+
+function cohortForTriennat(senateurs: Senateur[], triennatId: TriennatId): TriennatPair[] {
+	const pairs: TriennatPair[] = [];
 	for (const sen of senateurs) {
 		for (const m of sen.mandats) {
-			for (const ss of m.sessions) {
-				if (ss.sesann === sesann) pairs.push({ senateur: sen, mandat: m, session: ss });
+			for (const t of m.triennats) {
+				if (t.triennat === triennatId) pairs.push({ senateur: sen, mandat: m, triennat: t });
 			}
 		}
 	}
 	return pairs;
 }
 
-function computeRangsForSession(sesann: number, senateurs: Senateur[]) {
-	const cohort = cohortForSession(senateurs, sesann);
+function computeRangsForTriennat(triennatId: TriennatId, senateurs: Senateur[]) {
+	const cohort = cohortForTriennat(senateurs, triennatId);
 	const total = cohort.length;
 	for (const p of cohort) {
-		p.session.rangs.presence.total = total;
-		p.session.rangs.participation.total = total;
-		p.session.rangs.loyaute.total = total;
-		p.session.rangs.frondes.total = total;
+		p.triennat.rangs.presence.total = total;
+		p.triennat.rangs.participation.total = total;
+		p.triennat.rangs.loyaute.total = total;
+		p.triennat.rangs.frondes.total = total;
 	}
 
 	const denseRank = (
 		key: 'presence' | 'participation' | 'loyaute' | 'frondes',
-		valueFn: (p: SessionPair) => number | null,
+		valueFn: (p: TriennatPair) => number | null,
 		desc: boolean
 	) => {
 		const sorted = [...cohort].sort((a, b) => {
@@ -839,47 +921,49 @@ function computeRangsForSession(sesann: number, senateurs: Senateur[]) {
 		for (let i = 0; i < sorted.length; i++) {
 			const v = valueFn(sorted[i]);
 			if (v === null) {
-				(sorted[i].session.rangs[key].rank as number | null) = null;
+				(sorted[i].triennat.rangs[key].rank as number | null) = null;
 				continue;
 			}
 			if (v !== lastVal) {
 				rank = i + 1;
 				lastVal = v;
 			}
-			(sorted[i].session.rangs[key].rank as number) = rank;
+			(sorted[i].triennat.rangs[key].rank as number) = rank;
 		}
 	};
 
-	denseRank('presence', (p) => p.session.stats.presence.rate, true);
-	denseRank('participation', (p) => p.session.stats.participation.rate, true);
-	denseRank('loyaute', (p) => p.session.stats.loyaute.rate, true);
-	denseRank('frondes', (p) => p.session.stats.frondes.count, true);
+	denseRank('presence', (p) => p.triennat.stats.presence.rate, true);
+	denseRank('participation', (p) => p.triennat.stats.participation.rate, true);
+	denseRank('loyaute', (p) => p.triennat.stats.loyaute.rate, true);
+	denseRank('frondes', (p) => p.triennat.stats.frondes.count, true);
 }
 
-function computeBadgesForSession(sesann: number, senateurs: Senateur[]) {
-	const cohort = cohortForSession(senateurs, sesann);
+function computeBadgesForTriennat(triennatId: TriennatId, senateurs: Senateur[]) {
+	const cohort = cohortForTriennat(senateurs, triennatId);
 	const total = cohort.length;
 	if (total === 0) return;
 	const t = Math.min(total, Math.max(1, Math.floor(total * 0.1)));
 
 	const sortPres = [...cohort].sort(
-		(a, b) => b.session.stats.presence.rate - a.session.stats.presence.rate
+		(a, b) => b.triennat.stats.presence.rate - a.triennat.stats.presence.rate
 	);
 	for (let i = 0; i < t; i++) addBadge(sortPres[i].mandat, 'presence-or');
 	for (let i = total - t; i < total; i++) addBadge(sortPres[i].mandat, 'absent-remarquable');
 
-	const withLoy = cohort.filter((p) => p.session.stats.loyaute.rate !== null);
+	const withLoy = cohort.filter((p) => p.triennat.stats.loyaute.rate !== null);
 	if (withLoy.length > 0) {
 		const sortLoy = [...withLoy].sort(
-			(a, b) => (b.session.stats.loyaute.rate ?? 0) - (a.session.stats.loyaute.rate ?? 0)
+			(a, b) => (b.triennat.stats.loyaute.rate ?? 0) - (a.triennat.stats.loyaute.rate ?? 0)
 		);
 		const tLoy = Math.min(withLoy.length, Math.max(1, Math.floor(withLoy.length * 0.1)));
 		for (let i = 0; i < tLoy; i++) addBadge(sortLoy[i].mandat, 'top-loyaliste');
 	}
 
-	const sortFr = [...cohort].sort((a, b) => b.session.stats.frondes.count - a.session.stats.frondes.count);
+	const sortFr = [...cohort].sort(
+		(a, b) => b.triennat.stats.frondes.count - a.triennat.stats.frondes.count
+	);
 	for (let i = 0; i < t; i++) {
-		if (sortFr[i].session.stats.frondes.count > 0) addBadge(sortFr[i].mandat, 'frondeur');
+		if (sortFr[i].triennat.stats.frondes.count > 0) addBadge(sortFr[i].mandat, 'frondeur');
 	}
 }
 
@@ -913,18 +997,18 @@ function overallScore(
 	return { overall: Math.round(score * 99), volume };
 }
 
-function computeOverallsForSession(sesann: number, senateurs: Senateur[]) {
-	const cohort = cohortForSession(senateurs, sesann);
-	const volumeRef = percentile95(cohort.map((p) => p.session.stats.participation.numerator));
+function computeOverallsForTriennat(triennatId: TriennatId, senateurs: Senateur[]) {
+	const cohort = cohortForTriennat(senateurs, triennatId);
+	const volumeRef = percentile95(cohort.map((p) => p.triennat.stats.participation.numerator));
 	for (const p of cohort) {
 		const { overall, volume } = overallScore(
-			p.session.stats.participation.rate,
-			p.session.stats.presence.rate,
-			p.session.stats.participation.numerator,
+			p.triennat.stats.participation.rate,
+			p.triennat.stats.presence.rate,
+			p.triennat.stats.participation.numerator,
 			volumeRef
 		);
-		p.session.stats.overall = overall;
-		p.session.stats.volume = volume;
+		p.triennat.stats.overall = overall;
+		p.triennat.stats.volume = volume;
 	}
 }
 
@@ -961,13 +1045,16 @@ function computeCarriere(senateur: Senateur) {
 		frondes: { count: 0, rate: 0 },
 		nbMandats: senateur.mandats.length,
 		sessions: [],
+		triennats: [],
 		badgesCarriere: [],
 		overall: 0,
 		volume: 0
 	};
 	const sessionsSet = new Set<number>();
+	const triennatsSet = new Set<TriennatId>();
 	for (const m of senateur.mandats) {
 		for (const ss of m.sessions) sessionsSet.add(ss.sesann);
+		for (const t of m.triennats) triennatsSet.add(t.triennat);
 		c.presence.numerator += m.cumul.presence.numerator;
 		c.presence.denominator += m.cumul.presence.denominator;
 		c.participation.numerator += m.cumul.participation.numerator;
@@ -977,6 +1064,8 @@ function computeCarriere(senateur: Senateur) {
 		c.frondes.count += m.cumul.frondes.count;
 	}
 	c.sessions = [...sessionsSet].sort((a, b) => a - b);
+	// Tri chronologique sur la table figée
+	c.triennats = TRIENNATS.filter((t) => triennatsSet.has(t.id)).map((t) => t.id);
 	c.presence.rate = c.presence.denominator > 0 ? c.presence.numerator / c.presence.denominator : 0;
 	c.participation.rate =
 		c.participation.denominator > 0 ? c.participation.numerator / c.participation.denominator : 0;
@@ -1038,20 +1127,23 @@ function computeOverallsCarriere(senateurs: Senateur[]) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Groupes par session
+// Groupes par triennat (cf ADR 0028)
 // ────────────────────────────────────────────────────────────────────────────
 
-function buildGroupesBySession(
+function buildGroupesByTriennat(
 	senateurs: Senateur[],
-	allSesanns: number[],
+	allTriennatIds: TriennatId[],
 	apiByMat: Map<string, ApiSenateur>
-): Map<number, GroupeSenat[]> {
-	const out = new Map<number, GroupeSenat[]>();
+): Map<TriennatId, GroupeSenat[]> {
+	const out = new Map<TriennatId, GroupeSenat[]>();
 
-	for (const sesann of allSesanns) {
-		const dateRef = `${sesann + 1}-09-30`; // fin de session = effectifFin par convention
-		const dateDebut = `${sesann}-10-01`;
-		const cohort = cohortForSession(senateurs, sesann);
+	for (const triennatId of allTriennatIds) {
+		const triennat = TRIENNATS.find((t) => t.id === triennatId);
+		if (!triennat) continue;
+		// Date de référence pour le groupe principal : fin du triennat (ou aujourd'hui si en cours)
+		const today = new Date().toISOString().slice(0, 10);
+		const dateRef = triennat.enCours && triennat.dateFin > today ? today : triennat.dateFin;
+		const cohort = cohortForTriennat(senateurs, triennatId);
 
 		// Accumuler par code groupe
 		const acc = new Map<
@@ -1066,7 +1158,7 @@ function buildGroupesBySession(
 		>();
 
 		for (const p of cohort) {
-			// Groupe principal du mandat à la fin de la session
+			// Groupe principal du mandat à la fin du triennat
 			const grp = groupeAuVote(p.mandat.appartenancesGroupe, dateRef) ?? findFallbackGroupe(p.mandat);
 			if (!grp) continue;
 
@@ -1088,7 +1180,7 @@ function buildGroupesBySession(
 					presidentMatricule: null
 				};
 			a.effectif++;
-			a.overallSum += p.session.stats.overall;
+			a.overallSum += p.triennat.stats.overall;
 			// Président : appartenance avec fonction "Président"
 			const prezApp = p.mandat.appartenancesGroupe.find(
 				(x) =>
@@ -1105,21 +1197,21 @@ function buildGroupesBySession(
 			const ord = POLITICAL_ORDER[code];
 			groupes.push({
 				code,
-				sesann,
+				triennat: triennatId,
 				libelle: info.libelle,
 				libelleAbrege: info.libelleAbrege,
 				couleur: ord?.gradientColor ?? '#9ca3af',
 				preseance: ord?.rank ?? 99,
 				presidentMatricule: info.presidentMatricule,
-				dateDebut,
-				dateFin: `${sesann + 1}-09-30`,
+				dateDebut: triennat.dateDebut,
+				dateFin: triennat.dateFin,
 				effectifFin: info.effectif,
 				overallMoyen: info.effectif > 0 ? Math.round(info.overallSum / info.effectif) : 0,
 				overallEffectif: info.effectif
 			});
 		}
 		groupes.sort((a, b) => a.preseance - b.preseance);
-		out.set(sesann, groupes);
+		out.set(triennatId, groupes);
 	}
 	return out;
 }
@@ -1161,7 +1253,7 @@ function buildHistoriques(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Sessions meta + meta global
+// Sessions meta (brique data) + Triennats meta (cf ADR 0028) + meta global
 // ────────────────────────────────────────────────────────────────────────────
 
 function buildSessionsMeta(
@@ -1172,15 +1264,71 @@ function buildSessionsMeta(
 	const sessionsWithScrutins = new Set(scrutinsIndex.map((s) => s.sesann));
 	const out: SessionMeta[] = [];
 	for (const sesann of [...sessionsWithScrutins].sort((a, b) => a - b)) {
-		const cohort = cohortForSession(senateurs, sesann);
+		// Cohorte = sénateurs ayant ≥ 1 SessionStats sur cette session
+		const matsActifs = new Set<string>();
+		for (const sen of senateurs) {
+			for (const m of sen.mandats) {
+				if (m.sessions.some((ss) => ss.sesann === sesann)) {
+					matsActifs.add(sen.id);
+					break;
+				}
+			}
+		}
 		const scrutins = scrutinsIndex.filter((s) => s.sesann === sesann);
 		out.push({
 			sesann,
 			libelle: sesLib.get(sesann) ?? `${sesann}-${sesann + 1}`,
 			dateDebut: `${sesann}-10-01`,
 			dateFin: `${sesann + 1}-09-30`,
-			nbSenateursActifs: cohort.length,
+			nbSenateursActifs: matsActifs.size,
 			nbScrutins: scrutins.length
+		});
+	}
+	return out;
+}
+
+function buildTriennatsMeta(
+	scrutinsIndex: ScrutinSenatIndex[],
+	senateurs: Senateur[]
+): TriennatMeta[] {
+	const triennatsWithScrutins = new Set<TriennatId>();
+	const scrutinsCountByTriennat = new Map<TriennatId, number>();
+	for (const s of scrutinsIndex) {
+		const t = triennatOfDate(s.date);
+		if (!t) continue;
+		triennatsWithScrutins.add(t.id);
+		scrutinsCountByTriennat.set(t.id, (scrutinsCountByTriennat.get(t.id) ?? 0) + 1);
+	}
+
+	const out: TriennatMeta[] = [];
+	for (const t of TRIENNATS) {
+		if (!triennatsWithScrutins.has(t.id)) continue;
+		// Cohorte = sénateurs ayant ≥ 1 TriennatStats sur ce triennat
+		const matsActifs = new Set<string>();
+		for (const sen of senateurs) {
+			for (const m of sen.mandats) {
+				if (m.triennats.some((tr) => tr.triennat === t.id)) {
+					matsActifs.add(sen.id);
+					break;
+				}
+			}
+		}
+		// Sessions couvertes par ce triennat (intersection avec sessions ayant des scrutins)
+		const sessionsWithScrutinsSet = new Set(scrutinsIndex.map((s) => s.sesann));
+		const sessions: number[] = [];
+		for (let s = t.anneeDebut; s < t.anneeFin; s++) {
+			if (sessionsWithScrutinsSet.has(s)) sessions.push(s);
+		}
+		out.push({
+			id: t.id,
+			libelle: t.id,
+			dateDebut: t.dateDebut,
+			dateFin: t.dateFin,
+			enCours: t.enCours,
+			tronque: t.tronque,
+			sessions,
+			nbSenateursActifs: matsActifs.size,
+			nbScrutins: scrutinsCountByTriennat.get(t.id) ?? 0
 		});
 	}
 	return out;
@@ -1234,6 +1382,7 @@ function emptyCarriere(): CarriereSenatAggregee {
 		frondes: { count: 0, rate: 0 },
 		nbMandats: 0,
 		sessions: [],
+		triennats: [],
 		badgesCarriere: [],
 		overall: 0,
 		volume: 0

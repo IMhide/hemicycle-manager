@@ -1,15 +1,15 @@
 <script lang="ts">
 	/**
-	 * Fiche FIFA d'un sénateur (cf ADR 0023, 0024, transposition de ADR 0017).
+	 * Fiche FIFA d'un sénateur (cf ADR 0023..0028, transposition de ADR 0017).
 	 *
 	 * Modèle Phase 3 :
-	 *   - vue carrière (sesann = null) : stats cumulées pondérées, badges carrière, pas de rang
-	 *   - vue session (sesann fourni) : stats de la session, rangs scopés session, badges mandat + carrière
+	 *   - vue carrière (triennat = null) : stats cumulées pondérées, badges carrière, pas de rang
+	 *   - vue triennat (triennat fourni) : stats du triennat, rangs scopés triennat, badges mandat + carrière
 	 *
-	 * Au Sénat, un sénateur a N mandats. Chaque mandat couvre M sessions. Les rangs/stats
-	 * scopés se lisent sur la SessionStats correspondante (mandat.sessions[]).
+	 * Au Sénat, un sénateur a N mandats. Chaque mandat couvre 1-3 triennats (cf ADR 0028).
+	 * Les rangs/stats scopés se lisent sur la TriennatStats correspondante.
 	 */
-	import type { Senateur, GroupeSenat, MandatSenat, SessionStats } from '$lib/types';
+	import type { Senateur, GroupeSenat, MandatSenat, TriennatStats } from '$lib/types';
 	import { POLITICAL_ORDER } from '$lib/political-order';
 	import StatRadar from './StatRadar.svelte';
 	import Badge from './Badge.svelte';
@@ -19,25 +19,27 @@
 	interface Props {
 		senateur: Senateur;
 		groupe: GroupeSenat | null;
-		/** null = vue carrière, sinon sesann (ex: 2024) */
-		sesann: number | null;
+		/** null = vue carrière, sinon TriennatId (ex. "2023-2026") */
+		triennat: string | null;
 	}
 
-	let { senateur, groupe, sesann }: Props = $props();
+	let { senateur, groupe, triennat }: Props = $props();
 
-	const mandatSession = $derived.by((): { mandat: MandatSenat; session: SessionStats } | null => {
-		if (sesann === null) return null;
-		for (const m of senateur.mandats) {
-			const s = m.sessions.find((sess) => sess.sesann === sesann);
-			if (s) return { mandat: m, session: s };
+	const mandatTriennat = $derived.by(
+		(): { mandat: MandatSenat; triennat: TriennatStats } | null => {
+			if (triennat === null) return null;
+			for (const m of senateur.mandats) {
+				const t = m.triennats.find((tt) => tt.triennat === triennat);
+				if (t) return { mandat: m, triennat: t };
+			}
+			return null;
 		}
-		return null;
-	});
+	);
 
-	const stats = $derived(mandatSession ? mandatSession.session.stats : senateur.carriere);
-	const rangs = $derived(mandatSession ? mandatSession.session.rangs : null);
+	const stats = $derived(mandatTriennat ? mandatTriennat.triennat.stats : senateur.carriere);
+	const rangs = $derived(mandatTriennat ? mandatTriennat.triennat.rangs : null);
 	const circo = $derived(
-		mandatSession?.mandat.circonscription ?? senateur.mandats.at(-1)?.circonscription ?? null
+		mandatTriennat?.mandat.circonscription ?? senateur.mandats.at(-1)?.circonscription ?? null
 	);
 
 	const age = $derived.by(() => {
@@ -60,8 +62,8 @@
 	const badgeIds = $derived.by(() => {
 		const ids: { id: string; kind: 'mandat' | 'carriere' }[] = [];
 		for (const b of senateur.carriere.badgesCarriere) ids.push({ id: b, kind: 'carriere' });
-		if (mandatSession) {
-			for (const b of mandatSession.mandat.badgesMandat) ids.push({ id: b, kind: 'mandat' });
+		if (mandatTriennat) {
+			for (const b of mandatTriennat.mandat.badgesMandat) ids.push({ id: b, kind: 'mandat' });
 		}
 		return ids;
 	});
@@ -75,10 +77,6 @@
 	function pct(n: number | null): string {
 		if (n === null) return 'N/A';
 		return `${Math.round(n * 100)} %`;
-	}
-
-	function libelleSession(s: number): string {
-		return `${s}-${(s + 1).toString().slice(-2)}`;
 	}
 </script>
 
@@ -96,7 +94,7 @@
 				{overall}
 			</div>
 			<div class="text-[10px] uppercase tracking-widest text-assembly-muted mt-1 inline-flex items-center gap-1">
-				<span>{sesann !== null ? `Overall · ${libelleSession(sesann)}` : 'Overall · Carrière'}</span>
+				<span>{triennat !== null ? `Overall · Triennat ${triennat}` : 'Overall · Carrière'}</span>
 				<InfoTip title="Comment se calcule l'Overall ?" placement="bottom">
 					Note 0–99 mesurant l'assiduité d'un parlementaire à voter les lois
 					(<a href="/faq#overall" class="underline text-assembly-accent">détails</a>) :
@@ -151,10 +149,13 @@
 				{#if senateur.identite.professionDeclaree}
 					<div class="italic truncate">{senateur.identite.professionDeclaree}</div>
 				{/if}
-				{#if sesann === null}
+				{#if triennat === null}
 					<div class="text-assembly-accent/80">
 						{senateur.carriere.nbMandats} mandat{senateur.carriere.nbMandats > 1 ? 's' : ''}
-						· {senateur.carriere.sessions.length} session{senateur.carriere.sessions.length > 1 ? 's' : ''}
+						· {senateur.carriere.triennats.length} triennat{senateur.carriere.triennats.length >
+						1
+							? 's'
+							: ''}
 					</div>
 				{/if}
 				<div class="text-[10px] text-assembly-muted">
@@ -183,10 +184,10 @@
 					Part des scrutins où le sénateur était <strong>physiquement présent</strong> (vote
 					exprimé, abstention ou non-votant). Calculé sur les scrutins postérieurs à sa prise de
 					fonction.
-					{#if sesann === null}
+					{#if triennat === null}
 						<br /><br />
 						En vue carrière, la moyenne est <strong>pondérée par les scrutins éligibles</strong>
-						de chaque session (cf ADR 0017 transposée).
+						de chaque triennat (cf ADR 0017 transposée + ADR 0028).
 					{/if}
 				</InfoTip>
 			</span>

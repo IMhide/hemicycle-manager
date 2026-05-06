@@ -1,25 +1,29 @@
 <script lang="ts">
+	import { TRIENNATS, type TriennatId, triennatOfDate } from '$lib/triennats';
+
 	let { data } = $props();
 
 	type SortKey = 'date-desc' | 'date-asc' | 'numero-desc' | 'numero-asc';
 	type Period = 'all' | '30j' | '6m' | '1an';
 
-	const sessionsSorted = $derived([...data.sessions].sort((a, b) => b.sesann - a.sesann));
+	const triennatsSorted = $derived(
+		[...data.triennats].sort((a, b) => b.dateDebut.localeCompare(a.dateDebut))
+	);
 
 	let search = $state('');
 	let resultFilter = $state('all'); // libre car libellés sort hétérogènes côté Sénat
 	let period: Period = $state('all');
 	let sortKey: SortKey = $state('date-desc');
 	let visibleCount = $state(50);
-	/** null = toutes sessions */
-	let scopeSession: number | null = $state(null);
+	/** null = tous triennats */
+	let scopeTriennat: TriennatId | null = $state(null);
 
 	function clearFilters() {
 		search = '';
 		resultFilter = 'all';
 		period = 'all';
 		sortKey = 'date-desc';
-		scopeSession = null;
+		scopeTriennat = null;
 		visibleCount = 50;
 	}
 
@@ -42,10 +46,14 @@
 		return 'autre';
 	}
 
+	function triennatOfScrutin(date: string): TriennatId | null {
+		return (triennatOfDate(date)?.id as TriennatId) ?? null;
+	}
+
 	const filtered = $derived.by(() => {
 		const q = search.trim().toLowerCase();
 		return data.scrutins.filter((s) => {
-			if (scopeSession !== null && s.sesann !== scopeSession) return false;
+			if (scopeTriennat !== null && triennatOfScrutin(s.date) !== scopeTriennat) return false;
 			if (q && !s.titre.toLowerCase().includes(q)) return false;
 			if (resultFilter !== 'all') {
 				if (sortCategory(s.sort) !== resultFilter) return false;
@@ -85,7 +93,7 @@
 		void resultFilter;
 		void period;
 		void sortKey;
-		void scopeSession;
+		void scopeTriennat;
 		visibleCount = 50;
 	});
 
@@ -101,14 +109,10 @@
 		return s.length > n ? s.slice(0, n - 1) + '…' : s;
 	}
 
-	function libelleSession(sesann: number): string {
-		return `${sesann}-${(sesann + 1).toString().slice(-2)}`;
-	}
-
 	const counts = $derived.by(() => {
 		const c = { all: 0, adopte: 0, rejete: 0 };
 		for (const s of data.scrutins) {
-			if (scopeSession !== null && s.sesann !== scopeSession) continue;
+			if (scopeTriennat !== null && triennatOfScrutin(s.date) !== scopeTriennat) continue;
 			c.all += 1;
 			const cat = sortCategory(s.sort);
 			if (cat === 'adopte') c.adopte += 1;
@@ -122,7 +126,7 @@
 			resultFilter !== 'all' ||
 			period !== 'all' ||
 			sortKey !== 'date-desc' ||
-			scopeSession !== null
+			scopeTriennat !== null
 	);
 </script>
 
@@ -136,29 +140,29 @@
 			<h1 class="title-display text-4xl">Scrutins Sénat</h1>
 			<p class="text-assembly-muted text-sm mt-1">
 				{counts.all} scrutin{counts.all > 1 ? 's' : ''} public{counts.all > 1 ? 's' : ''}
-				{#if scopeSession !== null}
-					· session {libelleSession(scopeSession)}
+				{#if scopeTriennat !== null}
+					· triennat {scopeTriennat}
 				{/if}
 			</p>
 		</div>
 		<div class="flex items-center gap-1 text-xs flex-wrap justify-end max-w-md">
-			<span class="text-assembly-muted">Session :</span>
+			<span class="text-assembly-muted">Triennat :</span>
 			<button
-				class="px-2 py-1 rounded text-[11px] {scopeSession === null
+				class="px-2 py-1 rounded text-[11px] {scopeTriennat === null
 					? 'bg-assembly-accent text-assembly-bg font-semibold'
 					: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
-				onclick={() => (scopeSession = null)}
+				onclick={() => (scopeTriennat = null)}
 			>
-				Toutes
+				Tous
 			</button>
-			{#each sessionsSorted.slice(0, 6) as sess (sess.sesann)}
+			{#each triennatsSorted.slice(0, 6) as tri (tri.id)}
 				<button
-					class="px-2 py-1 rounded text-[11px] {scopeSession === sess.sesann
+					class="px-2 py-1 rounded text-[11px] {scopeTriennat === tri.id
 						? 'bg-assembly-accent text-assembly-bg font-semibold'
 						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
-					onclick={() => (scopeSession = sess.sesann)}
+					onclick={() => (scopeTriennat = tri.id as TriennatId)}
 				>
-					{libelleSession(sess.sesann)}
+					{tri.id}{#if tri.enCours} ⚡{/if}
 				</button>
 			{/each}
 		</div>
@@ -255,6 +259,7 @@
 				<div class="space-y-1.5">
 					{#each visible as s (s.uid)}
 						{@const cat = sortCategory(s.sort)}
+						{@const triId = triennatOfScrutin(s.date)}
 						<a
 							href="/senat/scrutins/{s.uid}/"
 							class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
@@ -270,9 +275,11 @@
 
 							<div class="min-w-0 flex-1">
 								<div class="text-sm leading-snug">{truncate(s.titre, 140)}</div>
-								<div class="text-[10px] text-assembly-muted mt-0.5">
-									Session {libelleSession(s.sesann)}
-								</div>
+								{#if triId}
+									<div class="text-[10px] text-assembly-muted mt-0.5">
+										Triennat {triId}
+									</div>
+								{/if}
 							</div>
 
 							<div

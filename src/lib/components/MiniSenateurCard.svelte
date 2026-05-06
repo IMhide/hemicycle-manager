@@ -2,39 +2,41 @@
 	/**
 	 * Compact FIFA-style card shown on hover (Sénat).
 	 *
-	 * Modèle Phase 3 (cf ADR 0023..0024) : on affiche un `Senateur`. Si `sesann`
-	 * est fourni, on est en vue session (stats + rangs scopés session). Sinon
-	 * on est en vue carrière (cumul pondéré, pas de rang).
+	 * Modèle Phase 3 (cf ADR 0023..0028) : on affiche un `Senateur`. Si `triennat`
+	 * est fourni, on est en vue triennat (stats + rangs scopés triennat, ADR 0028).
+	 * Sinon on est en vue carrière (cumul pondéré, pas de rang).
 	 */
-	import type { Senateur, GroupeSenat, MandatSenat, SessionStats } from '$lib/types';
+	import type { Senateur, GroupeSenat, MandatSenat, TriennatStats } from '$lib/types';
 	import Rank from './Rank.svelte';
 
 	interface Props {
 		senateur: Senateur;
 		groupe: GroupeSenat | null;
-		/** Si fourni : vue session. Si null : vue carrière. */
-		sesann: number | null;
+		/** Si fourni : vue triennat. Si null : vue carrière. */
+		triennat: string | null;
 	}
 
-	let { senateur, groupe, sesann }: Props = $props();
+	let { senateur, groupe, triennat }: Props = $props();
 
-	const mandatSession = $derived.by((): { mandat: MandatSenat; session: SessionStats } | null => {
-		if (sesann === null) return null;
-		for (const m of senateur.mandats) {
-			const s = m.sessions.find((sess) => sess.sesann === sesann);
-			if (s) return { mandat: m, session: s };
+	const mandatTriennat = $derived.by(
+		(): { mandat: MandatSenat; triennat: TriennatStats } | null => {
+			if (triennat === null) return null;
+			for (const m of senateur.mandats) {
+				const t = m.triennats.find((tt) => tt.triennat === triennat);
+				if (t) return { mandat: m, triennat: t };
+			}
+			return null;
 		}
-		return null;
-	});
+	);
 
-	const stats = $derived(mandatSession ? mandatSession.session.stats : senateur.carriere);
-	const rangs = $derived(mandatSession ? mandatSession.session.rangs : null);
+	const stats = $derived(mandatTriennat ? mandatTriennat.triennat.stats : senateur.carriere);
+	const rangs = $derived(mandatTriennat ? mandatTriennat.triennat.rangs : null);
 	const frondes = $derived(stats.frondes.count);
 	const overall = $derived(stats.overall);
 
 	const href = $derived(
-		sesann !== null
-			? `/senat/senateurs/${senateur.id}/?session=${sesann}`
+		triennat !== null
+			? `/senat/senateurs/${senateur.id}/?triennat=${triennat}`
 			: `/senat/senateurs/${senateur.id}/`
 	);
 
@@ -43,7 +45,7 @@
 	}
 
 	const circo = $derived(
-		mandatSession?.mandat.circonscription ?? senateur.mandats.at(-1)?.circonscription ?? null
+		mandatTriennat?.mandat.circonscription ?? senateur.mandats.at(-1)?.circonscription ?? null
 	);
 </script>
 
@@ -84,12 +86,12 @@
 			{#if circo}
 				<div class="text-[10px] text-assembly-muted mt-1 truncate">{circo}</div>
 			{/if}
-			{#if sesann === null}
+			{#if triennat === null}
 				<div class="text-[9px] text-assembly-muted mt-1 italic">
 					Carrière · {senateur.carriere.nbMandats} mandat{senateur.carriere.nbMandats > 1
 						? 's'
-						: ''} · {senateur.carriere.sessions.length} session{senateur.carriere.sessions.length >
-					1
+						: ''} · {senateur.carriere.triennats.length} triennat{senateur.carriere.triennats
+						.length > 1
 						? 's'
 						: ''}
 				</div>

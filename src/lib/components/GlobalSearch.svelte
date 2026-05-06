@@ -34,7 +34,7 @@
 		for (const g of results.groupes)
 			out.push({ kind: 'groupe', href: `/groupes/${g.legislature}/${g.id}/`, data: g });
 		for (const g of results.groupesSenat)
-			out.push({ kind: 'groupeSenat', href: `/senat/sessions/${g.sesann}/`, data: g });
+			out.push({ kind: 'groupeSenat', href: `/senat/triennats/${g.triennat}/`, data: g });
 		for (const s of results.scrutins)
 			out.push({ kind: 'scrutin', href: `/scrutins/${s.uid}/`, data: s });
 		return out;
@@ -359,7 +359,7 @@
 					>
 						Groupes (Sénat)
 					</div>
-					{#each results.groupesSenat as g, i (g.code + ':' + g.sesann)}
+					{#each results.groupesSenat as g, i (g.code + ':' + g.triennat)}
 						{@const flatIdx =
 							results.personnes.length +
 							results.senateurs.length +
@@ -375,7 +375,7 @@
 							onclick={() =>
 								selectItem({
 									kind: 'groupeSenat',
-									href: `/senat/sessions/${g.sesann}/`,
+									href: `/senat/triennats/${g.triennat}/`,
 									data: g
 								})}
 						>
@@ -390,9 +390,10 @@
 									{@html highlightMatch(g.libelle, query)}
 								</div>
 								<div class="text-[10px] text-assembly-muted">
-									{g.libelleAbrege} · Sénat · session {g.sesann}-{(g.sesann + 1)
-										.toString()
-										.slice(-2)} · {g.effectifFin} sénateur{g.effectifFin > 1 ? 's' : ''}
+									{g.libelleAbrege} · Sénat · triennat {g.triennat} · {g.effectifFin} sénateur{g.effectifFin >
+									1
+										? 's'
+										: ''}
 								</div>
 							</div>
 						</button>

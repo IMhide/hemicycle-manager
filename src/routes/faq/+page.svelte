@@ -214,7 +214,7 @@
 			id: 'senat',
 			title: 'Le Sénat (Phase 3)',
 			emoji: '🏛️',
-			intro: 'Le Sénat couvre 1 935 sénateurs, 4 662 scrutins et 20 sessions parlementaires (2006-2007 → 2025-2026). Quelques particularités à connaître.',
+			intro: 'Le Sénat couvre 1 935 sénateurs, 4 662 scrutins et 7 triennats (2006-2008 → 2023-2026). Quelques particularités à connaître.',
 			items: [
 				{
 					id: 'senat-overall',
@@ -223,10 +223,12 @@
 <p class="mt-2">En pratique, la moyenne d'Overall au Sénat est plus haute (~80) qu'à l'AN (~50–70), parce que la cohorte sénatoriale est quasi exclusivement composée de présents en séance (pas de ministres, peu d'absents systématiques). Cf ${ADR(22, 'score-overall')}.</p>`
 				},
 				{
-					id: 'senat-cohorte',
-					question: 'Pourquoi vous parlez de "<b>session</b>" et plus de "législature" ?',
-					answer: `<p>Côté Sénat, la <b>session parlementaire annuelle</b> (sept→sept) joue le rôle d'unité de cohorte pour les classements, badges et rangs. C'est l'analogue naturel de la "législature" AN : durée comparable, cohorte stable, classements qui restent pertinents.</p>
-<p class="mt-2">Le mandat individuel sénatorial reste le conteneur d'éligibilité (peut couvrir plusieurs sessions). Le Sénat se renouvelle par moitié — un mandat dure 6 ans = ~6 sessions. Cf ${ADR(23, 'phase3-senat-scope')}.</p>`
+					id: 'senat-triennat',
+					question: 'Pourquoi vous parlez de "<b>triennat</b>" et plus de "législature" ?',
+					answer: `<p>Côté Sénat, le <b>triennat</b> (3 ans entre 2 renouvellements) joue le rôle de la législature AN. C'est l'unité naturelle du Sénat : entre 2 renouvellements, la moitié des sièges qui vient d'être renouvelée siège tout du long, et l'autre moitié (renouvelée 3 ans plus tôt) aussi. La cohorte est <b>strictement stable</b> (sauf décès/démissions/suppléances).</p>
+<p class="mt-2">7 triennats sont couverts depuis 2006 : <code>2006-2008</code> (tronqué, ~2 ans car démarrage data Sénat en oct. 2006), <code>2008-2011</code>, <code>2011-2014</code>, <code>2014-2017</code>, <code>2017-2020</code>, <code>2020-2023</code>, <code>2023-2026</code> (en cours ⚡, fin théorique sept. 2026).</p>
+<p class="mt-2">Le mandat individuel sénatorial dure <b>6 ans = 2 triennats consécutifs</b> (mandat complet). Un mandat fragmenté ou partiel peut chevaucher 1, 2 ou 3 triennats. Sur la fiche d'un sénateur, l'onglet "Carrière" agrège tous les triennats de sa carrière.</p>
+<p class="mt-2">Default tab à l'arrivée sur une fiche : <b>triennat en cours</b> si le sénateur y siège, sinon <b>Carrière</b>. Cf ${ADR(28, 'senat-triennat-unite-regroupement')}.</p>`
 				},
 				{
 					id: 'senat-loyaute',
@@ -279,7 +281,7 @@
 				{
 					id: 'phase-3',
 					question: 'Y aura-t-il les <b>sénateurs</b> et les <b>ministres</b> ?',
-					answer: `<p><b>Les sénateurs sont là !</b> Phase 3 PolitiDex couvre 1 935 sénateurs, 4 662 scrutins et 20 sessions (2006-2007 → 2025-2026). Voir la <a class="underline hover:text-assembly-accent" href="/senat">home Sénat</a> et la section <a class="underline hover:text-assembly-accent" href="#senat">FAQ Sénat</a> ci-dessus.</p>
+					answer: `<p><b>Les sénateurs sont là !</b> Phase 3 PolitiDex couvre 1 935 sénateurs, 4 662 scrutins et 7 triennats (2006-2008 → 2023-2026). Voir la <a class="underline hover:text-assembly-accent" href="/senat">home Sénat</a> et la section <a class="underline hover:text-assembly-accent" href="#senat">FAQ Sénat</a> ci-dessus.</p>
 <p class="mt-2">Côté <b>ministres</b> et <b>présidents de la République</b>, c'est la suite de la Phase 3. Pour l'instant on couvre députés (15ᵉ + 16ᵉ + 17ᵉ législatures) et sénateurs en séparé — la fusion bicamérale (Phase 3c) viendra ensuite. Cf ${ADR(14, 'pivot-politidex')}.</p>`
 				}
 			]

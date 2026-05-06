@@ -1,10 +1,10 @@
 import type { PageLoad } from './$types';
-import { loadScrutinsSenatIndex, loadSessions } from '$lib/data';
+import { loadScrutinsSenatIndex, loadTriennats } from '$lib/data';
 
 export const load: PageLoad = async ({ fetch }) => {
-	const [scrutins, sessions] = await Promise.all([
+	const [scrutins, triennats] = await Promise.all([
 		loadScrutinsSenatIndex(fetch),
-		loadSessions(fetch)
+		loadTriennats(fetch)
 	]);
-	return { scrutins, sessions };
+	return { scrutins, triennats };
 };

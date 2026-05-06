@@ -23,7 +23,7 @@ import {
 	loadLegislatures,
 	loadSenateurs,
 	loadGroupesSenat,
-	loadSessions
+	loadTriennats
 } from './data';
 
 export interface SearchIndex {
@@ -45,21 +45,21 @@ export async function ensureSearchIndex(): Promise<SearchIndex> {
 	if (inflight) return inflight;
 
 	inflight = (async () => {
-		const [legislatures, sessions] = await Promise.all([
+		const [legislatures, triennats] = await Promise.all([
 			loadLegislatures(fetch),
-			loadSessions(fetch)
+			loadTriennats(fetch)
 		]);
-		const [personnes, scrutins, senateurs, groupesByLeg, groupesBySession] = await Promise.all([
+		const [personnes, scrutins, senateurs, groupesByLeg, groupesByTriennat] = await Promise.all([
 			loadPersonnes(fetch),
 			loadScrutinsIndex(fetch),
 			loadSenateurs(fetch),
 			Promise.all(legislatures.map((l) => loadGroupes(fetch, l.num))),
-			Promise.all(sessions.map((s) => loadGroupesSenat(fetch, s.sesann)))
+			Promise.all(triennats.map((t) => loadGroupesSenat(fetch, t.id)))
 		]);
 		const groupes = groupesByLeg.flat();
 		const groupesById = new Map(groupes.map((g) => [g.id, g]));
 
-		const groupesSenat = groupesBySession.flat();
+		const groupesSenat = groupesByTriennat.flat();
 		const groupesSenatByCode = new Map<string, GroupeSenat[]>();
 		for (const g of groupesSenat) {
 			const arr = groupesSenatByCode.get(g.code) ?? [];
@@ -124,8 +124,8 @@ function groupePrincipalDe(p: Personne, groupesById: Map<string, Groupe>): Group
 }
 
 /** Le groupe "principal" d'un sénateur pour l'affichage : dernier groupe connu
- *  (dernier mandat, dernière appartenance), recherché dans la session la plus
- *  récente où le code a existé. */
+ *  (dernier mandat, dernière appartenance), recherché dans le triennat le plus
+ *  récent où le code a existé (cf ADR 0028). */
 function groupePrincipalSenateurDe(
 	s: Senateur,
 	groupesSenatByCode: Map<string, GroupeSenat[]>
@@ -135,8 +135,8 @@ function groupePrincipalSenateurDe(
 	if (!lastApp) return undefined;
 	const candidats = groupesSenatByCode.get(lastApp.groupeCode);
 	if (!candidats || candidats.length === 0) return undefined;
-	// Le plus récent (sesann max)
-	return [...candidats].sort((a, b) => b.sesann - a.sesann)[0];
+	// Le plus récent (triennat max — tri lexicographique sur "YYYY-YYYY" fonctionne)
+	return [...candidats].sort((a, b) => b.triennat.localeCompare(a.triennat))[0];
 }
 
 export function searchAll(index: SearchIndex, query: string): SearchResults {
@@ -232,17 +232,18 @@ export function searchAll(index: SearchIndex, query: string): SearchResults {
 	}
 	matchedGroupes.sort((a, b) => b.legislature - a.legislature || a.preseance - b.preseance);
 
-	// ─── Groupes Sénat (dédupliqués par code, on garde la session la plus récente) ──
+	// ─── Groupes Sénat (dédupliqués par code, on garde le triennat le plus récent, cf ADR 0028) ──
 	const matchedGroupesSenatMap = new Map<string, GroupeSenat>();
 	for (const g of index.groupesSenat) {
 		const hay = normalize(`${g.libelleAbrege} ${g.libelle}`);
 		if (hay.includes(q)) {
 			const existing = matchedGroupesSenatMap.get(g.code);
-			if (!existing || existing.sesann < g.sesann) matchedGroupesSenatMap.set(g.code, g);
+			if (!existing || existing.triennat.localeCompare(g.triennat) < 0)
+				matchedGroupesSenatMap.set(g.code, g);
 		}
 	}
 	const matchedGroupesSenat = [...matchedGroupesSenatMap.values()].sort(
-		(a, b) => b.sesann - a.sesann || a.preseance - b.preseance
+		(a, b) => b.triennat.localeCompare(a.triennat) || a.preseance - b.preseance
 	);
 
 	// ─── Scrutins (AN, déjà triés desc dans l'index) ───────────────────

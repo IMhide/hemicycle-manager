@@ -1,16 +1,16 @@
 <script lang="ts">
 	/**
-	 * Fiche d'un groupe politique Sénat scopé par session (cf ADR 0023, 0016 transposée).
+	 * Fiche d'un groupe politique Sénat scopé par triennat (cf ADR 0028, 0016 transposée).
 	 *
 	 * Reconstruit les membres côté front à partir des `Senateur[]` filtrés sur le
-	 * mandat couvrant la session, avec dernière appartenance pointant vers ce groupe.
+	 * mandat couvrant le triennat, avec dernière appartenance pointant vers ce groupe.
 	 */
 	import HemicycleSenat from '$lib/components/HemicycleSenat.svelte';
 	import MiniSenateurCard from '$lib/components/MiniSenateurCard.svelte';
 	import SenateurRow from '$lib/components/SenateurRow.svelte';
 	import InfoTip from '$lib/components/InfoTip.svelte';
 	import { goto } from '$app/navigation';
-	import type { Senateur, MandatSenat, GroupeSenat, SessionStats } from '$lib/types';
+	import type { Senateur, MandatSenat, TriennatStats } from '$lib/types';
 
 	let { data } = $props();
 
@@ -21,22 +21,22 @@
 	let cursorX = $state(0);
 	let cursorY = $state(0);
 
-	function mandatPourSession(s: Senateur): MandatSenat | null {
+	function mandatPourTriennat(s: Senateur): MandatSenat | null {
 		for (const m of s.mandats) {
-			if (m.sessions.some((sess) => sess.sesann === data.sesann)) return m;
+			if (m.triennats.some((t) => t.triennat === data.triennat)) return m;
 		}
 		return null;
 	}
 
-	function sessionStats(s: Senateur): SessionStats | null {
-		const m = mandatPourSession(s);
+	function triennatStats(s: Senateur): TriennatStats | null {
+		const m = mandatPourTriennat(s);
 		if (!m) return null;
-		return m.sessions.find((sess) => sess.sesann === data.sesann) ?? null;
+		return m.triennats.find((t) => t.triennat === data.triennat) ?? null;
 	}
 
-	/** Membre du groupe pour cette session : dernière appartenance du mandat pointe ici. */
+	/** Membre du groupe pour ce triennat : dernière appartenance du mandat pointe ici. */
 	function estMembre(s: Senateur): boolean {
-		const m = mandatPourSession(s);
+		const m = mandatPourTriennat(s);
 		if (!m) return false;
 		const lastApp = m.appartenancesGroupe.at(-1);
 		return lastApp?.groupeCode === data.groupe.code;
@@ -54,11 +54,11 @@
 		membres
 			.map((s) => ({
 				senateur: s,
-				mandat: mandatPourSession(s),
-				session: sessionStats(s)
+				mandat: mandatPourTriennat(s),
+				triennat: triennatStats(s)
 			}))
-			.filter((x): x is { senateur: Senateur; mandat: MandatSenat; session: SessionStats } =>
-				!!x.mandat && !!x.session
+			.filter((x): x is { senateur: Senateur; mandat: MandatSenat; triennat: TriennatStats } =>
+				!!x.mandat && !!x.triennat
 			)
 	);
 
@@ -73,20 +73,19 @@
 		const sorted = [...filtered];
 		switch (sortKey) {
 			case 'nom':
-				sorted.sort((a, b) =>
-					a.senateur.identite.nom.localeCompare(b.senateur.identite.nom)
-				);
+				sorted.sort((a, b) => a.senateur.identite.nom.localeCompare(b.senateur.identite.nom));
 				break;
 			case 'loyaute':
 				sorted.sort(
-					(a, b) => (b.session.stats.loyaute.rate ?? 0) - (a.session.stats.loyaute.rate ?? 0)
+					(a, b) =>
+						(b.triennat.stats.loyaute.rate ?? 0) - (a.triennat.stats.loyaute.rate ?? 0)
 				);
 				break;
 			case 'presence':
-				sorted.sort((a, b) => b.session.stats.presence.rate - a.session.stats.presence.rate);
+				sorted.sort((a, b) => b.triennat.stats.presence.rate - a.triennat.stats.presence.rate);
 				break;
 			case 'frondes':
-				sorted.sort((a, b) => b.session.stats.frondes.count - a.session.stats.frondes.count);
+				sorted.sort((a, b) => b.triennat.stats.frondes.count - a.triennat.stats.frondes.count);
 				break;
 		}
 		return sorted;
@@ -100,7 +99,7 @@
 
 	const senateursPourHemicycle = $derived(
 		data.senateurs.filter((s) =>
-			s.mandats.some((m) => m.sessions.some((sess) => sess.sesann === data.sesann))
+			s.mandats.some((m) => m.triennats.some((t) => t.triennat === data.triennat))
 		)
 	);
 
@@ -112,11 +111,7 @@
 	}
 
 	function selectSenateur(id: string) {
-		goto(`/senat/senateurs/${id}/?session=${data.sesann}`);
-	}
-
-	function libelleSession(sesann: number): string {
-		return `${sesann}-${(sesann + 1).toString().slice(-2)}`;
+		goto(`/senat/senateurs/${id}/?triennat=${data.triennat}`);
 	}
 
 	const tooltipPos = $derived.by(() => {
@@ -152,17 +147,17 @@
 
 <section class="max-w-7xl mx-auto px-6 py-8 space-y-6">
 	<a
-		href="/senat/sessions/{data.sesann}/"
+		href="/senat/triennats/{data.triennat}/"
 		class="text-sm text-assembly-muted hover:text-assembly-accent inline-flex items-center gap-1"
 	>
-		← Session {libelleSession(data.sesann)}
+		← Triennat {data.triennat}
 	</a>
 
 	<div class="card p-6" style="border-left: 4px solid {data.groupe.couleur}">
 		<div class="flex items-start justify-between gap-4 mb-3">
 			<div class="min-w-0 flex-1">
 				<div class="text-xs uppercase tracking-widest text-assembly-muted mb-1">
-					Session {libelleSession(data.sesann)} · {data.groupe.libelleAbrege}
+					Triennat {data.triennat} · {data.groupe.libelleAbrege}
 				</div>
 				<h1
 					class="text-xl sm:text-2xl leading-snug font-semibold"
@@ -174,7 +169,7 @@
 					<div class="text-xs text-assembly-muted mt-2">
 						Président·e :
 						<a
-							href="/senat/senateurs/{president.id}/?session={data.sesann}"
+							href="/senat/senateurs/{president.id}/?triennat={data.triennat}"
 							class="hover:text-assembly-accent"
 						>
 							{president.identite.prenom}
@@ -194,7 +189,7 @@
 				<div class="text-xs text-assembly-muted flex items-center gap-1">
 					Overall moyen
 					<InfoTip title="Overall moyen du groupe" size="xs">
-						Moyenne des Overall individuels des membres du groupe pour cette session
+						Moyenne des Overall individuels des membres du groupe pour ce triennat
 						(cf <a
 							href="https://github.com/IMhide/hemicycle-manager/blob/main/decisions/0022-score-overall.md"
 							class="underline">ADR 0022</a
@@ -212,7 +207,7 @@
 	<div class="card p-4 sm:p-6">
 		<HemicycleSenat
 			senateurs={senateursPourHemicycle}
-			sesann={data.sesann}
+			triennat={data.triennat}
 			mode={{
 				kind: 'highlight-groupe',
 				groupeCode: data.groupe.code,
@@ -223,7 +218,7 @@
 			onselect={(id) => selectSenateur(id)}
 		/>
 		<div class="text-[10px] text-assembly-muted text-center mt-2 italic">
-			Les places non colorées sont celles des autres groupes pour cette session.
+			Les places non colorées sont celles des autres groupes pour ce triennat.
 		</div>
 	</div>
 
@@ -235,7 +230,7 @@
 			<MiniSenateurCard
 				senateur={hoveredSenateur}
 				groupe={data.groupe}
-				sesann={data.sesann}
+				triennat={data.triennat}
 			/>
 		</div>
 	{/if}
@@ -271,11 +266,11 @@
 			</div>
 		{:else}
 			<div class="grid grid-cols-1 xl:grid-cols-2 gap-2">
-				{#each filteredMembers as { senateur, mandat, session } (senateur.id)}
+				{#each filteredMembers as { senateur, mandat, triennat } (senateur.id)}
 					<SenateurRow
 						{senateur}
 						{mandat}
-						{session}
+						{triennat}
 						highlight={highlight()}
 						isPresident={president?.id === senateur.id}
 					/>

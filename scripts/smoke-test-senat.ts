@@ -1,15 +1,17 @@
 /**
- * Smoke test pour valider l'output du pipeline Sénat (Phase 3, cf ADR 0023..0027).
+ * Smoke test pour valider l'output du pipeline Sénat (Phase 3, cf ADR 0023..0028).
  * Lance après `npm run data:fetch:senat`.
  *
  * Vérifie :
  *  - comptes globaux (sénateurs, mandats, scrutins, votes nominatifs)
- *  - sessions et groupes par session
+ *  - sessions (brique data) et triennats (unité UI, cf ADR 0028)
+ *  - groupes par triennat
  *  - cas concrets (Patriat siège 1 LREM, Larcher siège 9 UMP)
  *  - cohérence des stats (rate ∈ [0, 1], denominator ≥ numerator)
  *  - vétérans cross-session, transfuges, distribution overalls
  *  - hémicycle (place ∈ [1, 348], serie ∈ {1, 2})
  *  - garde anti-fusion AN/Sénat
+ *  - garde anti-régression triennats (cf ADR 0028 § "Garde anti-régression")
  */
 
 import { readFile, readdir } from 'node:fs/promises';
@@ -20,10 +22,12 @@ import type {
 	Senateur,
 	GroupeSenat,
 	SessionMeta,
+	TriennatMeta,
 	ScrutinSenatIndex,
 	BuildMetaSenat,
 	Personne
 } from '../src/lib/types.ts';
+import { TRIENNATS, triennatOfDate } from '../src/lib/triennats.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = join(ROOT, 'static', 'data', 'senat');
@@ -80,6 +84,11 @@ async function main() {
 		meta.counts.sessions >= 19,
 		`got ${meta.counts.sessions}`
 	);
+	check(
+		'≥ 6 triennats avec scrutins (cf ADR 0028)',
+		(meta.counts.triennats ?? 0) >= 6,
+		`got ${meta.counts.triennats ?? 0}`
+	);
 
 	// ─── B. Sessions
 	console.log('\nB. Sessions');
@@ -110,33 +119,41 @@ async function main() {
 		);
 	}
 
-	// ─── C. Groupes par session
-	console.log('\nC. Groupes par session');
-	const groupes2024 = await loadJson<GroupeSenat[]>('groupes/2024.json');
-	check('groupes/2024.json contient ≥ 8 groupes', groupes2024.length >= 8, `got ${groupes2024.length}`);
-	// Codes en exercice 2024-2025 attendus : CRC, GEST, LREM, RDSE, RTLI, SOC, UC, UMP.
-	// AUCUN/NI peuvent être absents si l'effectif final est 0.
-	const codes2024 = new Set(groupes2024.map((g) => g.code));
+	// ─── C. Groupes par triennat (cf ADR 0028)
+	console.log('\nC. Groupes par triennat');
+	const groupes23_26 = await loadJson<GroupeSenat[]>('groupes/2023-2026.json');
+	check(
+		'groupes/2023-2026.json contient ≥ 8 groupes',
+		groupes23_26.length >= 8,
+		`got ${groupes23_26.length}`
+	);
+	const codes23_26 = new Set(groupes23_26.map((g) => g.code));
 	for (const c of ['SOC', 'UMP', 'UC', 'CRC', 'GEST', 'RDSE', 'LREM', 'RTLI']) {
-		check(`code ${c} présent en 2024`, codes2024.has(c));
+		check(`code ${c} présent en 2023-2026`, codes23_26.has(c));
 	}
 	check(
-		'tous les groupes 2024 ont une couleur hex',
-		groupes2024.every((g) => /^#[0-9a-fA-F]{6}$/.test(g.couleur))
+		'tous les groupes 2023-2026 ont une couleur hex',
+		groupes23_26.every((g) => /^#[0-9a-fA-F]{6}$/.test(g.couleur))
 	);
-	const totalEff2024 = groupes2024.reduce((s, g) => s + g.effectifFin, 0);
+	const totalEff23_26 = groupes23_26.reduce((s, g) => s + g.effectifFin, 0);
+	// Note : sur 3 ans, les effectifs cumulent les sénateurs ayant siégé (incl. successions)
+	// → la somme dépasse 348 (nombre instantané de sièges). Bornes larges.
 	check(
-		'somme des effectifs 2024 ∈ [320, 380]',
-		totalEff2024 >= 320 && totalEff2024 <= 380,
-		`got ${totalEff2024}`
+		'somme des effectifs 2023-2026 ∈ [320, 600]',
+		totalEff23_26 >= 320 && totalEff23_26 <= 600,
+		`got ${totalEff23_26}`
+	);
+	check(
+		'tous les groupes 2023-2026 ont triennat = "2023-2026"',
+		groupes23_26.every((g) => g.triennat === '2023-2026')
 	);
 
-	// Vérifier qu'au moins 1 groupe historique disparu apparaît dans une session ancienne
-	const groupes2006 = await loadJson<GroupeSenat[]>('groupes/2006.json').catch(() => null);
-	if (groupes2006) {
-		const codes2006 = new Set(groupes2006.map((g) => g.code));
-		const hasHistoricalCode = ['UMP', 'UC', 'SOC', 'RDSE'].some((c) => codes2006.has(c));
-		check('groupes/2006.json contient des codes historiques', hasHistoricalCode);
+	// Vérifier qu'au moins 1 groupe historique disparu apparaît dans un triennat ancien
+	const groupes06_08 = await loadJson<GroupeSenat[]>('groupes/2006-2008.json').catch(() => null);
+	if (groupes06_08) {
+		const codes06_08 = new Set(groupes06_08.map((g) => g.code));
+		const hasHistoricalCode = ['UMP', 'UC', 'SOC', 'RDSE'].some((c) => codes06_08.has(c));
+		check('groupes/2006-2008.json contient des codes historiques', hasHistoricalCode);
 	}
 
 	// ─── D. Cas concrets (api-senat confirmé en début de session)
@@ -296,8 +313,127 @@ async function main() {
 		`got ${placesActives}`
 	);
 
-	// ─── J. Garde anti-fusion AN/Sénat (cf ADR 0023)
-	console.log('\nJ. Garde anti-fusion AN/Sénat');
+	// ─── J. Garde anti-régression Triennats (cf ADR 0028)
+	console.log('\nJ. Garde anti-régression Triennats');
+	const triennatsMeta = await loadJson<TriennatMeta[]>('triennats.json');
+	check('triennats.json existe et n\'est pas vide', triennatsMeta.length > 0);
+	const triennatIds = triennatsMeta.map((t) => t.id);
+	check(
+		'triennats.json ⊆ table figée des 7 triennats',
+		triennatIds.every((id) => TRIENNATS.some((t) => t.id === id)),
+		`got ${triennatIds.join(', ')}`
+	);
+	check(
+		'triennat 2023-2026 présent (en cours)',
+		triennatIds.includes('2023-2026')
+	);
+	check(
+		'triennat 2023-2026 marqué enCours',
+		triennatsMeta.find((t) => t.id === '2023-2026')?.enCours === true
+	);
+	check(
+		'triennat 2006-2008 marqué tronqué',
+		triennatsMeta.find((t) => t.id === '2006-2008')?.tronque === true
+	);
+	const tri23_26 = triennatsMeta.find((t) => t.id === '2023-2026');
+	if (tri23_26) {
+		check(
+			'triennat 2023-2026 sessions ⊆ [2023, 2024, 2025]',
+			tri23_26.sessions.every((s) => s >= 2023 && s <= 2025),
+			`got [${tri23_26.sessions.join(', ')}]`
+		);
+		check(
+			'triennat 2023-2026 nbSenateursActifs ∈ [320, 450]',
+			tri23_26.nbSenateursActifs >= 320 && tri23_26.nbSenateursActifs <= 450,
+			`got ${tri23_26.nbSenateursActifs}`
+		);
+	}
+
+	// Mandat 2017-2023 (Patriat, élu 2017 série 2 jusqu'à fin 2023) doit avoir 2 entrées triennat
+	if (patriat) {
+		const m17 = patriat.mandats.find(
+			(m) => m.datePriseFonction.startsWith('2017') && m.dateFinFonction?.startsWith('2023')
+		);
+		if (m17) {
+			const triIds = m17.triennats.map((t) => t.triennat).sort();
+			check(
+				'Patriat mandat 2017-2023 a 2 entrées triennats : 2017-2020 + 2020-2023',
+				triIds.includes('2017-2020') && triIds.includes('2020-2023'),
+				`got [${triIds.join(', ')}]`
+			);
+		}
+	}
+
+	// Vérifier qu'aucun mandat n'a un triennat hors table figée
+	let badTriennats = 0;
+	for (const s of senateurs) {
+		for (const m of s.mandats) {
+			for (const t of m.triennats) {
+				if (!TRIENNATS.some((tr) => tr.id === t.triennat)) badTriennats++;
+			}
+		}
+	}
+	check(
+		'aucun mandat n\'a un triennat hors table figée',
+		badTriennats === 0,
+		badTriennats ? `${badTriennats} bad` : ''
+	);
+
+	// Cohérence stats triennat : rate ∈ [0,1], denominator ≥ numerator
+	let badTriRate = 0;
+	let badTriDenom = 0;
+	for (const s of senateurs) {
+		for (const m of s.mandats) {
+			for (const t of m.triennats) {
+				const st = t.stats;
+				if (
+					st.presence.rate < 0 ||
+					st.presence.rate > 1 ||
+					st.participation.rate < 0 ||
+					st.participation.rate > 1
+				)
+					badTriRate++;
+				if (
+					st.presence.numerator > st.presence.denominator ||
+					st.participation.numerator > st.participation.denominator
+				)
+					badTriDenom++;
+			}
+		}
+	}
+	check('rates triennat ∈ [0, 1] partout', badTriRate === 0, badTriRate ? `${badTriRate} bad` : '');
+	check(
+		'denominator ≥ numerator triennat partout',
+		badTriDenom === 0,
+		badTriDenom ? `${badTriDenom} bad` : ''
+	);
+
+	// Cohérence carriere.triennats = union des m.triennats
+	let badCarriereTri = 0;
+	for (const s of senateurs) {
+		const expected = new Set<string>();
+		for (const m of s.mandats) for (const t of m.triennats) expected.add(t.triennat);
+		const got = new Set(s.carriere.triennats);
+		if (expected.size !== got.size || [...expected].some((id) => !got.has(id))) badCarriereTri++;
+	}
+	check(
+		'carriere.triennats = union des m.triennats',
+		badCarriereTri === 0,
+		badCarriereTri ? `${badCarriereTri} bad` : ''
+	);
+
+	// Borne `[debut, fin)` : un scrutin pile à la date de renouvellement appartient au triennat suivant
+	check(
+		'triennatOfDate("2023-09-24") = 2023-2026 (renouv. série 2)',
+		triennatOfDate('2023-09-24')?.id === '2023-2026'
+	);
+	check(
+		'triennatOfDate("2023-09-23") = 2020-2023 (veille du renouv.)',
+		triennatOfDate('2023-09-23')?.id === '2020-2023'
+	);
+
+	// ─── K. Garde anti-fusion AN/Sénat (cf ADR 0023)
+	console.log('\nK. Garde anti-fusion AN/Sénat');
 	if (existsSync(join(DATA_AN, 'personnes.json'))) {
 		const personnesAN = JSON.parse(
 			await readFile(join(DATA_AN, 'personnes.json'), 'utf8')
@@ -316,7 +452,7 @@ async function main() {
 		console.log('  ⊘ personnes.json AN absent — assertion fusion skippée');
 	}
 
-	// ─── K. Bilan
+	// ─── L. Bilan
 	console.log('\n' + '═'.repeat(60));
 	console.log(`  ${pass} pass / ${fail} fail (total ${pass + fail})`);
 	if (fail > 0) {

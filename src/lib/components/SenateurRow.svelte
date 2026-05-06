@@ -1,25 +1,25 @@
 <script lang="ts">
 	/**
 	 * Ligne compacte d'un sénateur dans une liste (équivalent MemberRow côté Sénat).
-	 * Modèle Phase 3 : reçoit `Senateur` + `SessionStats | null` + `MandatSenat | null`.
+	 * Modèle Phase 3 (cf ADR 0023..0028) : reçoit `Senateur` + `TriennatStats | null` + `MandatSenat | null`.
 	 */
-	import type { Senateur, MandatSenat, SessionStats } from '$lib/types';
+	import type { Senateur, MandatSenat, TriennatStats } from '$lib/types';
 
 	interface Props {
 		senateur: Senateur;
 		mandat: MandatSenat | null;
-		session: SessionStats | null;
+		triennat: TriennatStats | null;
 		highlight?: 'loyaute' | 'frondes' | 'presence' | null;
 		isPresident?: boolean;
 	}
 
-	let { senateur, mandat, session, highlight = null, isPresident = false }: Props = $props();
+	let { senateur, mandat, triennat, highlight = null, isPresident = false }: Props = $props();
 
-	const stats = $derived(session ? session.stats : senateur.carriere);
+	const stats = $derived(triennat ? triennat.stats : senateur.carriere);
 	const circo = $derived(mandat?.circonscription ?? senateur.mandats.at(-1)?.circonscription ?? null);
 	const href = $derived(
-		session
-			? `/senat/senateurs/${senateur.id}/?session=${session.sesann}`
+		triennat
+			? `/senat/senateurs/${senateur.id}/?triennat=${triennat.triennat}`
 			: `/senat/senateurs/${senateur.id}/`
 	);
 
