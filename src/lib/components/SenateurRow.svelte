@@ -1,0 +1,99 @@
+<script lang="ts">
+	/**
+	 * Ligne compacte d'un sénateur dans une liste (équivalent MemberRow côté Sénat).
+	 * Modèle Phase 3 : reçoit `Senateur` + `SessionStats | null` + `MandatSenat | null`.
+	 */
+	import type { Senateur, MandatSenat, SessionStats } from '$lib/types';
+
+	interface Props {
+		senateur: Senateur;
+		mandat: MandatSenat | null;
+		session: SessionStats | null;
+		highlight?: 'loyaute' | 'frondes' | 'presence' | null;
+		isPresident?: boolean;
+	}
+
+	let { senateur, mandat, session, highlight = null, isPresident = false }: Props = $props();
+
+	const stats = $derived(session ? session.stats : senateur.carriere);
+	const circo = $derived(mandat?.circonscription ?? senateur.mandats.at(-1)?.circonscription ?? null);
+	const href = $derived(
+		session
+			? `/senat/senateurs/${senateur.id}/?session=${session.sesann}`
+			: `/senat/senateurs/${senateur.id}/`
+	);
+
+	function pct(n: number | null): string {
+		if (n === null) return 'N/A';
+		return `${Math.round(n * 100)} %`;
+	}
+</script>
+
+<a
+	{href}
+	class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
+>
+	<img
+		src={senateur.identite.photoUrl}
+		alt=""
+		class="w-10 h-10 rounded-full object-cover bg-assembly-border flex-shrink-0"
+		loading="lazy"
+		referrerpolicy="no-referrer"
+	/>
+	<div class="min-w-0 flex-1">
+		<div class="text-sm font-semibold truncate flex items-center gap-1.5">
+			{senateur.identite.prenom} {senateur.identite.nom}
+			{#if senateur.identite.etat === 'ANCIEN'}
+				<span
+					class="text-[10px] px-1.5 py-0.5 rounded bg-assembly-border/40 text-assembly-muted"
+					title="Ancien·ne sénateur·rice"
+				>
+					ancien
+				</span>
+			{/if}
+			{#if isPresident}
+				<span
+					class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30"
+					title="Président·e du groupe"
+				>
+					⭐ Président
+				</span>
+			{/if}
+		</div>
+		{#if circo}
+			<div class="text-[10px] text-assembly-muted truncate">{circo}</div>
+		{/if}
+	</div>
+	<div class="grid grid-cols-3 gap-3 text-right text-xs flex-shrink-0">
+		<div>
+			<div
+				class="title-display text-base tabular-nums {highlight === 'presence'
+					? 'text-blue-400'
+					: ''}"
+			>
+				{pct(stats.presence.rate)}
+			</div>
+			<div class="text-[9px] text-assembly-muted uppercase">Prés.</div>
+		</div>
+		<div>
+			<div
+				class="title-display text-base tabular-nums {highlight === 'loyaute'
+					? 'text-emerald-400'
+					: ''}"
+			>
+				{pct(stats.loyaute.rate)}
+			</div>
+			<div class="text-[9px] text-assembly-muted uppercase">Loy.</div>
+		</div>
+		<div>
+			<div
+				class="title-display text-base tabular-nums {highlight === 'frondes'
+					? 'text-rose-400'
+					: ''}"
+			>
+				{stats.frondes.count}
+			</div>
+			<div class="text-[9px] text-assembly-muted uppercase">Frd.</div>
+		</div>
+	</div>
+</a>

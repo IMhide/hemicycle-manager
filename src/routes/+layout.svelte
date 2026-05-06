@@ -23,8 +23,10 @@
 			</div>
 
 			<nav class="flex items-center gap-1 text-sm flex-shrink-0">
-				<a href="/" class="btn-ghost hidden md:inline-block" title="Hémicycle">Hémicycle</a>
+				<a href="/" class="btn-ghost hidden md:inline-block" title="Hémicycle Assemblée nationale">🏛️ AN</a>
+				<a href="/senat" class="btn-ghost hidden md:inline-block" title="Hémicycle Sénat">🏛️ Sénat</a>
 				<a href="/deputes" class="btn-ghost" title="Députés">Députés</a>
+				<a href="/senat/senateurs" class="btn-ghost" title="Sénateurs">Sénateurs</a>
 				<a href="/groupes" class="btn-ghost" title="Groupes">Groupes</a>
 				<a href="/scrutins" class="btn-ghost hidden md:inline-block" title="Scrutins">Scrutins</a>
 				<a href="/classements" class="btn-ghost hidden md:inline-block" title="Classements">🏆</a>
@@ -41,7 +43,10 @@
 			· <a class="underline hover:text-assembly-accent" href="https://github.com/IMhide/hemicycle-manager" target="_blank" rel="noopener">⭐ Code source sur GitHub</a>
 		</div>
 		<div>
-			Données : <a class="underline hover:text-assembly-accent" href="https://data.assemblee-nationale.fr" target="_blank" rel="noopener">Open Data Assemblée nationale</a>
+			Données :
+			<a class="underline hover:text-assembly-accent" href="https://data.assemblee-nationale.fr" target="_blank" rel="noopener">Open Data Assemblée nationale</a>
+			·
+			<a class="underline hover:text-assembly-accent" href="https://data.senat.fr" target="_blank" rel="noopener">Open Data Sénat</a>
 			— Licence Ouverte (Etalab) · Code sous <a class="underline hover:text-assembly-accent" href="https://github.com/IMhide/hemicycle-manager/blob/main/LICENSE" target="_blank" rel="noopener">Unlicense</a>
 		</div>
 		<div class="text-[11px] italic">
