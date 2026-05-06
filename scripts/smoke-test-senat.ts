@@ -1,6 +1,10 @@
 /**
- * Smoke test pour valider l'output du pipeline Sénat (Phase 3, cf ADR 0023..0028).
+ * Smoke test pour valider l'output du pipeline Sénat (Phase 3, cf ADR 0023..0029).
  * Lance après `npm run data:fetch:senat`.
+ *
+ * Scope : ère Macron (depuis 2017-09-24, cf ADR 0029). 3 triennats, 9 sessions,
+ * ~672 sénateurs (cohorte cumulée sur les 3 triennats), ~2029 scrutins,
+ * ~705k votes nominatifs.
  *
  * Vérifie :
  *  - comptes globaux (sénateurs, mandats, scrutins, votes nominatifs)
@@ -12,6 +16,7 @@
  *  - hémicycle (place ∈ [1, 348], serie ∈ {1, 2})
  *  - garde anti-fusion AN/Sénat
  *  - garde anti-régression triennats (cf ADR 0028 § "Garde anti-régression")
+ *  - garde scope ère Macron (cf ADR 0029)
  */
 
 import { readFile, readdir } from 'node:fs/promises';
@@ -62,38 +67,37 @@ async function main() {
 
 	console.log('A. Comptes globaux');
 	check('meta.json existe et est valide', !!meta.generatedAt);
-	// Réalité empirique observée : ~1847 sénateurs avec mandat ELUSEN (filtre pipeline).
-	// On accepte une marge large pour absorber les évolutions futures.
+	// Scope ère Macron (ADR 0029) : ~672 sénateurs cumulés sur 3 triennats.
 	check(
-		'1500-2500 sénateurs (avec mandat connu)',
-		meta.counts.senateurs >= 1500 && meta.counts.senateurs <= 2500,
+		'500-900 sénateurs ère Macron (cohorte cumulée 3 triennats)',
+		meta.counts.senateurs >= 500 && meta.counts.senateurs <= 900,
 		`got ${meta.counts.senateurs}`
 	);
 	check(
-		'≥ 4400 scrutins (depuis 2006)',
-		meta.counts.scrutins >= 4400,
+		'≥ 1800 scrutins (depuis 2017-09-24)',
+		meta.counts.scrutins >= 1800,
 		`got ${meta.counts.scrutins}`
 	);
 	check(
-		'≥ 1.5M votes nominatifs',
-		meta.counts.votesNominatifs >= 1_500_000,
+		'≥ 600k votes nominatifs',
+		meta.counts.votesNominatifs >= 600_000,
 		`got ${meta.counts.votesNominatifs}`
 	);
 	check(
-		'≥ 19 sessions avec scrutins (2006-2007 → 2025-2026)',
-		meta.counts.sessions >= 19,
+		'≥ 8 sessions avec scrutins (2017-2018 → 2025-2026)',
+		meta.counts.sessions >= 8,
 		`got ${meta.counts.sessions}`
 	);
 	check(
-		'≥ 6 triennats avec scrutins (cf ADR 0028)',
-		(meta.counts.triennats ?? 0) >= 6,
+		'3 triennats avec scrutins (cf ADR 0029)',
+		(meta.counts.triennats ?? 0) === 3,
 		`got ${meta.counts.triennats ?? 0}`
 	);
 
 	// ─── B. Sessions
 	console.log('\nB. Sessions');
 	const sessions = await loadJson<SessionMeta[]>('sessions.json');
-	check('≥ 19 sessions', sessions.length >= 19);
+	check('≥ 8 sessions (scope ère Macron)', sessions.length >= 8);
 	const sess2024 = sessions.find((s) => s.sesann === 2024);
 	check('Session 2024 présente', !!sess2024);
 	if (sess2024) {
@@ -148,12 +152,18 @@ async function main() {
 		groupes23_26.every((g) => g.triennat === '2023-2026')
 	);
 
-	// Vérifier qu'au moins 1 groupe historique disparu apparaît dans un triennat ancien
-	const groupes06_08 = await loadJson<GroupeSenat[]>('groupes/2006-2008.json').catch(() => null);
-	if (groupes06_08) {
-		const codes06_08 = new Set(groupes06_08.map((g) => g.code));
-		const hasHistoricalCode = ['UMP', 'UC', 'SOC', 'RDSE'].some((c) => codes06_08.has(c));
-		check('groupes/2006-2008.json contient des codes historiques', hasHistoricalCode);
+	// Vérifier qu'au moins 1 groupe historique apparaît dans le premier triennat de l'ère Macron
+	const groupes17_20 = await loadJson<GroupeSenat[]>('groupes/2017-2020.json').catch(() => null);
+	if (groupes17_20) {
+		const codes17_20 = new Set(groupes17_20.map((g) => g.code));
+		const hasHistoricalCode = ['UMP', 'UC', 'SOC', 'RDSE'].some((c) => codes17_20.has(c));
+		check('groupes/2017-2020.json contient des codes historiques', hasHistoricalCode);
+	}
+
+	// Garde scope (ADR 0029) : aucun fichier groupes/ pour les triennats hors scope
+	for (const oldId of ['2006-2008', '2008-2011', '2011-2014', '2014-2017']) {
+		const exists = existsSync(join(DATA, 'groupes', `${oldId}.json`));
+		check(`groupes/${oldId}.json absent (hors scope ère Macron)`, !exists);
 	}
 
 	// ─── D. Cas concrets (api-senat confirmé en début de session)
@@ -319,7 +329,13 @@ async function main() {
 	check('triennats.json existe et n\'est pas vide', triennatsMeta.length > 0);
 	const triennatIds = triennatsMeta.map((t) => t.id);
 	check(
-		'triennats.json ⊆ table figée des 7 triennats',
+		'triennats.json = exactement 3 triennats ère Macron (cf ADR 0029)',
+		triennatIds.length === 3 &&
+			['2017-2020', '2020-2023', '2023-2026'].every((id) => triennatIds.includes(id)),
+		`got [${triennatIds.join(', ')}]`
+	);
+	check(
+		'triennats.json ⊆ table figée TRIENNATS',
 		triennatIds.every((id) => TRIENNATS.some((t) => t.id === id)),
 		`got ${triennatIds.join(', ')}`
 	);
@@ -332,8 +348,10 @@ async function main() {
 		triennatsMeta.find((t) => t.id === '2023-2026')?.enCours === true
 	);
 	check(
-		'triennat 2006-2008 marqué tronqué',
-		triennatsMeta.find((t) => t.id === '2006-2008')?.tronque === true
+		'aucun triennat hors scope (2006-2008, 2008-2011, 2011-2014, 2014-2017)',
+		!triennatIds.some((id) =>
+			['2006-2008', '2008-2011', '2011-2014', '2014-2017'].includes(id)
+		)
 	);
 	const tri23_26 = triennatsMeta.find((t) => t.id === '2023-2026');
 	if (tri23_26) {

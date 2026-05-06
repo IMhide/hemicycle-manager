@@ -1,8 +1,8 @@
 <script lang="ts">
 	/**
-	 * Index des triennats sénatoriaux (cf ADR 0028).
-	 * Grille des 7 triennats depuis 2006, avec dates, sessions couvertes, et
-	 * comptes (sénateurs, scrutins).
+	 * Index des triennats sénatoriaux (cf ADR 0028 + 0029).
+	 * Grille des 3 triennats de l'ère Macron, avec dates, sessions couvertes,
+	 * et comptes (sénateurs, scrutins).
 	 */
 	let { data } = $props();
 
@@ -29,7 +29,8 @@
 		<p class="text-assembly-muted mt-2 max-w-3xl">
 			Au Sénat, la moitié des sièges est renouvelée tous les 3 ans (séries 1 et 2).
 			Le <b>triennat</b> — période entre 2 renouvellements — est l'unité de regroupement
-			principale (équivalent de la législature côté Assemblée nationale).
+			principale (équivalent de la législature côté Assemblée nationale). PolitiDex
+			couvre les 3 triennats de l'ère Macron, à parité avec les 3 législatures AN.
 			<a href="/faq#senat-triennat" class="text-assembly-accent hover:underline">
 				En savoir plus dans la FAQ
 			</a>.
@@ -47,7 +48,7 @@
 						{t.id}{#if t.enCours} <span class="text-base align-middle opacity-80">⚡</span>{/if}
 					</div>
 					<div class="text-xs text-assembly-muted">
-						{#if t.enCours}En cours{:else if t.tronque}Tronqué{:else}Terminé{/if}
+						{#if t.enCours}En cours{:else}Terminé{/if}
 					</div>
 				</div>
 				<div class="text-xs text-assembly-muted">

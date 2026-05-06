@@ -130,7 +130,7 @@
 		<div class="flex flex-col items-end gap-2 text-xs">
 			<div class="flex items-center gap-1 flex-wrap justify-end max-w-md">
 				<span class="text-assembly-muted">Triennat :</span>
-				{#each triennatsSorted.slice(0, 6) as tri (tri.id)}
+				{#each triennatsSorted as tri (tri.id)}
 					<button
 						class="px-2 py-1 rounded text-[11px] {tri.id === data.triennatCourant
 							? 'bg-assembly-accent text-assembly-bg font-semibold'

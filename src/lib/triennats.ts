@@ -1,13 +1,14 @@
 /**
- * Triennats sénatoriaux — unité de regroupement principale Sénat (cf ADR 0028).
+ * Triennats sénatoriaux — unité de regroupement principale Sénat (cf ADR 0028 + 0029).
  *
  * Un triennat est la période entre deux renouvellements sénatoriaux consécutifs
  * (séries 1 et 2 alternant tous les 3 ans). Il joue côté Sénat le rôle de la
  * législature côté AN. La session annuelle reste brique data sous-jacente
  * (`SessionStats`) mais n'est plus exposée comme unité de regroupement.
  *
- * Liste figée des 7 triennats couverts depuis 2006 (point de départ data Sénat).
- * Le triennat 2006-2008 est tronqué (~2 ans). Le triennat 2023-2026 est en cours.
+ * Liste figée des 3 triennats couverts depuis le 2017-09-24 (scope ère Macron,
+ * ADR 0029) — parité avec les 3 législatures AN (15ᵉ, 16ᵉ, 17ᵉ).
+ * Le triennat 2023-2026 est en cours.
  */
 
 export type TriennatId = string; // format `${YYYY}-${YYYY}` (ex. "2023-2026")
@@ -18,65 +19,20 @@ export interface Triennat {
 	anneeFin: number;
 	dateDebut: string; // ISO 8601, début du triennat (renouvellement initial)
 	dateFin: string; // ISO 8601, fin du triennat (renouvellement de fin)
-	serieRenouveleeDebut: 1 | 2 | null; // null pour le triennat tronqué d'amorçage
+	serieRenouveleeDebut: 1 | 2;
 	serieRenouveleeFin: 1 | 2;
 	enCours: boolean;
-	tronque: boolean;
 }
 
 /**
- * Table figée des 7 triennats. Bornes calées sur la date du renouvellement
- * (généralement dernier dimanche de septembre). Voir ADR 0028 pour les
- * justifications et `Code électoral L.290 et s.` pour les séries.
+ * Table figée des 3 triennats couverts (scope ère Macron, ADR 0029).
+ * Bornes calées sur la date du renouvellement (généralement dernier dimanche
+ * de septembre). Voir ADR 0028 + 0029 et `Code électoral L.290 et s.`.
  *
  * NB: les dates exactes de renouvellement varient légèrement (24-28 sept).
  * On retient le 28 septembre comme borne stable (post-renouvellement).
  */
 export const TRIENNATS: readonly Triennat[] = [
-	{
-		id: '2006-2008',
-		anneeDebut: 2006,
-		anneeFin: 2008,
-		dateDebut: '2006-10-01', // début data Sénat (1er scrutin oct. 2006)
-		dateFin: '2008-09-28',
-		serieRenouveleeDebut: null,
-		serieRenouveleeFin: 1,
-		enCours: false,
-		tronque: true
-	},
-	{
-		id: '2008-2011',
-		anneeDebut: 2008,
-		anneeFin: 2011,
-		dateDebut: '2008-09-28',
-		dateFin: '2011-09-25',
-		serieRenouveleeDebut: 1,
-		serieRenouveleeFin: 2,
-		enCours: false,
-		tronque: false
-	},
-	{
-		id: '2011-2014',
-		anneeDebut: 2011,
-		anneeFin: 2014,
-		dateDebut: '2011-09-25',
-		dateFin: '2014-09-28',
-		serieRenouveleeDebut: 2,
-		serieRenouveleeFin: 1,
-		enCours: false,
-		tronque: false
-	},
-	{
-		id: '2014-2017',
-		anneeDebut: 2014,
-		anneeFin: 2017,
-		dateDebut: '2014-09-28',
-		dateFin: '2017-09-24',
-		serieRenouveleeDebut: 1,
-		serieRenouveleeFin: 2,
-		enCours: false,
-		tronque: false
-	},
 	{
 		id: '2017-2020',
 		anneeDebut: 2017,
@@ -85,8 +41,7 @@ export const TRIENNATS: readonly Triennat[] = [
 		dateFin: '2020-09-27',
 		serieRenouveleeDebut: 2,
 		serieRenouveleeFin: 1,
-		enCours: false,
-		tronque: false
+		enCours: false
 	},
 	{
 		id: '2020-2023',
@@ -96,8 +51,7 @@ export const TRIENNATS: readonly Triennat[] = [
 		dateFin: '2023-09-24',
 		serieRenouveleeDebut: 1,
 		serieRenouveleeFin: 2,
-		enCours: false,
-		tronque: false
+		enCours: false
 	},
 	{
 		id: '2023-2026',
@@ -107,8 +61,7 @@ export const TRIENNATS: readonly Triennat[] = [
 		dateFin: '2026-09-27', // prévu (dernier dim. sept. 2026)
 		serieRenouveleeDebut: 2,
 		serieRenouveleeFin: 1,
-		enCours: true,
-		tronque: false
+		enCours: true
 	}
 ];
 
@@ -129,7 +82,7 @@ export function isTriennatId(value: string): value is TriennatId {
  * Comparaison `[dateDebut, dateFin)` — la date de renouvellement appartient au
  * triennat suivant (ex. 2023-09-24 → "2023-2026", 2023-09-23 → "2020-2023").
  *
- * Retourne null si la date est avant le premier triennat (avant 2006-10-01)
+ * Retourne null si la date est avant le premier triennat (avant 2017-09-24)
  * ou après le dernier (après 2026-09-27).
  */
 export function triennatOfDate(dateIso: string): Triennat | null {
@@ -154,10 +107,7 @@ export function triennatOfSesann(sesann: number): Triennat | null {
 
 /**
  * Liste les sessions (`sesann`) qui appartiennent à un triennat.
- * Renvoie un tableau ordonné chronologiquement.
- *
- * Pour le triennat tronqué `2006-2008` : sessions [2006, 2007] (2 sessions).
- * Pour les triennats complets : 3 sessions.
+ * Renvoie un tableau ordonné chronologiquement (3 sessions par triennat).
  */
 export function sessionsOfTriennat(id: TriennatId): number[] {
 	const t = getTriennat(id);

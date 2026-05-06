@@ -3,7 +3,7 @@
  *
  * Outputs (sous static/data/senat/) :
  *  - senateurs.json                : Senateur[] avec mandats[] et carriere
- *  - triennats.json                : TriennatMeta[] (7 triennats, cf ADR 0028)
+ *  - triennats.json                : TriennatMeta[] (3 triennats ère Macron, cf ADR 0028 + 0029)
  *  - sessions.json                 : SessionMeta[] (brique data sous-jacente)
  *  - groupes/{periode}.json        : GroupeSenat[] par triennat (ex. "2023-2026.json")
  *  - scrutins-index.json           : ScrutinSenatIndex[] global
@@ -69,6 +69,13 @@ const SOURCES = {
 	odsenElusen: 'https://data.senat.fr/data/senateurs/ODSEN_ELUSEN.csv',
 	dosleg: 'https://data.senat.fr/data/dosleg/dosleg.zip'
 } as const;
+
+/**
+ * Borne temporelle "ère Macron" (cf ADR 0029) : on ne traite que les scrutins
+ * et mandats effectifs à partir du 24 septembre 2017 (renouvellement série 2,
+ * début du triennat 2017-2020).
+ */
+const SCOPE_DATE_DEBUT = TRIENNATS[0].dateDebut; // '2017-09-24'
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types raw (intermédiaires, scopés à ce script)
@@ -203,13 +210,49 @@ async function main() {
 		`    → ${scrRows.length} scrutins, ${[...votsenByScrutin.values()].reduce((s, a) => s + a.length, 0)} votes nominatifs, ${auteurByMat.size} auteurs, ${sesLib.size} sessions (${dtParse}s)`
 	);
 
+	// Filtrage scope ère Macron (ADR 0029) : scrutins antérieurs au 2017-09-24 exclus
+	const scrRowsBeforeFilter = scrRows.length;
+	const scrRowsFiltered = scrRows.filter((r) => {
+		const date = (r.scrdat ?? '').slice(0, 10);
+		return date >= SCOPE_DATE_DEBUT;
+	});
+	const droppedUids = new Set(
+		scrRows
+			.filter((r) => (r.scrdat ?? '').slice(0, 10) < SCOPE_DATE_DEBUT)
+			.map((r) => `${r.sesann}-${r.scrnum}`)
+	);
+	for (const uid of droppedUids) votsenByScrutin.delete(uid);
+	scrRows.length = 0;
+	scrRows.push(...scrRowsFiltered);
+	console.log(
+		`    → scope ère Macron : ${scrRows.length} scrutins conservés (${scrRowsBeforeFilter - scrRows.length} drop avant ${SCOPE_DATE_DEBUT})`
+	);
+
 	// ═══ 4/5 Transformations
 	console.log('\n4/5  Construction des structures');
 
 	// 4.1 Sénateurs (cascade priorité ADR 0025)
 	console.log('  • Sénateurs (cascade ADR 0025)…');
-	const senateurs = buildSenateurs({ apiByMat, odsenByMat, auteurByMat, histogByMat, elusenByMat });
-	console.log(`    → ${senateurs.length} sénateurs`);
+	const senateursAll = buildSenateurs({
+		apiByMat,
+		odsenByMat,
+		auteurByMat,
+		histogByMat,
+		elusenByMat
+	});
+	// Filtrage scope ère Macron (ADR 0029) : on ne garde que les sénateurs avec
+	// au moins un mandat encore actif le 2017-09-24 (dateFinFonction null ou >= scope).
+	const senateurs = senateursAll
+		.map((s) => ({
+			...s,
+			mandats: s.mandats.filter(
+				(m) => m.dateFinFonction === null || m.dateFinFonction >= SCOPE_DATE_DEBUT
+			)
+		}))
+		.filter((s) => s.mandats.length > 0);
+	console.log(
+		`    → ${senateurs.length} sénateurs dans le scope (${senateursAll.length - senateurs.length} drop pré-${SCOPE_DATE_DEBUT})`
+	);
 
 	// 4.2 Scrutins (index + détails)
 	console.log('  • Scrutins…');
@@ -1325,7 +1368,6 @@ function buildTriennatsMeta(
 			dateDebut: t.dateDebut,
 			dateFin: t.dateFin,
 			enCours: t.enCours,
-			tronque: t.tronque,
 			sessions,
 			nbSenateursActifs: matsActifs.size,
 			nbScrutins: scrutinsCountByTriennat.get(t.id) ?? 0

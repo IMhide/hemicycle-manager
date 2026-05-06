@@ -353,14 +353,13 @@ export interface SessionMeta {
 	nbScrutins: number;
 }
 
-/** Métadonnées d'un triennat (cf ADR 0028) — unité de regroupement principale Sénat. */
+/** Métadonnées d'un triennat (cf ADR 0028 + 0029) — unité de regroupement principale Sénat. */
 export interface TriennatMeta {
 	id: string; // TriennatId, ex. "2023-2026"
 	libelle: string; // ex. "2023-2026"
 	dateDebut: string; // ISO, début du triennat
 	dateFin: string; // ISO, fin du triennat
 	enCours: boolean;
-	tronque: boolean;
 	sessions: number[]; // sesann couvertes par le triennat
 	nbSenateursActifs: number; // nombre distinct de sénateurs ayant siégé sur le triennat
 	nbScrutins: number;

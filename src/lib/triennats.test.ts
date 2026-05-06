@@ -13,15 +13,16 @@ import {
 	libelleTriennatLong
 } from './triennats.ts';
 
-describe('triennats — table figée (ADR 0028)', () => {
-	it('expose 7 triennats', () => {
-		assert.equal(TRIENNATS.length, 7);
+describe('triennats — table figée (ADR 0028 + 0029)', () => {
+	it('expose 3 triennats (scope ère Macron)', () => {
+		assert.equal(TRIENNATS.length, 3);
 	});
 
-	it('a un seul triennat tronqué (2006-2008)', () => {
-		const tronques = TRIENNATS.filter((t) => t.tronque);
-		assert.equal(tronques.length, 1);
-		assert.equal(tronques[0].id, '2006-2008');
+	it('couvre exactement 2017-2020, 2020-2023, 2023-2026', () => {
+		assert.deepEqual(
+			TRIENNATS.map((t) => t.id),
+			['2017-2020', '2020-2023', '2023-2026']
+		);
 	});
 
 	it('a un seul triennat en cours (2023-2026)', () => {
@@ -40,11 +41,9 @@ describe('triennats — table figée (ADR 0028)', () => {
 		}
 	});
 
-	it('séries renouvelées alternent (sauf premier triennat tronqué)', () => {
-		// 2008→2011 : série 1 puis 2
-		// 2011→2014 : série 2 puis 1
-		// etc.
-		const expectedFin: Array<1 | 2> = [1, 2, 1, 2, 1, 2, 1];
+	it('séries renouvelées alternent (1 ↔ 2)', () => {
+		// 2017-2020 fin série 1, 2020-2023 fin série 2, 2023-2026 fin série 1
+		const expectedFin: Array<1 | 2> = [1, 2, 1];
 		TRIENNATS.forEach((t, i) => {
 			assert.equal(t.serieRenouveleeFin, expectedFin[i], `triennat ${t.id} série fin`);
 		});
@@ -59,16 +58,18 @@ describe('getTriennat / isTriennatId', () => {
 
 	it('getTriennat retourne null pour un id inconnu', () => {
 		assert.equal(getTriennat('1999-2002'), null);
+		assert.equal(getTriennat('2014-2017'), null); // hors scope ère Macron
 		assert.equal(getTriennat('foo'), null);
 	});
 
 	it('isTriennatId valide les id existants', () => {
 		assert.equal(isTriennatId('2023-2026'), true);
-		assert.equal(isTriennatId('2006-2008'), true);
+		assert.equal(isTriennatId('2017-2020'), true);
 	});
 
-	it('isTriennatId rejette les id de format invalide ou inconnu', () => {
+	it('isTriennatId rejette les id de format invalide ou hors scope', () => {
 		assert.equal(isTriennatId('1999-2002'), false); // format ok mais inconnu
+		assert.equal(isTriennatId('2006-2008'), false); // format ok mais hors scope
 		assert.equal(isTriennatId('2023-26'), false); // format ko
 		assert.equal(isTriennatId('foo'), false);
 		assert.equal(isTriennatId(''), false);
@@ -79,7 +80,7 @@ describe('triennatOfDate', () => {
 	it('rattache une date au bon triennat (cas standard)', () => {
 		assert.equal(triennatOfDate('2024-06-15')?.id, '2023-2026');
 		assert.equal(triennatOfDate('2019-03-10')?.id, '2017-2020');
-		assert.equal(triennatOfDate('2007-12-25')?.id, '2006-2008');
+		assert.equal(triennatOfDate('2021-04-12')?.id, '2020-2023');
 	});
 
 	it('borne `[debut, fin)` : la date de renouvellement appartient au triennat suivant', () => {
@@ -91,6 +92,7 @@ describe('triennatOfDate', () => {
 
 	it('retourne null pour une date hors fenêtre couverte', () => {
 		assert.equal(triennatOfDate('2005-01-01'), null);
+		assert.equal(triennatOfDate('2017-09-23'), null); // veille du début scope
 		assert.equal(triennatOfDate('2030-01-01'), null);
 	});
 });
@@ -101,26 +103,29 @@ describe('triennatOfSesann', () => {
 		assert.equal(triennatOfSesann(2024)?.id, '2023-2026');
 		// session 2017-2018 (oct 2017 → sept 2018) → 2017-2020
 		assert.equal(triennatOfSesann(2017)?.id, '2017-2020');
-		// session 2006-2007 (oct 2006 → sept 2007) → 2006-2008
-		assert.equal(triennatOfSesann(2006)?.id, '2006-2008');
 	});
 
 	it('aucune session ne chevauche deux triennats (renouv. en septembre)', () => {
-		// pour chaque sesann couverte, on doit retomber sur exactement 1 triennat
-		for (let s = 2006; s <= 2025; s++) {
+		// pour chaque sesann couverte par le scope, on doit retomber sur exactement 1 triennat
+		for (let s = 2017; s <= 2025; s++) {
 			const t = triennatOfSesann(s);
 			assert.ok(t, `session ${s} doit appartenir à un triennat`);
 		}
 	});
+
+	it('sessions hors scope retournent null', () => {
+		assert.equal(triennatOfSesann(2010), null);
+		assert.equal(triennatOfSesann(2016), null);
+	});
 });
 
 describe('sessionsOfTriennat', () => {
-	it('triennat tronqué 2006-2008 contient 2 sessions [2006, 2007]', () => {
-		assert.deepEqual(sessionsOfTriennat('2006-2008'), [2006, 2007]);
+	it('triennat 2017-2020 contient 3 sessions [2017, 2018, 2019]', () => {
+		assert.deepEqual(sessionsOfTriennat('2017-2020'), [2017, 2018, 2019]);
 	});
 
-	it('triennat complet 2017-2020 contient 3 sessions [2017, 2018, 2019]', () => {
-		assert.deepEqual(sessionsOfTriennat('2017-2020'), [2017, 2018, 2019]);
+	it('triennat complet 2020-2023 contient 3 sessions [2020, 2021, 2022]', () => {
+		assert.deepEqual(sessionsOfTriennat('2020-2023'), [2020, 2021, 2022]);
 	});
 
 	it('triennat en cours 2023-2026 contient 3 sessions [2023, 2024, 2025]', () => {
@@ -164,12 +169,25 @@ describe('triennatsOfPeriode (mandats sénatoriaux)', () => {
 		assert.ok(ids.includes('2023-2026'));
 	});
 
-	it('cas extrême : un mandat couvrant 3 triennats consécutifs', () => {
-		// imaginaire mais possible avec succession titulaire + suppléant + réélection
-		const t = triennatsOfPeriode('2014-09-28', '2023-09-24');
+	it('mandat couvrant les 3 triennats du scope (réélection sur série 2 puis 1)', () => {
+		const t = triennatsOfPeriode('2017-09-24', '2026-09-27');
 		assert.deepEqual(
 			t.map((x) => x.id),
-			['2014-2017', '2017-2020', '2020-2023']
+			['2017-2020', '2020-2023', '2023-2026']
+		);
+	});
+
+	it('mandat antérieur au scope retourne []', () => {
+		const t = triennatsOfPeriode('2010-09-25', '2014-09-28');
+		assert.deepEqual(t.map((x) => x.id), []);
+	});
+
+	it('mandat chevauchant la borne 2017-09-24 ne retient que la portion ère Macron', () => {
+		// mandat 2014-2020 : seul 2017-2020 est dans le scope
+		const t = triennatsOfPeriode('2014-09-28', '2020-09-27');
+		assert.deepEqual(
+			t.map((x) => x.id),
+			['2017-2020']
 		);
 	});
 });

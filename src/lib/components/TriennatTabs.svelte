@@ -52,9 +52,7 @@
 				? 'border-assembly-accent text-assembly-accent'
 				: 'border-transparent text-assembly-muted hover:text-slate-200'}"
 			onclick={() => onSelect(t.id)}
-			title={t.tronque
-				? `Triennat ${t.id} (tronqué — démarrage data Sénat oct. 2006)`
-				: `Triennat ${t.id}`}
+			title={`Triennat ${t.id}`}
 		>
 			{t.id}{#if isEnCours(t.id)} <span class="opacity-80">⚡</span>{/if}
 		</button>
