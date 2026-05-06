@@ -313,6 +313,127 @@ export const POLITICAL_ORDER: Record<string, PoliticalRank> = {
 		confidence: 'na',
 		rationale: 'Non-inscrits — heterogeneous, displayed on a separate bench',
 		gradientColor: GRADIENT_BY_RANK[12]
+	},
+
+	// ════════════════════════════════════════════════════════════════════════
+	// SÉNAT (cf ADR 0023..0025) — codes groupes parlementaires Sénat.
+	// Distincts des codes AN dans la majorité des cas. Les clés partagées
+	// (SOC, LREM, NI) sont déjà mappées ci-dessus côté AN — on les réutilise.
+	// Mapping CHES par proxy : chaque groupe Sénat est rapproché d'un parti
+	// politique français connu.
+	// ════════════════════════════════════════════════════════════════════════
+
+	// ── Communiste / extrême gauche (CRC = ex-CRCE = "Communiste Républicain
+	// Citoyen — Kanaky" en 2024-2025) ─────────────────────────────────────
+	CRC: {
+		rank: 1,
+		chesScore: 1.73,
+		confidence: 'proxy',
+		rationale: 'Groupe Communiste Républicain Citoyen — Kanaky (Sénat) — proxy PCF',
+		gradientColor: COLOR_GDR
+	},
+
+	// ── Écologistes ───────────────────────────────────────────────────────
+	GEST: {
+		rank: 3,
+		chesScore: 2.3,
+		confidence: 'proxy',
+		rationale: 'Groupe Écologiste — Solidarité et Territoires (Sénat) — EELV proxy',
+		gradientColor: COLOR_ECO
+	},
+	ECO: {
+		rank: 3,
+		chesScore: 2.3,
+		confidence: 'proxy',
+		rationale: 'Groupe écologiste (Sénat, ancien code 2012-2017) — EELV proxy',
+		gradientColor: COLOR_ECO
+	},
+
+	// ── Gauche démocratique (historique Sénat 1959-1980, alias SOC moderne) ──
+	GD: {
+		rank: 4,
+		chesScore: 3.5,
+		confidence: 'estimated',
+		rationale: 'Gauche Démocratique (Sénat, historique IVe-Ve République) — SOC-like',
+		gradientColor: COLOR_SOC
+	},
+
+	// ── RDSE (Rassemblement Démocratique et Social Européen, hétérogène
+	// centre-gauche radical) — placé entre SOC et UC ────────────────────────
+	RDSE: {
+		rank: 5,
+		chesScore: 3.5,
+		confidence: 'estimated',
+		rationale:
+			'Groupe du Rassemblement Démocratique et Social Européen (Sénat) — radicaux de gauche, hétérogène centre-gauche',
+		gradientColor: COLOR_TECH
+	},
+	'RDSE-A': {
+		rank: 5,
+		chesScore: 3.5,
+		confidence: 'estimated',
+		rationale: 'RDSE Apparentés (variante historique) — même placement que RDSE',
+		gradientColor: COLOR_TECH
+	},
+
+	// ── Union Centriste (UDI / MoDem-ish) ─────────────────────────────────
+	UC: {
+		rank: 6,
+		chesScore: 5.36,
+		confidence: 'proxy',
+		rationale: 'Groupe Union Centriste (Sénat) — MoDem/UDI proxy',
+		gradientColor: COLOR_DEM
+	},
+
+	// ── Indépendants — République et Territoires (Horizons-ish, créé 2017) ──
+	RTLI: {
+		rank: 8,
+		chesScore: 6.6,
+		confidence: 'estimated',
+		rationale: 'Groupe Les Indépendants — République et Territoires (Sénat) — Horizons-like',
+		gradientColor: COLOR_HOR
+	},
+
+	// ── Les Républicains (alias historique UMP au Sénat — le code reste UMP
+	// pour compatibilité historique malgré le rebrand de 2015) ──────────────
+	UMP: {
+		rank: 9,
+		chesScore: 7.73,
+		confidence: 'direct',
+		rationale: 'Groupe Les Républicains (Sénat, code historique UMP) — LR direct',
+		gradientColor: COLOR_LR
+	},
+	'UMP-A': {
+		rank: 9,
+		chesScore: 7.73,
+		confidence: 'proxy',
+		rationale: 'LR Apparentés (variante historique) — LR proxy',
+		gradientColor: COLOR_LR
+	},
+	'UMP-R': {
+		rank: 9,
+		chesScore: 7.73,
+		confidence: 'proxy',
+		rationale: 'LR Rattachés (variante historique) — LR proxy',
+		gradientColor: COLOR_LR
+	},
+	RI: {
+		rank: 9,
+		chesScore: 7.0,
+		confidence: 'estimated',
+		rationale: 'Républicains Indépendants (Sénat, historique 1962-) — LR-like',
+		gradientColor: COLOR_LR
+	},
+
+	// ── Sans groupe (alias Sénat de NI : "Sénateurs n'appartenant à aucun
+	// groupe", étiquette officielle distincte de "Réunion administrative des
+	// non-inscrits"). Mêmes propriétés que NI. ─────────────────────────────
+	AUCUN: {
+		rank: 12,
+		chesScore: null,
+		confidence: 'na',
+		rationale: "Sénateurs n'appartenant à aucun groupe (Sénat) — alias de NI",
+		gradientColor: GRADIENT_BY_RANK[12]
 	}
 };
 

@@ -4,9 +4,9 @@
 
 Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque décision est un fichier dédié au format [ADR](https://adr.github.io). Pour ajouter une décision : créer `decisions/NNNN-slug.md` avec la trame de `TEMPLATE.md`, puis lancer `npm run decisions:index`.
 
-**22 décisions** consignées.
+**27 décisions** consignées.
 
-**Tags** : `data`(8) · `déploiement`(4) · `métriques`(4) · `sémantique`(4) · `ux`(3) · `pipeline-data`(2) · `sourcing`(2) · `gouvernance`(2) · `build`(2) · `scope`(2) · `roadmap`(2) · `modèle`(2) · `identité`(2) · `badges`(2) · `pipeline`(2) · `etalab`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `hémicycle`(1) · `layout`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `routes`(1) · `groupes`(1) · `phase-1`(1) · `sources`(1) · `ches`(1) · `multi-legislature`(1) · `performance`(1) · `métrique`(1) · `overall`(1) · `exemplarité`(1)
+**Tags** : `data`(11) · `métriques`(5) · `sémantique`(5) · `senat`(5) · `déploiement`(4) · `pipeline`(4) · `ux`(3) · `sourcing`(3) · `scope`(3) · `roadmap`(3) · `identité`(3) · `pipeline-data`(2) · `hémicycle`(2) · `layout`(2) · `gouvernance`(2) · `build`(2) · `modèle`(2) · `badges`(2) · `sources`(2) · `etalab`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `routes`(1) · `groupes`(1) · `phase-1`(1) · `ches`(1) · `multi-legislature`(1) · `performance`(1) · `métrique`(1) · `overall`(1) · `exemplarité`(1) · `multi-chambre`(1) · `v1`(1) · `à-revisiter`(1)
 
 ## Index chronologique
 
@@ -34,6 +34,11 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 | 0020 | [Phase 2 : ajout de la 15ᵉ législature (ère Macron complète)](0020-phase2-15e-legislature.md) | ✅ accepté | `data` `scope` `roadmap` `ches` `multi-legislature` | 2026-05-05 |
 | 0021 | [Cache HTTP conditionnel + cache mount BuildKit pour les sources Etalab](0021-cache-conditionnel-sources.md) | ✅ accepté | `data` `déploiement` `build` `performance` `etalab` | 2026-05-05 |
 | 0022 | [Score Overall (sémantique d'exemplarité du parlementaire)](0022-score-overall.md) | ✅ accepté | `métrique` `sémantique` `overall` `exemplarité` `ux` | 2026-05-05 |
+| 0023 | [Phase 3 Sénat : scope, granularité temporelle, sources](0023-phase3-senat-scope.md) | ✅ accepté | `data` `scope` `roadmap` `senat` `multi-chambre` | 2026-05-06 |
+| 0024 | [Identifiant stable Sénat = `Matricule`](0024-identifiant-senat-matricule.md) | ✅ accepté | `data` `identité` `pipeline` `senat` | 2026-05-06 |
+| 0025 | [Priorité de sources Sénat : api-senat → ODSEN_* → dosleg](0025-priorite-sources-senat.md) | ✅ accepté | `data` `pipeline` `sources` `senat` | 2026-05-06 |
+| 0026 | [Hémicycle Sénat 348 sièges adapté de Kurea/visu_senat](0026-hemicycle-senat-kurea.md) | ✅ accepté | `sourcing` `hémicycle` `layout` `senat` | 2026-05-06 |
+| 0027 | [Délégations de vote au Sénat : ignorées en v1](0027-delegations-vote-senat-v1.md) | ✅ accepté | `sémantique` `métriques` `senat` `v1` `à-revisiter` | 2026-05-06 |
 
 ## Résumés
 
@@ -168,3 +173,33 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 > L'Overall est un score 0-99 calculé dans le pipeline (`scripts/fetch-data.ts`) et exposé sur `MandatStats.overall` et `CarriereAggregee.overall`. Sa formule unique est :
 
 📄 [Lire la décision complète](0022-score-overall.md)
+
+### 0023 — Phase 3 Sénat : scope, granularité temporelle, sources
+
+> Phase 3 Sénat démarre avec :
+
+📄 [Lire la décision complète](0023-phase3-senat-scope.md)
+
+### 0024 — Identifiant stable Sénat = `Matricule`
+
+> La clé d'identité cross-source côté Sénat est le matricule tel que publié, sans normalisation :
+
+📄 [Lire la décision complète](0024-identifiant-senat-matricule.md)
+
+### 0025 — Priorité de sources Sénat : api-senat → ODSEN_* → dosleg
+
+> Hiérarchie en trois passes, symétrique à ADR 0019. Pour chaque champ d'un sénateur, le pipeline résout selon cet ordre :
+
+📄 [Lire la décision complète](0025-priorite-sources-senat.md)
+
+### 0026 — Hémicycle Sénat 348 sièges adapté de Kurea/visu_senat
+
+> On n'invente pas la géométrie. On reprend le layout 348 sièges du projet `Kurea/visu_senat` (MIT) et on l'adapte graphiquement à la DA PolitiDex.
+
+📄 [Lire la décision complète](0026-hemicycle-senat-kurea.md)
+
+### 0027 — Délégations de vote au Sénat : ignorées en v1
+
+> Pour la v1 de Phase 3 Sénat, le champ `senmatdel` est ignoré :
+
+📄 [Lire la décision complète](0027-delegations-vote-senat-v1.md)

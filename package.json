@@ -8,9 +8,14 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "data:fetch": "node --experimental-strip-types scripts/fetch-data.ts",
-    "data:smoke": "node --experimental-strip-types scripts/smoke-test.ts",
-    "decisions:index": "node --experimental-strip-types scripts/decisions-index.ts"
+    "data:fetch:an": "node --experimental-strip-types scripts/fetch-data.ts",
+    "data:fetch:senat": "node --experimental-strip-types scripts/fetch-data-senat.ts",
+    "data:fetch": "npm run data:fetch:an && npm run data:fetch:senat",
+    "data:smoke:an": "node --experimental-strip-types scripts/smoke-test.ts",
+    "data:smoke:senat": "node --experimental-strip-types scripts/smoke-test-senat.ts",
+    "data:smoke": "npm run data:smoke:an && npm run data:smoke:senat",
+    "decisions:index": "node --experimental-strip-types scripts/decisions-index.ts",
+    "test:unit": "node --experimental-strip-types --test 'scripts/**/*.test.ts'"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.6",

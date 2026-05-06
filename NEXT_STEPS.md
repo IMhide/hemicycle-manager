@@ -123,12 +123,60 @@ Mergée en une seule PR cumulant Phase 1 (16ᵉ+17ᵉ) et Phase 2 (15ᵉ).
 
 ## 🌐 Phase 3 — Au-delà de l'AN (Sénat, ministres, président)
 
-À démarrer une fois Phases 1+2 stabilisées. Implique probablement de **généraliser le type `Mandat`** (ajout d'un champ `chambre: 'AN' | 'Senat'` ou similaire) et d'introduire un type `MandatGouvernemental` pour les ministres. Mini-ADR de cadrage à prévoir au démarrage.
+Phase 3a+3b démarre 2026-05-06 par le **pipeline Sénat** (PR A `feat/senat-pipeline`). 4 PR successives planifiées (cf plan d'implémentation interne). Décisions cadrées dans ADR 0023..0027 :
+- ADR 0023 — scope, granularité (session annuelle), pas de fusion bicamérale en v1 (différée à Phase 3c)
+- ADR 0024 — identifiant matricule (≠ PA-id AN, espaces disjoints)
+- ADR 0025 — sources : api-senat live > ODSEN_*.csv > dosleg.zip
+- ADR 0026 — hémicycle 348 sièges adapté de Kurea/visu_senat (MIT)
+- ADR 0027 — délégations de vote ignorées en v1 (`senmatdel`)
 
-- [ ] **Sénat** : pipeline data.senat.fr (348 sénateurs, mandats de 6 ans renouvelés par moitié — modèle temporel différent de l'AN)
+### ✅ PR A — Pipeline + types + smoke-test (en cours, branche `feat/senat-pipeline`)
+
+- [x] 5 ADR Sénat (0023-0027) écrites + indexées
+- [x] Refactor `scripts/lib/cache.ts` (utilitaires partagés AN/Sénat) + 19 tests unitaires
+- [x] Types `Senateur`, `MandatSenat`, `SessionStats`, `GroupeSenat`, `SessionMeta`, `ScrutinSenatDetail`… ajoutés à `src/lib/types.ts` (append-only, AN intact)
+- [x] Loaders `loadSenateurs`, `loadGroupesSenat(sesann)`, etc. dans `src/lib/data.ts`
+- [x] Codes groupes Sénat dans `political-order.ts` : CRC, GEST, RDSE, UC, RTLI, UMP, AUCUN + variantes historiques RI, GD, ECO, UMP-A, UMP-R, RDSE-A
+- [x] `scripts/lib/dosleg-parser.ts` (TDD strict) : streamCopyBlocks SQL + parseOdsenCsv ISO-8859-1 + decodePostgresLiteral + splitCsvLine
+- [x] `scripts/lib/senat-layout.ts` (TDD strict) : extracteur layout 348 sièges Kurea avec correction de l'anomalie (siège 16 manquant) + trigonométrie reproduite
+- [x] `scripts/extract-senat-seats.ts` + `src/lib/generated/senat-seats.json` commité (28 KB, 348 sièges)
+- [x] `scripts/lib/senat-transform.ts` (TDD strict) : sessionsCovering + groupeAuVote
+- [x] `scripts/fetch-data-senat.ts` (pipeline central, ~970 lignes)
+- [x] `scripts/smoke-test-senat.ts` : **47/47 ✅** (Patriat 08061X siège 1 LREM, Larcher 86034E siège 9 UMP, vétérans, transfuges, distribution, garde anti-fusion)
+- [x] **Tests unitaires totaux : 102/102 ✅**
+- [x] Output `static/data/senat/` : 1935 sénateurs, 3 348 mandats, 4 662 scrutins, 1.61M votes, 20 sessions, 348 places hémicycle, ~97 MB JSON
+- [x] `package.json` : 6 scripts npm (`data:fetch:an`, `data:fetch:senat`, etc.) + `test:unit`
+- [x] Dockerfile : 2ᵉ cache mount BuildKit `politidex-senat`
+- [x] Pipeline cold ~2 min / warm ~3 s (parsing SQL streaming 124 MB en 0.9s — 70× plus rapide que la cible)
+
+### 🚧 PR B — Routes UI Sénat (home + listes filtrables)
+
+- [ ] Composants : `SenateurCard.svelte`, `MiniSenateurCard.svelte`, `HemicycleSenat.svelte`, `SessionTabs.svelte`, `hemicycle-senat.ts`
+- [ ] Routes : `/senat/`, `/senat/senateurs/`, `/senat/scrutins/`, `/senat/sessions/[sesann]/`
+- [ ] Nav : entrée header `🏛️ Sénat` + footer enrichi
+- [ ] Recherche globale : étendre `search-index.ts` aux sénateurs et groupes Sénat
+
+### 🚧 PR C — Fiches détail Sénat
+
+- [ ] `/senat/senateurs/[matricule]/` (avec SessionTabs)
+- [ ] `/senat/scrutins/[uid]/` (uid = `${sesann}-${scrnum}`)
+- [ ] `/senat/groupes/[sesann]/[code]/` (avec highlight hémicycle)
+
+### 🚧 PR D — Classements Sénat + FAQ + polish
+
+- [ ] `/senat/classements/` (Le Championnat + Les Coupes Sénat)
+- [ ] FAQ : section `📍 Sénat` (`#senat-overall`, `#senat-loyaute`, `#senat-delegations`)
+
+### 🚧 Phase 3c — fusion bicamérale (différée)
+
+- [ ] Politique de matching `(nom normalisé + dateNaissance)` cross-chambre AN↔Sénat (~50 cas attendus)
+- [ ] ADR de cadrage à écrire au démarrage
+- [ ] Refacto `Personne` pour porter `mandats: (MandatAN | MandatSenat)[]` ou structure équivalente
+
+### À venir (au-delà du Sénat)
+
 - [ ] **Ministres** : sources data.gouv.fr / annuaire-service-public — gérer les changements de gouvernement (mandats datés)
 - [ ] **Président de la République** : Élysée + Wikidata — fiches synthétiques, peu de "stats" comparables, plutôt narratives
-- [ ] Hémicycle Sénat (palais du Luxembourg) — vérifier disponibilité du SVG
 - [ ] Recherche globale unifiée sur les 4 types d'élus
 - [ ] Comparateur cross-chambre (un député peut être comparé à un sénateur sur des indicateurs communs)
 

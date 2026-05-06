@@ -17,11 +17,13 @@ RUN npm ci --no-audit --no-fund
 # Copy the rest of the source.
 COPY . .
 
-# Fetch and process the open data — ADR 0021.
-# `--mount=type=cache` persists /tmp/politidex-cache across builds, so we only
-# re-download ZIPs whose Last-Modified/ETag has changed. Frozen archives (15ᵉ,
-# 16ᵉ) become 0-byte HEAD requests on subsequent builds (~50 ms each).
+# Fetch and process the open data — ADR 0021 + ADR 0025 (Sénat).
+# Two BuildKit cache mounts persist /tmp/politidex-cache (AN) and
+# /tmp/politidex-cache-senat (Sénat) across builds. AN sources are mostly
+# frozen (15ᵉ, 16ᵉ archives ~ 0-byte HEAD), Sénat dosleg.zip is regenerated
+# daily so the conditional HEAD is essential.
 RUN --mount=type=cache,target=/tmp/politidex-cache,id=politidex-data \
+    --mount=type=cache,target=/tmp/politidex-cache-senat,id=politidex-senat \
     npm run data:fetch
 
 # Build the static site.

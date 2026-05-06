@@ -13,7 +13,14 @@ import type {
 	ScrutinIndex,
 	ScrutinDetail,
 	BuildMeta,
-	VoteHistoryItem
+	VoteHistoryItem,
+	Senateur,
+	GroupeSenat,
+	SessionMeta,
+	ScrutinSenatIndex,
+	ScrutinSenatDetail,
+	BuildMetaSenat,
+	VoteHistoryItemSenat
 } from './types';
 
 const BASE = '/data';
@@ -65,4 +72,63 @@ export function loadScrutinDetail(fetchFn: typeof fetch, uid: string) {
 
 export function loadMeta(fetchFn: typeof fetch) {
 	return fetchJson<BuildMeta>(fetchFn, '/meta.json');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SÉNAT (Phase 3, cf ADR 0023..0027) — loaders parallèles aux loaders AN.
+// Les datasets vivent sous static/data/senat/ (isolés du dossier AN).
+// ════════════════════════════════════════════════════════════════════════════
+
+const BASE_SENAT = '/data/senat';
+
+async function fetchJsonSenat<T>(fetchFn: typeof fetch, path: string): Promise<T> {
+	const res = await fetchFn(`${BASE_SENAT}${path}`);
+	if (!res.ok) throw new Error(`Failed to load senat${path}: ${res.status}`);
+	return res.json() as Promise<T>;
+}
+
+// ─────────────────── Sénateurs ───────────────────
+
+export function loadSenateurs(fetchFn: typeof fetch) {
+	return fetchJsonSenat<Senateur[]>(fetchFn, '/senateurs.json');
+}
+
+export async function loadSenateur(
+	fetchFn: typeof fetch,
+	matricule: string
+): Promise<Senateur | null> {
+	const all = await loadSenateurs(fetchFn);
+	return all.find((s) => s.id === matricule) ?? null;
+}
+
+export function loadHistoriqueSenat(fetchFn: typeof fetch, matricule: string) {
+	return fetchJsonSenat<VoteHistoryItemSenat[]>(fetchFn, `/historique/${matricule}.json`);
+}
+
+// ─────────────────── Groupes (scopés par session) ───────────────────
+
+export function loadGroupesSenat(fetchFn: typeof fetch, sesann: number) {
+	return fetchJsonSenat<GroupeSenat[]>(fetchFn, `/groupes/${sesann}.json`);
+}
+
+// ─────────────────── Sessions ───────────────────
+
+export function loadSessions(fetchFn: typeof fetch) {
+	return fetchJsonSenat<SessionMeta[]>(fetchFn, '/sessions.json');
+}
+
+// ─────────────────── Scrutins ───────────────────
+
+export function loadScrutinsSenatIndex(fetchFn: typeof fetch) {
+	return fetchJsonSenat<ScrutinSenatIndex[]>(fetchFn, '/scrutins-index.json');
+}
+
+export function loadScrutinSenatDetail(fetchFn: typeof fetch, uid: string) {
+	return fetchJsonSenat<ScrutinSenatDetail>(fetchFn, `/scrutins/${uid}.json`);
+}
+
+// ─────────────────── Meta Sénat ───────────────────
+
+export function loadMetaSenat(fetchFn: typeof fetch) {
+	return fetchJsonSenat<BuildMetaSenat>(fetchFn, '/meta.json');
 }
