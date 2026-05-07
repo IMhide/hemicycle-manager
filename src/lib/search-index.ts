@@ -5,18 +5,36 @@
  * et tous les groupes connus toutes législatures (cf ADR 0016 : la recherche
  * doit matcher une personne via n'importe laquelle de ses appartenances).
  *
- * Volume : personnes ~1-2 MB, groupes/{leg} ~5 KB chacun, scrutins-index ~500 KB
- * → on diffère le chargement après le boot.
+ * Phase 3 : ajoute aussi les **sénateurs** (cf ADR 0023..0024) et leurs groupes
+ * scopés par session. AN et Sénat restent disjoints en v1 (cf ADR 0023).
  */
 
-import type { Personne, Groupe, ScrutinIndex } from './types';
-import { loadPersonnes, loadGroupes, loadScrutinsIndex, loadLegislatures } from './data';
+import type {
+	Personne,
+	Groupe,
+	ScrutinIndex,
+	Senateur,
+	GroupeSenat
+} from './types';
+import {
+	loadPersonnes,
+	loadGroupes,
+	loadScrutinsIndex,
+	loadLegislatures,
+	loadSenateurs,
+	loadGroupesSenat,
+	loadTriennats
+} from './data';
 
 export interface SearchIndex {
 	personnes: Personne[];
 	groupes: Groupe[]; // tous groupes toutes législatures
 	groupesById: Map<string, Groupe>;
 	scrutins: ScrutinIndex[];
+	senateurs: Senateur[];
+	groupesSenat: GroupeSenat[];
+	/** code → liste de GroupeSenat (toutes sessions où ce code a existé). */
+	groupesSenatByCode: Map<string, GroupeSenat[]>;
 }
 
 let cached: SearchIndex | null = null;
@@ -27,15 +45,37 @@ export async function ensureSearchIndex(): Promise<SearchIndex> {
 	if (inflight) return inflight;
 
 	inflight = (async () => {
-		const legislatures = await loadLegislatures(fetch);
-		const [personnes, scrutins, ...groupesByLeg] = await Promise.all([
+		const [legislatures, triennats] = await Promise.all([
+			loadLegislatures(fetch),
+			loadTriennats(fetch)
+		]);
+		const [personnes, scrutins, senateurs, groupesByLeg, groupesByTriennat] = await Promise.all([
 			loadPersonnes(fetch),
 			loadScrutinsIndex(fetch),
-			...legislatures.map((l) => loadGroupes(fetch, l.num))
+			loadSenateurs(fetch),
+			Promise.all(legislatures.map((l) => loadGroupes(fetch, l.num))),
+			Promise.all(triennats.map((t) => loadGroupesSenat(fetch, t.id)))
 		]);
 		const groupes = groupesByLeg.flat();
 		const groupesById = new Map(groupes.map((g) => [g.id, g]));
-		cached = { personnes, groupes, groupesById, scrutins };
+
+		const groupesSenat = groupesByTriennat.flat();
+		const groupesSenatByCode = new Map<string, GroupeSenat[]>();
+		for (const g of groupesSenat) {
+			const arr = groupesSenatByCode.get(g.code) ?? [];
+			arr.push(g);
+			groupesSenatByCode.set(g.code, arr);
+		}
+
+		cached = {
+			personnes,
+			groupes,
+			groupesById,
+			scrutins,
+			senateurs,
+			groupesSenat,
+			groupesSenatByCode
+		};
 		inflight = null;
 		return cached;
 	})();
@@ -55,9 +95,17 @@ export interface SearchResults {
 	personnes: Array<Personne & { groupePrincipal?: Groupe }>;
 	groupes: Groupe[];
 	scrutins: ScrutinIndex[];
+	senateurs: Array<Senateur & { groupePrincipal?: GroupeSenat }>;
+	groupesSenat: GroupeSenat[];
 }
 
-const MAX_PER_CATEGORY = { personnes: 5, groupes: 3, scrutins: 5 };
+const MAX_PER_CATEGORY = {
+	personnes: 5,
+	senateurs: 5,
+	groupes: 3,
+	groupesSenat: 3,
+	scrutins: 5
+};
 
 /** Le groupe "principal" d'une personne pour l'affichage (cf ADR 0016) :
  *  groupe le plus récent enregistré tous mandats confondus, en ignorant les
@@ -75,17 +123,33 @@ function groupePrincipalDe(p: Personne, groupesById: Map<string, Groupe>): Group
 	return undefined;
 }
 
+/** Le groupe "principal" d'un sénateur pour l'affichage : dernier groupe connu
+ *  (dernier mandat, dernière appartenance), recherché dans le triennat le plus
+ *  récent où le code a existé (cf ADR 0028). */
+function groupePrincipalSenateurDe(
+	s: Senateur,
+	groupesSenatByCode: Map<string, GroupeSenat[]>
+): GroupeSenat | undefined {
+	const lastM = s.mandats.at(-1);
+	const lastApp = lastM?.appartenancesGroupe.at(-1);
+	if (!lastApp) return undefined;
+	const candidats = groupesSenatByCode.get(lastApp.groupeCode);
+	if (!candidats || candidats.length === 0) return undefined;
+	// Le plus récent (triennat max — tri lexicographique sur "YYYY-YYYY" fonctionne)
+	return [...candidats].sort((a, b) => b.triennat.localeCompare(a.triennat))[0];
+}
+
 export function searchAll(index: SearchIndex, query: string): SearchResults {
 	const q = normalize(query.trim());
-	if (!q) return { personnes: [], groupes: [], scrutins: [] };
+	if (!q)
+		return { personnes: [], groupes: [], scrutins: [], senateurs: [], groupesSenat: [] };
 
-	// ─── Personnes : match nom/prénom OU libellé d'un groupe d'appartenance
+	// ─── Personnes (AN) ────────────────────────────────────────────────
 	const matchedPersonnes: Array<Personne & { groupePrincipal?: Groupe }> = [];
 	for (const p of index.personnes) {
 		const hayName = normalize(`${p.identite.prenom} ${p.identite.nom}`);
 		let match = hayName.includes(q);
 		if (!match) {
-			// Match via une appartenance de groupe (libellé court ou long)
 			outer: for (const m of p.mandats) {
 				for (const a of m.appartenancesGroupe) {
 					const g = index.groupesById.get(a.groupeId);
@@ -106,30 +170,83 @@ export function searchAll(index: SearchIndex, query: string): SearchResults {
 			if (matchedPersonnes.length >= MAX_PER_CATEGORY.personnes * 6) break;
 		}
 	}
-	// Préférer les matches en début de nom
 	matchedPersonnes.sort((a, b) => {
 		const an = normalize(`${a.identite.prenom} ${a.identite.nom}`);
 		const bn = normalize(`${b.identite.prenom} ${b.identite.nom}`);
 		const ai = an.indexOf(q);
 		const bi = bn.indexOf(q);
-		// Les matches via groupe sortent avec ai = -1 (q n'est pas dans le nom)
-		// → on les pousse plus bas en priorisant les vrais matches de nom.
 		if (ai === -1 && bi !== -1) return 1;
 		if (bi === -1 && ai !== -1) return -1;
 		if (ai !== bi) return ai - bi;
 		return an.localeCompare(bn);
 	});
 
-	// ─── Groupes : match libelleAbrege ou libelle (toutes législatures)
+	// ─── Sénateurs ─────────────────────────────────────────────────────
+	const matchedSenateurs: Array<Senateur & { groupePrincipal?: GroupeSenat }> = [];
+	for (const s of index.senateurs) {
+		const hayName = normalize(`${s.identite.prenom} ${s.identite.nom}`);
+		let match = hayName.includes(q);
+		if (!match) {
+			outer: for (const m of s.mandats) {
+				for (const a of m.appartenancesGroupe) {
+					const candidats = index.groupesSenatByCode.get(a.groupeCode);
+					if (!candidats) continue;
+					for (const g of candidats) {
+						const hayG = normalize(`${g.libelleAbrege} ${g.libelle}`);
+						if (hayG.includes(q)) {
+							match = true;
+							break outer;
+						}
+					}
+				}
+			}
+		}
+		if (match) {
+			matchedSenateurs.push({
+				...s,
+				groupePrincipal: groupePrincipalSenateurDe(s, index.groupesSenatByCode)
+			});
+			if (matchedSenateurs.length >= MAX_PER_CATEGORY.senateurs * 6) break;
+		}
+	}
+	matchedSenateurs.sort((a, b) => {
+		const an = normalize(`${a.identite.prenom} ${a.identite.nom}`);
+		const bn = normalize(`${b.identite.prenom} ${b.identite.nom}`);
+		const ai = an.indexOf(q);
+		const bi = bn.indexOf(q);
+		if (ai === -1 && bi !== -1) return 1;
+		if (bi === -1 && ai !== -1) return -1;
+		if (ai !== bi) return ai - bi;
+		// Préférer ACTIF sur ANCIEN
+		if (a.identite.etat !== b.identite.etat) {
+			return a.identite.etat === 'ACTIF' ? -1 : 1;
+		}
+		return an.localeCompare(bn);
+	});
+
+	// ─── Groupes AN (toutes légis) ─────────────────────────────────────
 	const matchedGroupes: Groupe[] = [];
 	for (const g of index.groupes) {
 		const hay = normalize(`${g.libelleAbrege} ${g.libelle}`);
 		if (hay.includes(q)) matchedGroupes.push(g);
 	}
-	// Tri : plus récent en premier
 	matchedGroupes.sort((a, b) => b.legislature - a.legislature || a.preseance - b.preseance);
 
-	// ─── Scrutins : match titre (déjà triés desc dans l'index)
+	// ─── Groupes Sénat (dédupliqués par code, on garde le triennat le plus récent, cf ADR 0028) ──
+	const matchedGroupesSenatMap = new Map<string, GroupeSenat>();
+	for (const g of index.groupesSenat) {
+		const hay = normalize(`${g.libelleAbrege} ${g.libelle}`);
+		if (hay.includes(q)) {
+			const existing = matchedGroupesSenatMap.get(g.code);
+			if (!existing || existing.triennat.localeCompare(g.triennat) < 0)
+				matchedGroupesSenatMap.set(g.code, g);
+		}
+	}
+	const matchedGroupesSenat = [...matchedGroupesSenatMap.values()].sort(
+		(a, b) => b.triennat.localeCompare(a.triennat) || a.preseance - b.preseance
+	);
+
+	// ─── Scrutins (AN, déjà triés desc dans l'index) ───────────────────
 	const matchedScrutins: ScrutinIndex[] = [];
 	for (const s of index.scrutins) {
 		if (normalize(s.titre).includes(q)) {
@@ -140,7 +257,9 @@ export function searchAll(index: SearchIndex, query: string): SearchResults {
 
 	return {
 		personnes: matchedPersonnes.slice(0, MAX_PER_CATEGORY.personnes),
+		senateurs: matchedSenateurs.slice(0, MAX_PER_CATEGORY.senateurs),
 		groupes: matchedGroupes.slice(0, MAX_PER_CATEGORY.groupes),
+		groupesSenat: matchedGroupesSenat.slice(0, MAX_PER_CATEGORY.groupesSenat),
 		scrutins: matchedScrutins
 	};
 }

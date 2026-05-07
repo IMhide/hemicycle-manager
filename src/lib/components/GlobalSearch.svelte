@@ -7,29 +7,45 @@
 	let isOpen = $state(false);
 	let isLoading = $state(false);
 	let index: SearchIndex | null = $state(null);
-	let results: SearchResults = $state({ personnes: [], groupes: [], scrutins: [] });
+	let results: SearchResults = $state({
+		personnes: [],
+		groupes: [],
+		scrutins: [],
+		senateurs: [],
+		groupesSenat: []
+	});
 	let activeIndex = $state(0);
 	let inputEl: HTMLInputElement | null = $state(null);
 	let containerEl: HTMLDivElement | null = $state(null);
 
 	type Item =
 		| { kind: 'personne'; href: string; data: SearchResults['personnes'][number] }
+		| { kind: 'senateur'; href: string; data: SearchResults['senateurs'][number] }
 		| { kind: 'groupe'; href: string; data: SearchResults['groupes'][number] }
+		| { kind: 'groupeSenat'; href: string; data: SearchResults['groupesSenat'][number] }
 		| { kind: 'scrutin'; href: string; data: SearchResults['scrutins'][number] };
 
 	const flatResults = $derived.by(() => {
 		const out: Item[] = [];
 		for (const p of results.personnes)
 			out.push({ kind: 'personne', href: `/deputes/${p.id}/`, data: p });
+		for (const s of results.senateurs)
+			out.push({ kind: 'senateur', href: `/senat/senateurs/${s.id}/`, data: s });
 		for (const g of results.groupes)
 			out.push({ kind: 'groupe', href: `/groupes/${g.legislature}/${g.id}/`, data: g });
+		for (const g of results.groupesSenat)
+			out.push({ kind: 'groupeSenat', href: `/senat/triennats/${g.triennat}/`, data: g });
 		for (const s of results.scrutins)
 			out.push({ kind: 'scrutin', href: `/scrutins/${s.uid}/`, data: s });
 		return out;
 	});
 
 	const totalCount = $derived(
-		results.personnes.length + results.groupes.length + results.scrutins.length
+		results.personnes.length +
+			results.senateurs.length +
+			results.groupes.length +
+			results.groupesSenat.length +
+			results.scrutins.length
 	);
 
 	async function ensureLoaded() {
@@ -95,7 +111,7 @@
 	function close() {
 		isOpen = false;
 		query = '';
-		results = { personnes: [], groupes: [], scrutins: [] };
+		results = { personnes: [], groupes: [], scrutins: [], senateurs: [], groupesSenat: [] };
 		inputEl?.blur();
 	}
 
@@ -245,14 +261,63 @@
 					{/each}
 				{/if}
 
+				{#if results.senateurs.length > 0}
+					<div
+						class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50"
+					>
+						Sénateurs
+					</div>
+					{#each results.senateurs as s, i (s.id)}
+						{@const flatIdx = results.personnes.length + i}
+						<button
+							type="button"
+							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
+							flatIdx
+								? 'bg-assembly-accent/10'
+								: 'hover:bg-assembly-border/30'}"
+							onmouseenter={() => (activeIndex = flatIdx)}
+							onclick={() =>
+								selectItem({
+									kind: 'senateur',
+									href: `/senat/senateurs/${s.id}/`,
+									data: s
+								})}
+						>
+							<img
+								src={s.identite.photoUrl}
+								alt=""
+								class="w-8 h-8 rounded-full object-cover bg-assembly-border flex-shrink-0"
+								loading="lazy"
+								referrerpolicy="no-referrer"
+							/>
+							<div class="min-w-0 flex-1">
+								<div class="text-sm font-semibold truncate">
+									{@html highlightMatch(`${s.identite.prenom} ${s.identite.nom}`, query)}
+								</div>
+								<div class="flex items-center gap-1.5 text-[10px] text-assembly-muted">
+									{#if s.groupePrincipal}
+										<span
+											class="w-1.5 h-1.5 rounded-full"
+											style="background-color: {s.groupePrincipal.couleur}"
+										></span>
+										<span>{s.groupePrincipal.libelleAbrege}</span>
+									{/if}
+									<span>· {s.identite.etat === 'ACTIF' ? 'En exercice' : 'Ancien'}</span>
+									<span>· Sénat</span>
+								</div>
+							</div>
+						</button>
+					{/each}
+				{/if}
+
 				{#if results.groupes.length > 0}
 					<div
 						class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50"
 					>
-						Groupes
+						Groupes (AN)
 					</div>
 					{#each results.groupes as g, i (g.legislature + ':' + g.id)}
-						{@const flatIdx = results.personnes.length + i}
+						{@const flatIdx = results.personnes.length + results.senateurs.length + i}
 						<button
 							type="button"
 							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
@@ -288,14 +353,66 @@
 					{/each}
 				{/if}
 
+				{#if results.groupesSenat.length > 0}
+					<div
+						class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50"
+					>
+						Groupes (Sénat)
+					</div>
+					{#each results.groupesSenat as g, i (g.code + ':' + g.triennat)}
+						{@const flatIdx =
+							results.personnes.length +
+							results.senateurs.length +
+							results.groupes.length +
+							i}
+						<button
+							type="button"
+							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
+							flatIdx
+								? 'bg-assembly-accent/10'
+								: 'hover:bg-assembly-border/30'}"
+							onmouseenter={() => (activeIndex = flatIdx)}
+							onclick={() =>
+								selectItem({
+									kind: 'groupeSenat',
+									href: `/senat/triennats/${g.triennat}/`,
+									data: g
+								})}
+						>
+							<div
+								class="w-8 h-8 rounded-md flex items-center justify-center title-display text-[10px] flex-shrink-0"
+								style="background-color: {g.couleur}; color: white;"
+							>
+								{g.libelleAbrege.slice(0, 4)}
+							</div>
+							<div class="min-w-0 flex-1">
+								<div class="text-sm font-semibold truncate">
+									{@html highlightMatch(g.libelle, query)}
+								</div>
+								<div class="text-[10px] text-assembly-muted">
+									{g.libelleAbrege} · Sénat · triennat {g.triennat} · {g.effectifFin} sénateur{g.effectifFin >
+									1
+										? 's'
+										: ''}
+								</div>
+							</div>
+						</button>
+					{/each}
+				{/if}
+
 				{#if results.scrutins.length > 0}
 					<div
 						class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50"
 					>
-						Scrutins
+						Scrutins (AN)
 					</div>
 					{#each results.scrutins as s, i (s.uid)}
-						{@const flatIdx = results.personnes.length + results.groupes.length + i}
+						{@const flatIdx =
+							results.personnes.length +
+							results.senateurs.length +
+							results.groupes.length +
+							results.groupesSenat.length +
+							i}
 						<button
 							type="button"
 							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===

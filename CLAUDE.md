@@ -13,9 +13,11 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 **Roadmap en 3 phases** (cf ADR 0014) :
 1. ✅ **Phase 1** (mergée 2026-05-05) — 16ᵉ + 17ᵉ législatures AN avec modèle "personne unique cross-législature"
 2. ✅ **Phase 2** (mergée 2026-05-05) — 15ᵉ législature AN ajoutée (toute l'ère Macron à l'AN couverte)
-3. ⏳ **Phase 3** (à venir) — Sénat + ministres + président
+3. 🚧 **Phase 3** (en cours) — **Sénat (PR A pipeline en cours)** + ministres + président
 
-**État actuel** : 1196 personnes uniques, 1925 mandats, 14 840 scrutins, 50+ vétérans 15+16+17. Smoke-test 40/40 ✅. Score **Overall** v2 + **Le Championnat / Les Coupes** + **FAQ** mergés 2026-05-06 (PR #6, ADR 0022). Polish UX (tooltips menu, ordre 🏆 avant 📚, groupes par législature en vue Carrière, historique vote scrollable interne) mergé 2026-05-06 (PR #7).
+**État actuel** : côté AN, 1196 personnes uniques, 1925 mandats, 14 840 scrutins, 50+ vétérans 15+16+17. Smoke-test AN 40/40 ✅. Score **Overall** v2 + **Le Championnat / Les Coupes** + **FAQ** mergés 2026-05-06 (PR #6, ADR 0022). Polish UX mergé 2026-05-06 (PR #7).
+
+**Phase 3 Sénat — pipeline (PR A en cours)** : 1935 sénateurs, 3 348 mandats, 4 662 scrutins, 1.61M votes nominatifs, 20 sessions (2006-2007 → 2025-2026), 348 places hémicycle. Smoke-test Sénat 47/47 ✅. Tests unitaires 102/102 ✅. ADR 0023-0027 figées.
 
 > ⚠️ **Le repo s'appelle encore `hemicycle-manager`** (rebrand pas encore fait, cf ADR 0014). Le **nom de produit** est désormais **PolitiDex**.
 
@@ -28,7 +30,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 
 **Toutes les décisions structurantes** (sémantique des métriques, choix techniques, sources, contraintes infra) sont consignées dans **[`decisions/`](decisions/README.md)** au format ADR (Architecture Decision Records).
 
-**À chaque ouverture de session sur ce repo**, lis l'index : [`decisions/README.md`](decisions/README.md). Il liste les 21 décisions actives avec leur statut et leurs tags. Tu peux ouvrir n'importe quelle ADR pour les détails.
+**À chaque ouverture de session sur ce repo**, lis l'index : [`decisions/README.md`](decisions/README.md). Il liste les 27 décisions actives avec leur statut et leurs tags. Tu peux ouvrir n'importe quelle ADR pour les détails.
 
 **Avant de proposer un changement** qui touche à :
 
@@ -47,6 +49,11 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 - le **cache du pipeline data** (HEAD conditionnel, BuildKit cache mount, no-resume) → vérifie ADR 0021
 - l'**ordonnancement gauche-droite** des groupes → vérifie ADR 0007 (sourcé CHES 2024)
 - la **licence** ou la **gouvernance** → vérifie ADR 0009 et 0013
+- le **scope ou la granularité Sénat** (sessions vs mandats individuels, fusion bicamérale différée) → vérifie ADR 0023
+- l'**identifiant matricule Sénat** (vs PA-id AN) → vérifie ADR 0024
+- les **sources Sénat** (api-senat live > ODSEN_*.csv > dosleg.zip) → vérifie ADR 0025
+- l'**hémicycle Sénat 348 sièges** (layout adapté de Kurea/visu_senat) → vérifie ADR 0026
+- la **sémantique des délégations de vote** Sénat → vérifie ADR 0027 (ignorées en v1)
 
 Si la décision te semble obsolète ou si tu veux la changer : **propose explicitement à l'utilisateur** de la marquer "déprécié" ou "remplacée par #NNNN", ne la contourne pas en silence.
 
@@ -64,12 +71,18 @@ Voir **[NEXT_STEPS.md](NEXT_STEPS.md)** pour les idées en backlog (animations, 
 ## 🛠️ Commandes utiles
 
 ```bash
-npm run dev              # serveur de dev sur localhost:5173
-npm run build            # build statique dans build/
-npm run preview          # vérifier le build en local
-npm run check            # type-check Svelte/TS
-npm run data:fetch       # télécharge + transforme les données AN (~30s)
-npm run decisions:index  # regen decisions/README.md
+npm run dev                # serveur de dev sur localhost:5173
+npm run build              # build statique dans build/
+npm run preview            # vérifier le build en local
+npm run check              # type-check Svelte/TS
+npm run test:unit          # tests unitaires Node:test (102 tests, parser dosleg, layout, …)
+npm run data:fetch         # télécharge + transforme AN puis Sénat
+npm run data:fetch:an      #   AN seul (~30s warm cache)
+npm run data:fetch:senat   #   Sénat seul (~3s warm, ~2 min cold)
+npm run data:smoke         # smoke-test AN + Sénat (40+47=87 assertions)
+npm run data:smoke:an      #   AN seul
+npm run data:smoke:senat   #   Sénat seul
+npm run decisions:index    # regen decisions/README.md
 ```
 
 ## 🚀 Mise à jour des données / redéploiement
@@ -78,7 +91,7 @@ npm run decisions:index  # regen decisions/README.md
 
 Pour un redéploiement manuel (par ex. sans changement de code), passer par le sous-agent dans `~/Agents/coolify_control/`.
 
-**Pipeline data accéléré** (cf ADR 0021) : `npm run data:fetch` est en ~30s quand le cache `tmpdir/politidex-cache/` est chaud (cache HTTP conditionnel via Last-Modified/ETag). Premier run cold = ~12-15 min selon le throttling CDN AN sur Scrutins 17ᵉ.
+**Pipeline data accéléré** (cf ADR 0021 + 0025) : `npm run data:fetch` est en ~30s quand les caches `tmpdir/politidex-cache/` et `tmpdir/politidex-cache-senat/` sont chauds (cache HTTP conditionnel via Last-Modified/ETag). Premier run cold ≈ ~12-15 min côté AN (Scrutins 17ᵉ throttle CDN) + ~2 min côté Sénat (download + parsing dump dosleg 124 MB).
 
 ## 🧭 Architecture rapide
 
@@ -109,11 +122,22 @@ src/
     faq/                       # /faq/ — page FAQ ludique (préredue) avec ancres #overall, #presence, etc.
     legislatures/[num]/        # (SPA) home par législature (équivalent / mais paramétrée)
 scripts/
-  fetch-data.ts                # pipeline AMO30 (identité) + AMO10/AMO20 (enrichissement par leg)
+  fetch-data.ts                # pipeline AN — AMO30 (identité) + AMO10/AMO20 (enrichissement par leg)
                                # cf ADR 0018, 0019. LEGISLATURES = [15, 16, 17]
-  smoke-test.ts                # validation 40/40 (cas concrets, comptes, vétérans, NI-bridge)
-  extract-seats.ts             # extrait seats.json depuis Serrulien/hemicycle-france
+  fetch-data-senat.ts          # pipeline Sénat — api-senat + ODSEN_*.csv + dosleg.zip
+                               # cf ADR 0023..0027. Output sous static/data/senat/
+  smoke-test.ts                # validation AN 40/40 (cas concrets, comptes, vétérans, NI-bridge)
+  smoke-test-senat.ts          # validation Sénat 47/47 (Patriat 08061X siège 1, Larcher 86034E…)
+  extract-seats.ts             # extrait seats.json AN depuis Serrulien/hemicycle-france
+  extract-senat-seats.ts       # extrait senat-seats.json depuis Kurea/visu_senat (MIT)
   decisions-index.ts           # regen decisions/README.md
+  lib/
+    cache.ts                   # downloadFile/Zip + extractIfNeeded + cache HTTP conditionnel (ADR 0021)
+                               # mutualisé entre AN et Sénat
+    dosleg-parser.ts           # parser SQL streaming + CSV ISO-8859-1 (Sénat) — TDD strict
+    senat-layout.ts            # layout 348 sièges adapté Kurea — TDD strict
+    senat-transform.ts         # sessionsCovering, groupeAuVote (transformations métier Sénat)
+    *.test.ts                  # 102 tests unitaires Node:test (npm run test:unit)
 decisions/
   README.md                    # index auto-généré (NE PAS éditer à la main)
   TEMPLATE.md                  # trame pour nouvelles décisions
