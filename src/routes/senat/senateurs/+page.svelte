@@ -1,11 +1,25 @@
 <script lang="ts">
 	import SenateurRow from '$lib/components/SenateurRow.svelte';
 	import InfoTip from '$lib/components/InfoTip.svelte';
+	import FiltresElus from '$lib/components/FiltresElus.svelte';
 	import { POLITICAL_ORDER } from '$lib/political-order';
 	import { type TriennatId } from '$lib/triennats';
 	import type { Senateur, MandatSenat, GroupeSenat, TriennatStats } from '$lib/types';
 
 	let { data } = $props();
+
+	const BADGES_CARRIERE = [
+		{ id: 'reelu', label: 'Réélu·e', emoji: '🔁' },
+		{ id: 'veteran', label: 'Vétéran', emoji: '🎖️' },
+		{ id: 'recomposition', label: 'Recomposition', emoji: '🔀' },
+		{ id: 'transfuge', label: 'Transfuge', emoji: '🚪' }
+	];
+	const BADGES_MANDAT = [
+		{ id: 'top-loyaliste', label: 'Top loyaliste', emoji: '🤝' },
+		{ id: 'frondeur', label: 'Frondeur·euse', emoji: '🔥' },
+		{ id: 'presence-or', label: 'Présence en or', emoji: '🎯' },
+		{ id: 'absent-remarquable', label: 'Absent·e remarquable', emoji: '👻' }
+	];
 
 	type SortKey = 'nom' | 'presence' | 'loyaute' | 'frondes' | 'participation';
 	type EtatFilter = 'all' | 'ACTIF' | 'ANCIEN';
@@ -23,8 +37,10 @@
 	let search = $state('');
 	let sortKey: SortKey = $state('nom');
 	let groupFilter = $state<Set<string>>(new Set());
-	let civFilter = $state<'all' | 'M.' | 'Mme'>('all');
+	let sexeFilter = $state<'tous' | 'M' | 'F'>('tous');
 	let etatFilter: EtatFilter = $state('all');
+	let famillesSelected = $state<string[]>([]);
+	let badgesSelected = $state<string[]>([]);
 	let visibleCount = $state(60);
 	/** null = vue carrière (cross-triennat), sinon scope par triennat. Init = triennat en cours. */
 	let scopeTriennat: TriennatId | null = $state(pickTriennatCourant(data.triennats));
@@ -68,8 +84,10 @@
 	function clearFilters() {
 		search = '';
 		groupFilter = new Set();
-		civFilter = 'all';
+		sexeFilter = 'tous';
 		etatFilter = 'all';
+		famillesSelected = [];
+		badgesSelected = [];
 		sortKey = 'nom';
 		visibleCount = 60;
 	}
@@ -127,15 +145,47 @@
 			);
 	});
 
+	const famByCode = $derived(
+		(data.famillesByGroupeCodeSenat ?? {}) as Record<string, string>
+	);
+
+	function senateurFamilles(s: Senateur, m: MandatSenat | null): string[] {
+		const mandats = m ? [m] : s.mandats;
+		const set = new Set<string>();
+		for (const md of mandats) {
+			const stable = md.appartenancesGroupe.find(
+				(a) => a.groupeCode !== 'NI' && a.groupeCode !== 'AUCUN'
+			);
+			if (stable?.groupeCode) {
+				const fam = famByCode[stable.groupeCode] ?? stable.groupeCode;
+				set.add(fam);
+			}
+		}
+		return [...set];
+	}
+
+	function senateurBadgesForScope(s: Senateur, m: MandatSenat | null): string[] {
+		if (scopeTriennat === null) return s.carriere.badgesCarriere ?? [];
+		return m?.badgesMandat ?? [];
+	}
+
 	const filtered = $derived.by(() => {
 		const q = search.trim().toLowerCase();
-		return enriched.filter(({ senateur, groupe }) => {
+		return enriched.filter(({ senateur, mandat, groupe }) => {
 			if (q) {
 				const hay = `${senateur.identite.prenom} ${senateur.identite.nom}`.toLowerCase();
 				if (!hay.includes(q)) return false;
 			}
-			if (civFilter !== 'all' && senateur.identite.civ !== civFilter) return false;
+			if (sexeFilter !== 'tous' && senateur.identite.sexe !== sexeFilter) return false;
 			if (etatFilter !== 'all' && senateur.identite.etat !== etatFilter) return false;
+			if (famillesSelected.length > 0) {
+				const fams = senateurFamilles(senateur, mandat);
+				if (!fams.some((f) => famillesSelected.includes(f))) return false;
+			}
+			if (badgesSelected.length > 0) {
+				const bs = senateurBadgesForScope(senateur, mandat);
+				if (!badgesSelected.some((b) => bs.includes(b))) return false;
+			}
 			if (groupFilter.size > 0) {
 				if (!groupe || !groupFilter.has(groupe.code)) return false;
 			}
@@ -200,8 +250,10 @@
 	$effect(() => {
 		void search;
 		void groupFilter;
-		void civFilter;
+		void sexeFilter;
 		void etatFilter;
+		void famillesSelected;
+		void badgesSelected;
 		void sortKey;
 		void scopeTriennat;
 		visibleCount = 60;
@@ -286,21 +338,13 @@
 				</select>
 			</div>
 
-			<div>
-				<div class="text-xs uppercase tracking-widest text-assembly-muted mb-1.5">Civilité</div>
-				<div class="flex gap-1">
-					{#each [['all', 'Tous'], ['M.', 'M.'], ['Mme', 'Mme']] as [key, label] (key)}
-						<button
-							class="btn px-3 py-1 text-xs flex-1 {civFilter === key
-								? 'bg-assembly-accent text-assembly-bg'
-								: 'border border-assembly-border text-assembly-muted hover:text-assembly-text'}"
-							onclick={() => (civFilter = key as 'all' | 'M.' | 'Mme')}
-						>
-							{label}
-						</button>
-					{/each}
-				</div>
-			</div>
+			<FiltresElus
+				bind:sexe={sexeFilter}
+				bind:famillesSelected
+				bind:badgesSelected
+				familles={data.familles}
+				badges={scopeTriennat === null ? BADGES_CARRIERE : BADGES_MANDAT}
+			/>
 
 			<div>
 				<div class="text-xs uppercase tracking-widest text-assembly-muted mb-1.5">État</div>
@@ -358,9 +402,9 @@
 				</div>
 			</div>
 
-			{#if search || groupFilter.size > 0 || civFilter !== 'all' || etatFilter !== 'all' || sortKey !== 'nom'}
+			{#if search || groupFilter.size > 0 || sexeFilter !== 'tous' || etatFilter !== 'all' || famillesSelected.length > 0 || badgesSelected.length > 0 || sortKey !== 'nom'}
 				<button class="btn-ghost w-full text-xs" onclick={clearFilters}>
-					Réinitialiser les filtres
+					Réinitialiser tous les filtres
 				</button>
 			{/if}
 		</aside>
@@ -392,11 +436,12 @@
 				</div>
 			{:else}
 				<div class="grid grid-cols-1 xl:grid-cols-2 gap-2">
-					{#each visible as { senateur, mandat, triennat } (senateur.id)}
+					{#each visible as { senateur, mandat, triennat, groupe } (senateur.id)}
 						<SenateurRow
 							{senateur}
 							{mandat}
 							{triennat}
+							{groupe}
 							{highlight}
 							isPresident={presidentMatricules.has(senateur.id)}
 						/>

@@ -2,6 +2,8 @@
 	/**
 	 * Ligne compacte d'un sénateur dans une liste (équivalent MemberRow côté Sénat).
 	 * Modèle Phase 3 (cf ADR 0023..0028) : reçoit `Senateur` + `TriennatStats | null` + `MandatSenat | null`.
+	 *
+	 * Groupe en prop optionnelle (caller résout via `groupePrincipal`).
 	 */
 	import type { Senateur, MandatSenat, TriennatStats } from '$lib/types';
 	import {
@@ -9,15 +11,28 @@
 		lookupEluUrlCarriereForMatricule
 	} from '$lib/elus';
 
+	interface GroupeChip {
+		libelleAbrege: string;
+		couleur: string;
+	}
+
 	interface Props {
 		senateur: Senateur;
 		mandat: MandatSenat | null;
 		triennat: TriennatStats | null;
 		highlight?: 'loyaute' | 'frondes' | 'presence' | null;
 		isPresident?: boolean;
+		groupe?: GroupeChip | null;
 	}
 
-	let { senateur, mandat, triennat, highlight = null, isPresident = false }: Props = $props();
+	let {
+		senateur,
+		mandat,
+		triennat,
+		highlight = null,
+		isPresident = false,
+		groupe = null
+	}: Props = $props();
 
 	const stats = $derived(triennat ? triennat.stats : senateur.carriere);
 	const circo = $derived(mandat?.circonscription ?? senateur.mandats.at(-1)?.circonscription ?? null);
@@ -64,9 +79,23 @@
 				</span>
 			{/if}
 		</div>
-		{#if circo}
-			<div class="text-[10px] text-assembly-muted truncate">{circo}</div>
-		{/if}
+		<div class="flex items-center gap-1.5 mt-0.5 flex-wrap text-[10px] text-assembly-muted">
+			{#if groupe}
+				<span
+					class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-assembly-border/40"
+					title={groupe.libelleAbrege}
+				>
+					<span
+						class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+						style="background-color: {groupe.couleur}"
+					></span>
+					<span class="truncate max-w-[10rem]">{groupe.libelleAbrege}</span>
+				</span>
+			{/if}
+			{#if circo}
+				<span class="truncate">{circo}</span>
+			{/if}
+		</div>
 	</div>
 	<div class="grid grid-cols-3 gap-3 text-right text-xs flex-shrink-0">
 		<div>

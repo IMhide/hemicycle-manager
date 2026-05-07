@@ -18,6 +18,10 @@ export type EluMandatRef =
 			debut: string;
 			fin: string | null;
 			overall: number;
+			groupeId: string | null;
+			groupeLibelleAbrege: string | null;
+			groupeCouleur: string | null;
+			famille: string | null;
 	  }
 	| {
 			chambre: 'SENAT';
@@ -25,6 +29,10 @@ export type EluMandatRef =
 			debut: string;
 			fin: string | null;
 			overall: number;
+			groupeCode: string | null;
+			groupeLibelleAbrege: string | null;
+			groupeCouleur: string | null;
+			famille: string | null;
 	  };
 
 export type BadgeCarriereCross =

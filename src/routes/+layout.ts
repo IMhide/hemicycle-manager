@@ -1,5 +1,6 @@
 import type { LayoutLoad } from './$types';
 import { loadElusManifest } from '$lib/elus';
+import { loadFamilles } from '$lib/familles';
 
 // Layout root partageant les données : on charge le manifest bicaméral
 // `elus.json` UNE FOIS et il alimente le cache module dans `$lib/elus`.
@@ -24,5 +25,18 @@ export const load: LayoutLoad = async ({ fetch }) => {
 		elus: [],
 		warnings: []
 	}));
-	return { elusManifest: manifest };
+	// Charge la table des familles politiques (cf ADR 0034) — utilisée par
+	// les filtres "Famille politique" sur /elus, /assemblee/deputes,
+	// /senat/senateurs. Échec silencieux toléré (filtre dégradé, pas bloquant).
+	const famillesData = await loadFamilles(fetch).catch(() => ({
+		list: [],
+		byGroupeIdAN: {},
+		byGroupeCodeSenat: {}
+	}));
+	return {
+		elusManifest: manifest,
+		familles: famillesData.list,
+		famillesByGroupeIdAN: famillesData.byGroupeIdAN,
+		famillesByGroupeCodeSenat: famillesData.byGroupeCodeSenat
+	};
 };

@@ -2,9 +2,19 @@
 	/**
 	 * Ligne compacte d'un député dans une liste (top loyalistes, frondeurs, etc.).
 	 * Modèle Phase 1 : reçoit `Personne` + `Mandat | null` (cf ADR 0015, 0017).
+	 *
+	 * Le groupe (chip couleur + libellé court) est passé en prop optionnelle pour
+	 * éviter au composant de connaître `data.groupes`. Caller résout via son
+	 * propre helper `groupePrincipal(personne, mandat)`. Sur les pages groupe
+	 * (où l'info est redondante), passer `groupe={null}`.
 	 */
 	import type { Personne, Mandat } from '$lib/types';
 	import { lookupEluUrlForPaIdLeg, lookupEluUrlCarriereForPaId } from '$lib/elus';
+
+	interface GroupeChip {
+		libelleAbrege: string;
+		couleur: string;
+	}
 
 	interface Props {
 		personne: Personne;
@@ -12,9 +22,17 @@
 		mandat: Mandat | null;
 		highlight?: 'loyaute' | 'frondes' | 'presence' | null;
 		isPresident?: boolean;
+		/** Groupe principal à afficher en chip (passé par le caller). Null = pas affiché. */
+		groupe?: GroupeChip | null;
 	}
 
-	let { personne, mandat, highlight = null, isPresident = false }: Props = $props();
+	let {
+		personne,
+		mandat,
+		highlight = null,
+		isPresident = false,
+		groupe = null
+	}: Props = $props();
 
 	const stats = $derived(mandat ? mandat.stats : personne.carriere);
 	const circo = $derived(mandat?.circonscription ?? personne.mandats.at(-1)?.circonscription ?? null);
@@ -55,11 +73,23 @@
 				</span>
 			{/if}
 		</div>
-		{#if circo}
-			<div class="text-[10px] text-assembly-muted">
-				{circo.dep} ({circo.depNum}-{circo.num})
-			</div>
-		{/if}
+		<div class="flex items-center gap-1.5 mt-0.5 flex-wrap text-[10px] text-assembly-muted">
+			{#if groupe}
+				<span
+					class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-assembly-border/40"
+					title={groupe.libelleAbrege}
+				>
+					<span
+						class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+						style="background-color: {groupe.couleur}"
+					></span>
+					<span class="truncate max-w-[10rem]">{groupe.libelleAbrege}</span>
+				</span>
+			{/if}
+			{#if circo}
+				<span class="truncate">{circo.dep} ({circo.depNum}-{circo.num})</span>
+			{/if}
+		</div>
 	</div>
 	<div class="grid grid-cols-3 gap-3 text-right text-xs flex-shrink-0">
 		<div>
