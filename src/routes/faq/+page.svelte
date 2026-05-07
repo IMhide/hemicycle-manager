@@ -245,15 +245,60 @@
 				},
 				{
 					id: 'senat-bicamerale',
-					question: 'Pourquoi un député ET un sénateur ne sont pas <b>fusionnés</b> dans une même fiche ?',
-					answer: `<p>Parce qu'on n'a pas (encore) implémenté le matching cross-chambre. En v1 Phase 3, l'AN et le Sénat sont deux datasets <b>strictement disjoints</b> : un sénateur a un <code>matricule</code> (ex. <code>08061X</code>), un député a un <code>PA-id</code>, et on n'essaie pas de réconcilier les deux.</p>
-<p class="mt-2">Conséquence : si quelqu'un est passé de l'AN au Sénat (ou inversement), il a deux fiches, une par chambre. La fusion bicamérale viendra en Phase 3c (politique de matching <code>(nom + dateNaissance)</code> à statuer dans une ADR future). Cf ${ADR(23, 'phase3-senat-scope')} et ${ADR(24, 'identifiant-senat-matricule')}.</p>`
+					question: 'Un député ET un sénateur c\'est la <b>même fiche</b> maintenant ?',
+					answer: `<p>Oui — depuis la refonte routes (ADR 0030/0031/0032). Toutes les personnes, qu'elles soient députées, sénatrices ou les deux, ont <b>une seule fiche</b> sous <code>/elus/[eluId]</code> avec un sélecteur de mandat permettant de basculer entre Carrière, mandats AN et triennats Sénat.</p>
+<p class="mt-2">Le matching cross-chambre se fait sur <code>prénom + nom + dateNaissance</code> normalisés (sans accents, particules <code>de/du/des/le/la</code> remplacées par <code>_</code>). Quand la date de naissance manque d'un côté, la fusion est <b>refusée par défaut</b> (mieux vaut deux fiches distinctes qu'une fusion erronée). Cas exotiques (nom marital, etc.) gérés via <code>static/data/elus-overrides.json</code> commité.</p>
+<p class="mt-2">~10 bicaméraux détectés sur l'ère Macron (Bonnecarrère, Bourguignon, Boyer, Demilly, Florennes, Folliot, Girardin, Létard, Taillé-Polian, Cazebonne). Cf <a class="underline hover:text-assembly-accent" href="#elu-carriere">section dédiée</a>, ${ADR(31, 'modele-elu-cross-chambre-manifest')} et ${ADR(32, 'semantique-carriere-cross-chambre')}.</p>`
 				},
 				{
 					id: 'senat-hemicycle',
 					question: 'D\'où vient le layout de l\'<b>hémicycle Sénat</b> à 348 sièges ?',
 					answer: `<p>Adapté du projet open-source <a class="underline hover:text-assembly-accent" target="_blank" rel="noopener" href="https://github.com/Kurea/visu_senat">Kurea/visu_senat</a> (MIT). 9 couches concentriques, places 1..348 alignées avec le champ <code>siege</code> de l'API live du Sénat.</p>
 <p class="mt-2">Crédit MIT préservé dans le fichier <code>senat-seats.json</code>. Cf ${ADR(26, 'hemicycle-senat-kurea')}.</p>`
+				}
+			]
+		},
+		{
+			id: 'elu-carriere',
+			title: 'La fiche Élu cross-chambre',
+			emoji: '🗂️',
+			intro: 'Le hub /elus/[id] est l\'unique point d\'entrée pour consulter le détail d\'une personne. Voici comment marche la vue Carrière, le badge Bicaméral et la moyenne simple.',
+			items: [
+				{
+					id: 'elu-hub',
+					question: 'Pourquoi <b>une seule fiche</b> par personne et plus une par chambre ?',
+					answer: `<p>Parce que c'est la même personne. Avant la refonte, on avait deux fiches pour Gérard Larcher (en réalité une seule, il n'a que le Sénat — mais pour Bonnecarrère, Girardin, Bourguignon… il y avait deux fiches qui ignoraient l'autre). Désormais : une fiche <code>/elus/[eluId]</code>, un sélecteur de mandat unique <code>[Carrière] [16ᵉ AN] [17ᵉ AN] [Sénat 2023-2026]</code>.</p>
+<p class="mt-2">L'<code>eluId</code> est un hash sha256-8 stable de <code>prénom + nom + dateNaissance</code> normalisés. Format : <code>elu_e08cf4b9</code>. Déterministe entre builds, donc l'URL ne bouge pas. Cf ${ADR(30, 'routes-par-chambre-elus-hub')} et ${ADR(31, 'modele-elu-cross-chambre-manifest')}.</p>`
+				},
+				{
+					id: 'elu-carriere-overall',
+					question: 'L\'<b>Overall carrière</b> cross-chambre, c\'est calculé comment ?',
+					answer: `<p><b>Moyenne arithmétique simple</b> des Overall de chaque mandat (un par législature AN, un par triennat Sénat). Pas de pondération par durée, pas de pondération par nb de scrutins.</p>
+<p class="mt-2">Exemples :</p>
+<ul class="list-disc pl-6 mt-2 space-y-1 text-xs">
+	<li>Pilato (PA817211) : 16ᵉ AN + 17ᵉ AN → <code>(o₁₆ + o₁₇) / 2</code></li>
+	<li>Larcher (86034E) : 3 triennats Sénat → <code>(o₂₀₁₇ + o₂₀₂₀ + o₂₀₂₃) / 3</code></li>
+	<li>Bonnecarrère (bicaméral) : 1 leg AN + 3 triennats Sénat → moyenne des 4</li>
+</ul>
+<p class="mt-3">Postulat éditorial : <b>chaque mandat compte pareil</b>. Une pondération par durée pénaliserait les carrières heurtées (un mandat de 2 mois pèserait 12× moins qu'un de 5 ans, ce qui est mathématiquement correct mais contre-intuitif côté Pokédex). On préfère une métrique simple et compréhensible à un score complexe et opaque. Cf ${ADR(32, 'semantique-carriere-cross-chambre')}.</p>`
+				},
+				{
+					id: 'elu-bicameral',
+					question: 'C\'est quoi le badge <b>Bicaméral·e</b> ?',
+					answer: `<p>Tier <b>legend</b> (gradient fuchsia → amber). Il signale qu'une personne a siégé dans les <b>deux chambres</b> du Parlement : ≥1 mandat à l'AN ET ≥1 triennat au Sénat. ~10 cas attendus sur l'ère Macron (~50 historiquement, scope plus large).</p>
+<p class="mt-2">Il prend le pas visuellement sur les autres badges carrière (Vétéran, Réélu·e, Recomposition, Transfuge), parce que c'est rare et symboliquement fort.</p>`
+				},
+				{
+					id: 'elu-rangs',
+					question: 'Pourquoi pas de <b>rang</b> sur la vue Carrière ?',
+					answer: `<p>Parce que le rang nécessite une <b>cohorte</b> homogène. La carrière agrège des cohortes différentes (15ᵉ AN ≠ 17ᵉ AN ≠ Sénat 2023-2026), donc rang carrière = comparaison de pommes et d'oranges. Cohérent avec ${ADR(17, 'stats-mandat-vs-carriere')}.</p>
+<p class="mt-2">Pour comparer scope-aware, basculer le sélecteur sur un mandat précis : <code>?tab=an-17</code> ou <code>?tab=senat-2023-2026</code>.</p>`
+				},
+				{
+					id: 'elu-historique',
+					question: 'L\'historique de votes en vue Carrière, ça mélange AN et Sénat ?',
+					answer: `<p>Oui — concat des votes AN + Sénat triés <b>chrono desc</b> (les plus récents en haut). Chaque ligne expose un badge chambre (🏛️ AN / 🏛️ Sénat) pour distinguer le contexte du vote.</p>
+<p class="mt-2">Cohérent avec la réalité : un élu qui passe de l'AN au Sénat a une trajectoire continue, pas deux histoires parallèles.</p>`
 				}
 			]
 		},
