@@ -26,3 +26,4 @@ static/data/
 # Local agent state (Claude Code, thoughts/handoffs)
 .claude/
 thoughts/
+prompt.md

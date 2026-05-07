@@ -4,9 +4,9 @@
 
 Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque décision est un fichier dédié au format [ADR](https://adr.github.io). Pour ajouter une décision : créer `decisions/NNNN-slug.md` avec la trame de `TEMPLATE.md`, puis lancer `npm run decisions:index`.
 
-**29 décisions** consignées.
+**32 décisions** consignées.
 
-**Tags** : `data`(13) · `senat`(7) · `métriques`(5) · `sémantique`(5) · `scope`(5) · `déploiement`(4) · `ux`(4) · `pipeline`(4) · `sourcing`(3) · `roadmap`(3) · `identité`(3) · `pipeline-data`(2) · `hémicycle`(2) · `layout`(2) · `gouvernance`(2) · `build`(2) · `modèle`(2) · `badges`(2) · `sources`(2) · `etalab`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `routes`(1) · `groupes`(1) · `phase-1`(1) · `ches`(1) · `multi-legislature`(1) · `performance`(1) · `métrique`(1) · `overall`(1) · `exemplarité`(1) · `multi-chambre`(1) · `v1`(1) · `à-revisiter`(1) · `granularite-temporelle`(1) · `classements`(1) · `parite-an`(1) · `ere-macron`(1)
+**Tags** : `data`(14) · `senat`(8) · `métriques`(6) · `sémantique`(6) · `ux`(6) · `scope`(6) · `déploiement`(4) · `identité`(4) · `pipeline`(4) · `multi-chambre`(4) · `sourcing`(3) · `roadmap`(3) · `modèle`(3) · `pipeline-data`(2) · `hémicycle`(2) · `layout`(2) · `gouvernance`(2) · `build`(2) · `routes`(2) · `badges`(2) · `sources`(2) · `etalab`(2) · `overall`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `groupes`(1) · `phase-1`(1) · `ches`(1) · `multi-legislature`(1) · `performance`(1) · `métrique`(1) · `exemplarité`(1) · `v1`(1) · `à-revisiter`(1) · `granularite-temporelle`(1) · `classements`(1) · `parite-an`(1) · `ere-macron`(1)
 
 ## Index chronologique
 
@@ -41,6 +41,9 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 | 0027 | [Délégations de vote au Sénat : ignorées en v1](0027-delegations-vote-senat-v1.md) | ✅ accepté | `sémantique` `métriques` `senat` `v1` `à-revisiter` | 2026-05-06 |
 | 0028 | [Sénat : triennat comme unité de regroupement (remplace session annuelle)](0028-senat-triennat-unite-regroupement.md) | ✅ accepté | `data` `scope` `senat` `ux` `granularite-temporelle` `classements` | 2026-05-06 |
 | 0029 | [Sénat : scope restreint à l'ère Macron (3 triennats depuis 2017)](0029-senat-scope-ere-macron.md) | ✅ accepté | `data` `scope` `senat` `parite-an` `ere-macron` | 2026-05-07 |
+| 0030 | [Architecture des routes : `/assemblee/`, `/senat/`, `/elus/`, racine neutre](0030-routes-par-chambre-elus-hub.md) | ✅ accepté | `routes` `ux` `scope` `multi-chambre` | 2026-05-08 |
+| 0031 | [Modèle Élu cross-chambre : manifest bicaméral, ID synthétique](0031-modele-elu-cross-chambre-manifest.md) | ✅ accepté | `data` `modèle` `identité` `multi-chambre` `senat` | 2026-05-08 |
+| 0032 | [Sémantique de la carrière cross-chambre sur la fiche Élu](0032-semantique-carriere-cross-chambre.md) | ✅ accepté | `sémantique` `métriques` `ux` `multi-chambre` `overall` | 2026-05-08 |
 
 ## Résumés
 
@@ -217,3 +220,21 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 > Le scope temporel Sénat est restreint à l'ère Macron : seuls les 3 triennats `2017-2020`, `2020-2023`, `2023-2026` sont couverts par PolitiDex.
 
 📄 [Lire la décision complète](0029-senat-scope-ere-macron.md)
+
+### 0030 — Architecture des routes : `/assemblee/`, `/senat/`, `/elus/`, racine neutre
+
+> L'arborescence des routes est restructurée autour de trois espaces symétriques plus un hub cross-chambre :
+
+📄 [Lire la décision complète](0030-routes-par-chambre-elus-hub.md)
+
+### 0031 — Modèle Élu cross-chambre : manifest bicaméral, ID synthétique
+
+> ### Modèle de données
+
+📄 [Lire la décision complète](0031-modele-elu-cross-chambre-manifest.md)
+
+### 0032 — Sémantique de la carrière cross-chambre sur la fiche Élu
+
+> La vue Carrière sur `/elus/[eluId]` est un agrégat ludique des mandats AN et Sénat de l'élu, sans prétention de comparabilité scientifique cross-chambre. Les arbitrages :
+
+📄 [Lire la décision complète](0032-semantique-carriere-cross-chambre.md)
