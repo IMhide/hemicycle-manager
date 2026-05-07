@@ -22,7 +22,7 @@
 
 {#if linked}
 	<a
-		href="/groupes/{groupe.legislature}/{groupe.id}/"
+		href="/assemblee/groupes/{groupe.legislature}/{groupe.id}/"
 		class="inline-flex items-center {sizeClasses} hover:text-assembly-accent transition-colors"
 	>
 		<span class="{dotSize} rounded-full flex-shrink-0" style="background-color: {groupe.couleur}"></span>

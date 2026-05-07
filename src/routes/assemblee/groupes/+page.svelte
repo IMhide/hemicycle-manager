@@ -56,7 +56,7 @@
 		{#each groupesScope as groupe (groupe.id)}
 			{@const rank = POLITICAL_ORDER[groupe.libelleAbrege]?.rank ?? 99}
 			<a
-				href="/groupes/{groupe.legislature}/{groupe.id}/"
+				href="/assemblee/groupes/{groupe.legislature}/{groupe.id}/"
 				class="card p-4 hover:border-assembly-accent/60 transition-colors flex items-start gap-4"
 				style="border-left: 4px solid {groupe.couleur}"
 			>

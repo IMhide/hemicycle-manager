@@ -114,7 +114,7 @@
 
 <section class="max-w-7xl mx-auto px-6 py-8 space-y-6">
 	<a
-		href="/scrutins/"
+		href="/assemblee/scrutins/"
 		class="text-sm text-assembly-muted hover:text-assembly-accent inline-flex items-center gap-1"
 	>
 		← Tous les scrutins
@@ -250,7 +250,7 @@
 
 	<div class="flex justify-between gap-4 pt-2">
 		{#if navigation.next}
-			<a href="/scrutins/{navigation.next.uid}/" class="btn-ghost text-sm flex-1 max-w-xs">
+			<a href="/assemblee/scrutins/{navigation.next.uid}/" class="btn-ghost text-sm flex-1 max-w-xs">
 				← Scrutin n°{navigation.next.numero}
 				<div class="text-xs text-assembly-muted truncate">{navigation.next.titre}</div>
 			</a>
@@ -259,7 +259,7 @@
 		{/if}
 		{#if navigation.prev}
 			<a
-				href="/scrutins/{navigation.prev.uid}/"
+				href="/assemblee/scrutins/{navigation.prev.uid}/"
 				class="btn-ghost text-sm flex-1 max-w-xs text-right"
 			>
 				Scrutin n°{navigation.prev.numero} →
