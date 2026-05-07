@@ -10,6 +10,7 @@
 	import SenateurRow from '$lib/components/SenateurRow.svelte';
 	import InfoTip from '$lib/components/InfoTip.svelte';
 	import { goto } from '$app/navigation';
+	import { lookupEluUrlForMatriculeTriennat } from '$lib/elus';
 	import type { Senateur, MandatSenat, TriennatStats } from '$lib/types';
 
 	let { data } = $props();
@@ -111,7 +112,7 @@
 	}
 
 	function selectSenateur(id: string) {
-		goto(`/senat/senateurs/${id}/?triennat=${data.triennat}`);
+		goto(lookupEluUrlForMatriculeTriennat(id, data.triennat) ?? '/elus/');
 	}
 
 	const tooltipPos = $derived.by(() => {
@@ -169,7 +170,7 @@
 					<div class="text-xs text-assembly-muted mt-2">
 						Président·e :
 						<a
-							href="/senat/senateurs/{president.id}/?triennat={data.triennat}"
+							href={lookupEluUrlForMatriculeTriennat(president.id, data.triennat) ?? '/elus/'}
 							class="hover:text-assembly-accent"
 						>
 							{president.identite.prenom}

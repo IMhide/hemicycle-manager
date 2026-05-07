@@ -21,6 +21,7 @@
 	import GroupBadge from '$lib/components/GroupBadge.svelte';
 	import type { Personne, Mandat, Groupe } from '$lib/types';
 	import { BLOCS, blocOf, type Bloc } from '$lib/political-order';
+	import { lookupEluUrlForPaIdLeg, lookupEluUrlCarriereForPaId } from '$lib/elus';
 
 	let { data } = $props();
 
@@ -401,8 +402,8 @@
 					{@const tier = tierFor(rank, championDeputes.length)}
 					<a
 						href={mandat
-							? `/assemblee/deputes/${personne.id}/?leg=${mandat.legislature}`
-							: `/assemblee/deputes/${personne.id}/`}
+							? lookupEluUrlForPaIdLeg(personne.id, mandat.legislature) ?? '/elus/'
+							: lookupEluUrlCarriereForPaId(personne.id) ?? '/elus/'}
 						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors {tier.cls}"
 					>
 						<div
@@ -610,7 +611,7 @@
 					{@const rank = currentMeta.rank(mandat)!}
 					{@const tier = tierFor(rank, coupesSorted.length)}
 					<a
-						href="/assemblee/deputes/{personne.id}/?leg={scopeLeg}"
+						href={lookupEluUrlForPaIdLeg(personne.id, scopeLeg) ?? '/elus/'}
 						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors {tier.cls}"
 					>
 						<div
@@ -661,7 +662,7 @@
 						<div class="space-y-1.5">
 							{#each top as { personne, mandat }, i (personne.id)}
 								<a
-									href="/assemblee/deputes/{personne.id}/?leg={scopeLeg}"
+									href={lookupEluUrlForPaIdLeg(personne.id, scopeLeg) ?? '/elus/'}
 									class="flex items-center gap-3 p-2 rounded hover:bg-assembly-border/30 transition-colors"
 								>
 									<div

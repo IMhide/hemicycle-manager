@@ -5,6 +5,7 @@
 	 * **au moment du vote**.
 	 */
 	import type { Personne, Groupe, VotePosition } from '$lib/types';
+	import { lookupEluUrlForPaIdLeg, lookupEluUrlCarriereForPaId } from '$lib/elus';
 
 	interface Props {
 		personne: Personne;
@@ -12,16 +13,29 @@
 		groupe: Groupe | null;
 		position: VotePosition;
 		positionMajoritaireGroupe: string;
+		/** Législature du scrutin — sert à pointer le bon onglet sur la fiche Élu. */
+		legislature?: number;
 	}
 
-	let { personne, groupe, position, positionMajoritaireGroupe }: Props = $props();
+	let {
+		personne,
+		groupe,
+		position,
+		positionMajoritaireGroupe,
+		legislature
+	}: Props = $props();
 
 	const positionColor = $derived(position === 'pour' ? '#22c55e' : '#ef4444');
 	const majColor = $derived(positionMajoritaireGroupe === 'pour' ? '#22c55e' : '#ef4444');
+	const href = $derived(
+		legislature !== undefined
+			? lookupEluUrlForPaIdLeg(personne.id, legislature) ?? '/elus/'
+			: lookupEluUrlCarriereForPaId(personne.id) ?? '/elus/'
+	);
 </script>
 
 <a
-	href="/assemblee/deputes/{personne.id}/"
+	{href}
 	class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
 >
 	<img

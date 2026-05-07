@@ -19,6 +19,10 @@
 	import type { Senateur, MandatSenat, GroupeSenat, TriennatStats } from '$lib/types';
 	import { BLOCS, blocOf, type Bloc } from '$lib/political-order';
 	import { type TriennatId } from '$lib/triennats';
+	import {
+		lookupEluUrlForMatriculeTriennat,
+		lookupEluUrlCarriereForMatricule
+	} from '$lib/elus';
 
 	let { data } = $props();
 
@@ -465,8 +469,8 @@
 					{@const tier = tierFor(rank, championSenateurs.length)}
 					<a
 						href={mandat && scopeTriennat !== ''
-							? `/senat/senateurs/${senateur.id}/?triennat=${scopeTriennat}`
-							: `/senat/senateurs/${senateur.id}/`}
+							? lookupEluUrlForMatriculeTriennat(senateur.id, scopeTriennat as string) ?? '/elus/'
+							: lookupEluUrlCarriereForMatricule(senateur.id) ?? '/elus/'}
 						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors {tier.cls}"
 					>
 						<div
@@ -686,7 +690,7 @@
 					{@const rank = currentMeta.rank(triennat)!}
 					{@const tier = tierFor(rank, coupesSorted.length)}
 					<a
-						href="/senat/senateurs/{senateur.id}/?triennat={scopeTriennat}"
+						href={lookupEluUrlForMatriculeTriennat(senateur.id, scopeTriennat as string) ?? '/elus/'}
 						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors {tier.cls}"
 					>
 						<div
@@ -752,7 +756,7 @@
 						<div class="space-y-1.5">
 							{#each top as { senateur, triennat }, i (senateur.id)}
 								<a
-									href="/senat/senateurs/{senateur.id}/?triennat={scopeTriennat}"
+									href={lookupEluUrlForMatriculeTriennat(senateur.id, scopeTriennat as string) ?? '/elus/'}
 									class="flex items-center gap-3 p-2 rounded hover:bg-assembly-border/30 transition-colors"
 								>
 									<div

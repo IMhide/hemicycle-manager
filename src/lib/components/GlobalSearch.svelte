@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { ensureSearchIndex, searchAll, type SearchResults } from '$lib/search-index';
 	import type { SearchIndex } from '$lib/search-index';
+	import { lookupEluUrlCarriereForPaId, lookupEluUrlCarriereForMatricule } from '$lib/elus';
 
 	let query = $state('');
 	let isOpen = $state(false);
@@ -28,9 +29,17 @@
 	const flatResults = $derived.by(() => {
 		const out: Item[] = [];
 		for (const p of results.personnes)
-			out.push({ kind: 'personne', href: `/assemblee/deputes/${p.id}/`, data: p });
+			out.push({
+				kind: 'personne',
+				href: lookupEluUrlCarriereForPaId(p.id) ?? '/elus/',
+				data: p
+			});
 		for (const s of results.senateurs)
-			out.push({ kind: 'senateur', href: `/senat/senateurs/${s.id}/`, data: s });
+			out.push({
+				kind: 'senateur',
+				href: lookupEluUrlCarriereForMatricule(s.id) ?? '/elus/',
+				data: s
+			});
 		for (const g of results.groupes)
 			out.push({ kind: 'groupe', href: `/assemblee/groupes/${g.legislature}/${g.id}/`, data: g });
 		for (const g of results.groupesSenat)
@@ -230,7 +239,11 @@
 								: 'hover:bg-assembly-border/30'}"
 							onmouseenter={() => (activeIndex = flatIdx)}
 							onclick={() =>
-								selectItem({ kind: 'personne', href: `/assemblee/deputes/${p.id}/`, data: p })}
+								selectItem({
+									kind: 'personne',
+									href: lookupEluUrlCarriereForPaId(p.id) ?? '/elus/',
+									data: p
+								})}
 						>
 							<img
 								src={p.identite.photoUrl}
@@ -279,7 +292,7 @@
 							onclick={() =>
 								selectItem({
 									kind: 'senateur',
-									href: `/senat/senateurs/${s.id}/`,
+									href: lookupEluUrlCarriereForMatricule(s.id) ?? '/elus/',
 									data: s
 								})}
 						>
