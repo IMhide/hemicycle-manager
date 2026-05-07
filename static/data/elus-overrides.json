@@ -1,0 +1,5 @@
+{
+  "_doc": "Overrides manuels pour le manifest bicaméral elus.json (cf ADR 0031). Commité par exception au gitignore static/data/. forceFusion : force le rapprochement de PA-id AN ↔ matricule Sénat même si les clés normalisées diffèrent (cas typiques : nom marital, particules variables). forceSeparation : empêche la fusion auto en cas de homonymie parfaite que l'on sait être deux personnes distinctes.",
+  "forceFusion": [],
+  "forceSeparation": []
+}
