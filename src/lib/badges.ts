@@ -12,7 +12,7 @@
 
 import type { BadgeMandat, BadgeCarriere } from './types';
 
-export type BadgeTier = 'gold' | 'silver' | 'bronze' | 'special';
+export type BadgeTier = 'gold' | 'silver' | 'bronze' | 'special' | 'legend';
 
 export interface BadgeDisplay {
 	id: BadgeMandat | BadgeCarriere;
@@ -96,4 +96,34 @@ export function badgeDisplayUnknown(b: string): BadgeDisplay {
 		tier: 'bronze',
 		description: 'Badge non documenté.'
 	};
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Badges carrière cross-chambre (cf ADR 0032)
+// ────────────────────────────────────────────────────────────────────────────
+
+import type { BadgeCarriereCross } from './elus';
+
+const CARRIERE_CROSS: Record<BadgeCarriereCross, Omit<BadgeDisplay, 'id'>> = {
+	Recomposition: { ...CARRIERE.recomposition },
+	Transfuge: { ...CARRIERE.transfuge },
+	Veteran: {
+		...CARRIERE.veteran,
+		description: 'A siégé dans au moins 3 mandats au total (toutes chambres confondues).'
+	},
+	Reelu: {
+		...CARRIERE.reelu,
+		description: 'A obtenu au moins 2 mandats consécutifs dans la même chambre.'
+	},
+	Bicameral: {
+		label: 'Bicaméral·e',
+		emoji: '🏛️',
+		tier: 'legend',
+		description:
+			'A siégé dans les deux chambres du Parlement français — Assemblée nationale ET Sénat. Statut rare, ~50 cas attendus dans PolitiDex.'
+	}
+};
+
+export function badgeCarriereCrossDisplay(b: BadgeCarriereCross): BadgeDisplay {
+	return { id: b as unknown as BadgeMandat, ...CARRIERE_CROSS[b] };
 }
