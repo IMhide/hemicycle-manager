@@ -7,6 +7,7 @@
 	 * législature). Sinon on est en vue carrière (cumul pondéré, pas de rang).
 	 */
 	import type { Personne, Groupe, Mandat } from '$lib/types';
+	import { lookupEluUrlForPaIdLeg, lookupEluUrlCarriereForPaId } from '$lib/elus';
 	import Rank from './Rank.svelte';
 
 	interface Props {
@@ -29,8 +30,8 @@
 
 	const href = $derived(
 		mandat
-			? `/assemblee/deputes/${personne.id}/?leg=${mandat.legislature}`
-			: `/assemblee/deputes/${personne.id}/`
+			? lookupEluUrlForPaIdLeg(personne.id, mandat.legislature) ?? '/elus/'
+			: lookupEluUrlCarriereForPaId(personne.id) ?? '/elus/'
 	);
 
 	function pct(n: number | null): string {

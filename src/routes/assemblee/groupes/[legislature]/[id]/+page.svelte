@@ -9,6 +9,7 @@
 	import MemberRow from '$lib/components/MemberRow.svelte';
 	import InfoTip from '$lib/components/InfoTip.svelte';
 	import { POLITICAL_ORDER } from '$lib/political-order';
+	import { lookupEluUrlForPaIdLeg } from '$lib/elus';
 	import type { Personne, Mandat } from '$lib/types';
 
 	let { data } = $props();
@@ -150,7 +151,7 @@
 
 			{#if president}
 				<a
-					href="/assemblee/deputes/{president.id}/?leg={data.legislature}"
+					href={lookupEluUrlForPaIdLeg(president.id, data.legislature) ?? '/elus/'}
 					class="card flex items-center gap-3 px-3 py-2 hover:border-assembly-accent/60"
 				>
 					<img

@@ -4,6 +4,7 @@
 	 * Modèle Phase 1 : reçoit `Personne` + `Mandat | null` (cf ADR 0015, 0017).
 	 */
 	import type { Personne, Mandat } from '$lib/types';
+	import { lookupEluUrlForPaIdLeg, lookupEluUrlCarriereForPaId } from '$lib/elus';
 
 	interface Props {
 		personne: Personne;
@@ -17,10 +18,12 @@
 
 	const stats = $derived(mandat ? mandat.stats : personne.carriere);
 	const circo = $derived(mandat?.circonscription ?? personne.mandats.at(-1)?.circonscription ?? null);
+	// Lien vers la fiche Élu (cf ADR 0030) — fallback `/elus/` si manifest
+	// non chargé (CI placeholder ou orphelin).
 	const href = $derived(
 		mandat
-			? `/assemblee/deputes/${personne.id}/?leg=${mandat.legislature}`
-			: `/assemblee/deputes/${personne.id}/`
+			? lookupEluUrlForPaIdLeg(personne.id, mandat.legislature) ?? '/elus/'
+			: lookupEluUrlCarriereForPaId(personne.id) ?? '/elus/'
 	);
 
 	function pct(n: number | null): string {

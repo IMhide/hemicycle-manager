@@ -7,6 +7,10 @@
 	 * Sinon on est en vue carrière (cumul pondéré, pas de rang).
 	 */
 	import type { Senateur, GroupeSenat, MandatSenat, TriennatStats } from '$lib/types';
+	import {
+		lookupEluUrlForMatriculeTriennat,
+		lookupEluUrlCarriereForMatricule
+	} from '$lib/elus';
 	import Rank from './Rank.svelte';
 
 	interface Props {
@@ -36,8 +40,8 @@
 
 	const href = $derived(
 		triennat !== null
-			? `/senat/senateurs/${senateur.id}/?triennat=${triennat}`
-			: `/senat/senateurs/${senateur.id}/`
+			? lookupEluUrlForMatriculeTriennat(senateur.id, triennat) ?? '/elus/'
+			: lookupEluUrlCarriereForMatricule(senateur.id) ?? '/elus/'
 	);
 
 	function pct(n: number | null): string {
