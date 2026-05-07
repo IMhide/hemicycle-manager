@@ -10,7 +10,15 @@ build
 
 # Generated data — regenerable via `npm run data:fetch`
 # Heavy (~75 MB) and always-fresh-from-source, so we don't track it.
-static/data/
+# Note : on ignore le CONTENU du dossier (pas le dossier lui-même) pour
+# permettre la négation `!elus-overrides.json` ci-dessous (git ne ré-inclut
+# pas un fichier dont le dossier parent est ignoré).
+static/data/*
+static/data/**/
+# Exception : overrides manuels du manifest bicaméral elus.json (cf ADR 0031).
+# Petit fichier JSON commité (modification = audit/PR), source de vérité du
+# matching cross-chambre Larcher/Schiappa/etc. Le pipeline le lit en input.
+!static/data/elus-overrides.json
 
 # Editor / OS
 .DS_Store
