@@ -51,6 +51,10 @@ jobs:
           echo '[]' > static/data/senat/groupes/2020-2023.json
           echo '[]' > static/data/senat/groupes/2023-2026.json
           echo '{"generatedAt":"1970-01-01T00:00:00Z","sessions":[2024],"triennats":["2017-2020","2020-2023","2023-2026"],"counts":{"senateurs":0,"mandats":0,"groupesUniques":0,"sessions":1,"triennats":3,"scrutins":0,"votesNominatifs":0},"sources":{}}' > static/data/senat/meta.json
+          # Manifest bicaméral (ADR 0031) : placeholder vide pour permettre le build
+          # avec /elus/* et /classement (PR #D, #E). Le pipeline réel le remplit via
+          # `npm run data:build:elus` après data:fetch:an + data:fetch:senat.
+          echo '{"generatedAt":"1970-01-01T00:00:00Z","count":0,"countBicameral":0,"elus":[],"warnings":[]}' > static/data/elus.json
 
       - name: Sync SvelteKit
         run: npx svelte-kit sync
