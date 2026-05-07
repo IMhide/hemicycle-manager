@@ -232,6 +232,7 @@ Phase 3a+3b démarre 2026-05-06 par le **pipeline Sénat** (PR A `feat/senat-pip
 - [ ] **Cron de rebuild quotidien** sur Coolify (pour les données fraîches sans intervention) — moins urgent maintenant que les builds chauds sont à ~30s
 - [ ] **Lazy-load** le composant Hemicycle et la photo dans MiniDeputeCard pour le boot
 - [ ] **Préfetch** des données fréquentes (groupes, deputes-lite) dans `+layout.ts`
+- [ ] **CI : déprécation Node 20 GitHub Actions** — `actions/checkout@v4` et `actions/setup-node@v4` tournent encore sur Node 20 (forcé sur 24 par défaut à partir du 2026-06-02, retrait runner 2026-09-16). Bumper les actions ou setter `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` quand une version compatible Node 24 sortira.
 
 ## 🧪 Idées exploratoires
 
