@@ -118,7 +118,7 @@
 
 <section class="max-w-7xl mx-auto px-6 py-8 space-y-6">
 	<a
-		href="/groupes/"
+		href="/assemblee/groupes/"
 		class="text-sm text-assembly-muted hover:text-assembly-accent inline-flex items-center gap-1"
 	>
 		← Tous les groupes
@@ -150,7 +150,7 @@
 
 			{#if president}
 				<a
-					href="/deputes/{president.id}/?leg={data.legislature}"
+					href="/assemblee/deputes/{president.id}/?leg={data.legislature}"
 					class="card flex items-center gap-3 px-3 py-2 hover:border-assembly-accent/60"
 				>
 					<img

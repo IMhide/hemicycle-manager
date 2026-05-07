@@ -21,7 +21,7 @@
 </script>
 
 <a
-	href="/deputes/{personne.id}/"
+	href="/assemblee/deputes/{personne.id}/"
 	class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
 >
 	<img

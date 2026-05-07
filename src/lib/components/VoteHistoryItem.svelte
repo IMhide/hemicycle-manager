@@ -33,7 +33,7 @@
 </script>
 
 <a
-	href="/scrutins/{scrutin.uid}/"
+	href="/assemblee/scrutins/{scrutin.uid}/"
 	class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
 >
 	<div class="text-xs text-assembly-muted whitespace-nowrap w-16 flex-shrink-0">

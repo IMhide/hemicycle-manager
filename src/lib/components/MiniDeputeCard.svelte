@@ -27,7 +27,11 @@
 	// Overall — calculé côté pipeline, cf ADR 0022 (aligné avec DeputeCard).
 	const overall = $derived(stats.overall);
 
-	const href = $derived(mandat ? `/deputes/${personne.id}/?leg=${mandat.legislature}` : `/deputes/${personne.id}/`);
+	const href = $derived(
+		mandat
+			? `/assemblee/deputes/${personne.id}/?leg=${mandat.legislature}`
+			: `/assemblee/deputes/${personne.id}/`
+	);
 
 	function pct(n: number | null): string {
 		return n === null ? 'N/A' : `${Math.round(n * 100)} %`;

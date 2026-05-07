@@ -449,7 +449,7 @@ export function gradientColorFor(groupeAbrege: string | null): string {
 
 // ────────────────────────────────────────────────────────────────────────────
 // Blocs politiques (5 blocs basés sur CHES 2024, cf ADR 0007)
-// Découpage utilisé pour les agrégats par bloc dans /classements/.
+// Découpage utilisé pour les agrégats par bloc dans /assemblee/classements/.
 // Bornes inclusives à gauche, exclusives à droite (ex: gauche = [2.5, 4.5[).
 // ────────────────────────────────────────────────────────────────────────────
 
