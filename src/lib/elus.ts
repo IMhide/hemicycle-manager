@@ -69,6 +69,20 @@ export interface EluManifest {
 type FetchFn = typeof fetch;
 
 let _cached: EluManifest | null = null;
+let _byPaId = new Map<string, Elu>();
+let _byMatricule = new Map<string, Elu>();
+let _byEluId = new Map<string, Elu>();
+
+function rebuildIndexes(manifest: EluManifest) {
+	_byPaId = new Map();
+	_byMatricule = new Map();
+	_byEluId = new Map();
+	for (const e of manifest.elus) {
+		if (e.paId) _byPaId.set(e.paId, e);
+		if (e.matricule) _byMatricule.set(e.matricule, e);
+		_byEluId.set(e.id, e);
+	}
+}
 
 /** Charge l'intégralité du manifest `elus.json`. Cache mémoire (idempotent). */
 export async function loadElusManifest(fetchFn: FetchFn): Promise<EluManifest> {
@@ -79,7 +93,60 @@ export async function loadElusManifest(fetchFn: FetchFn): Promise<EluManifest> {
 	}
 	const manifest = (await res.json()) as EluManifest;
 	_cached = manifest;
+	rebuildIndexes(manifest);
 	return manifest;
+}
+
+/**
+ * Lookup direct sur le cache module (chargé via `loadElusManifest` dans
+ * `+layout.ts`). Permet aux composants `lib/components/*` de résoudre
+ * `paId → eluId` sans recevoir `elus[]` en prop. Retourne `null` tant que
+ * le manifest n'a pas été chargé (cas CI placeholder ou page sans layout
+ * data).
+ */
+export function lookupEluByPaId(paId: string): Elu | null {
+	return _byPaId.get(paId) ?? null;
+}
+
+export function lookupEluByMatricule(matricule: string): Elu | null {
+	return _byMatricule.get(matricule) ?? null;
+}
+
+export function lookupEluByEluId(eluId: string): Elu | null {
+	return _byEluId.get(eluId) ?? null;
+}
+
+/**
+ * URL fiche Élu pour un PA-id + une législature (mandat AN). Tombe sur
+ * `null` si le manifest n'est pas chargé ou si le PA-id n'a pas d'Elu —
+ * dans ce cas le caller affiche soit un fallback, soit cache le lien.
+ */
+export function lookupEluUrlForPaIdLeg(paId: string, leg: number): string | null {
+	const elu = lookupEluByPaId(paId);
+	if (!elu) return null;
+	return `/elus/${elu.id}?tab=an-${leg}`;
+}
+
+export function lookupEluUrlForMatriculeTriennat(
+	matricule: string,
+	periode: string
+): string | null {
+	const elu = lookupEluByMatricule(matricule);
+	if (!elu) return null;
+	return `/elus/${elu.id}?tab=senat-${periode}`;
+}
+
+/** URL Carrière par PA-id (sans législature spécifique). */
+export function lookupEluUrlCarriereForPaId(paId: string): string | null {
+	const elu = lookupEluByPaId(paId);
+	if (!elu) return null;
+	return `/elus/${elu.id}?tab=carriere`;
+}
+
+export function lookupEluUrlCarriereForMatricule(matricule: string): string | null {
+	const elu = lookupEluByMatricule(matricule);
+	if (!elu) return null;
+	return `/elus/${elu.id}?tab=carriere`;
 }
 
 /** Charge un Elu par son `eluId`. Retourne `null` si inconnu. */

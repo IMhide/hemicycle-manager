@@ -4,6 +4,7 @@
 	import { POLITICAL_ORDER } from '$lib/political-order';
 	import { TRIENNATS, type TriennatId } from '$lib/triennats';
 	import { goto } from '$app/navigation';
+	import { lookupEluUrlForMatriculeTriennat } from '$lib/elus';
 	import type { Senateur, GroupeSenat, MandatSenat } from '$lib/types';
 
 	let { data } = $props();
@@ -79,7 +80,7 @@
 	}
 
 	function selectSenateur(id: string) {
-		goto(`/senat/senateurs/${id}/?triennat=${data.triennatCourant}`);
+		goto(lookupEluUrlForMatriculeTriennat(id, data.triennatCourant) ?? '/elus/');
 	}
 
 	function basculerTriennat(periode: TriennatId) {

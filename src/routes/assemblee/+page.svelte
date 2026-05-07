@@ -5,6 +5,7 @@
 	import { POLITICAL_ORDER } from '$lib/political-order';
 	import { colorMode } from '$lib/color-mode.svelte';
 	import { goto } from '$app/navigation';
+	import { lookupEluUrlForPaIdLeg } from '$lib/elus';
 	import type { Personne, Groupe, Mandat } from '$lib/types';
 
 	let { data } = $props();
@@ -77,7 +78,7 @@
 	}
 
 	function selectPersonne(id: string) {
-		goto(`/assemblee/deputes/${id}/?leg=${data.legCourante}`);
+		goto(lookupEluUrlForPaIdLeg(id, data.legCourante) ?? '/elus/');
 	}
 
 	function basculerLeg(num: number) {

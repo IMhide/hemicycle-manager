@@ -4,6 +4,10 @@
 	 * Modèle Phase 3 (cf ADR 0023..0028) : reçoit `Senateur` + `TriennatStats | null` + `MandatSenat | null`.
 	 */
 	import type { Senateur, MandatSenat, TriennatStats } from '$lib/types';
+	import {
+		lookupEluUrlForMatriculeTriennat,
+		lookupEluUrlCarriereForMatricule
+	} from '$lib/elus';
 
 	interface Props {
 		senateur: Senateur;
@@ -19,8 +23,8 @@
 	const circo = $derived(mandat?.circonscription ?? senateur.mandats.at(-1)?.circonscription ?? null);
 	const href = $derived(
 		triennat
-			? `/senat/senateurs/${senateur.id}/?triennat=${triennat.triennat}`
-			: `/senat/senateurs/${senateur.id}/`
+			? lookupEluUrlForMatriculeTriennat(senateur.id, triennat.triennat) ?? '/elus/'
+			: lookupEluUrlCarriereForMatricule(senateur.id) ?? '/elus/'
 	);
 
 	function pct(n: number | null): string {

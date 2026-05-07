@@ -242,6 +242,7 @@
 						groupe={f.groupe}
 						position={f.position}
 						positionMajoritaireGroupe={f.positionMajoritaireGroupe}
+						legislature={data.detail.legislature}
 					/>
 				{/each}
 			</div>

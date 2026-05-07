@@ -269,6 +269,7 @@
 						groupe={f.groupe}
 						position={f.position}
 						positionMajoritaireGroupe={f.positionMajoritaireGroupe}
+						triennat={triennatId ?? undefined}
 					/>
 				{/each}
 			</div>

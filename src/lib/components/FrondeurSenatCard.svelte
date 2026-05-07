@@ -3,22 +3,39 @@
 	 * Carte d'un frondeur sur la page scrutin Sénat (cf ADR 0023..0027).
 	 */
 	import type { Senateur, GroupeSenat, VotePosition } from '$lib/types';
+	import {
+		lookupEluUrlForMatriculeTriennat,
+		lookupEluUrlCarriereForMatricule
+	} from '$lib/elus';
 
 	interface Props {
 		senateur: Senateur;
 		groupe: GroupeSenat | null;
 		position: VotePosition;
 		positionMajoritaireGroupe: string;
+		/** Triennat du scrutin — sert à pointer le bon onglet sur la fiche Élu. */
+		triennat?: string;
 	}
 
-	let { senateur, groupe, position, positionMajoritaireGroupe }: Props = $props();
+	let {
+		senateur,
+		groupe,
+		position,
+		positionMajoritaireGroupe,
+		triennat
+	}: Props = $props();
 
 	const positionColor = $derived(position === 'pour' ? '#22c55e' : '#ef4444');
 	const majColor = $derived(positionMajoritaireGroupe === 'pour' ? '#22c55e' : '#ef4444');
+	const href = $derived(
+		triennat !== undefined
+			? lookupEluUrlForMatriculeTriennat(senateur.id, triennat) ?? '/elus/'
+			: lookupEluUrlCarriereForMatricule(senateur.id) ?? '/elus/'
+	);
 </script>
 
 <a
-	href="/senat/senateurs/{senateur.id}/"
+	{href}
 	class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
 >
 	<img
