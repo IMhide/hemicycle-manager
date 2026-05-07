@@ -58,6 +58,12 @@ import { downloadFile, downloadZip, ensureDir, extractIfNeeded } from './lib/cac
 import { parseOdsenCsv, streamCopyBlocks } from './lib/dosleg-parser.ts';
 import { sessionsCovering, groupeAuVote } from './lib/senat-transform.ts';
 import { readApiSenateursOrEmpty, type ApiSenateurRaw } from './lib/senat-sources.ts';
+import {
+	buildFamillesIndex,
+	familleSenat,
+	type FamillesIndex,
+	type FamillesManifest
+} from './lib/groupes-familles.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'static', 'data', 'senat');
@@ -114,6 +120,17 @@ async function main() {
 	await ensureDir(join(OUT_DIR, 'scrutins'));
 	await ensureDir(join(OUT_DIR, 'groupes'));
 	await ensureDir(join(OUT_DIR, 'historique'));
+
+	// Table de familles politiques (cf ADR 0034) — utilisée par computeCarriere
+	// pour neutraliser les renommages de groupes.
+	const famillesPath = join(ROOT, 'static', 'data', 'groupes-familles.json');
+	const famillesManifest = JSON.parse(
+		await readFile(famillesPath, 'utf8')
+	) as FamillesManifest;
+	const famillesIdx = buildFamillesIndex(famillesManifest);
+	console.log(
+		`   Familles politiques : ${Object.keys(famillesManifest.familles).length} familles, ${famillesIdx.senat.size} groupes Sénat mappés\n`
+	);
 
 	// ═══ 1/5 Téléchargement
 	console.log('1/5  Téléchargement des sources Sénat');
@@ -273,7 +290,7 @@ async function main() {
 	console.log('  • Cumul mandat + carrière + overall carrière…');
 	for (const s of senateurs) {
 		for (const m of s.mandats) computeMandatCumul(m);
-		computeCarriere(s);
+		computeCarriere(s, famillesIdx);
 	}
 	computeOverallsCarriere(senateurs);
 
@@ -1074,7 +1091,7 @@ function computeMandatCumul(mandat: MandatSenat) {
 	c.volume = 0;
 }
 
-function computeCarriere(senateur: Senateur) {
+function computeCarriere(senateur: Senateur, famillesIdx: FamillesIndex) {
 	const c: CarriereSenatAggregee = {
 		presence: { numerator: 0, denominator: 0, rate: 0 },
 		participation: { numerator: 0, denominator: 0, rate: 0 },
@@ -1115,17 +1132,25 @@ function computeCarriere(senateur: Senateur) {
 	if (senateur.mandats.length >= 2) badges.push('reelu');
 	if (c.sessions.length >= 5) badges.push('veteran');
 
-	// Recomposition : si 2 mandats consécutifs ont des "groupe principal" différents
+	// Recomposition : famille politique principale différente entre 2 mandats
+	// consécutifs. La table `groupes-familles.json` (cf ADR 0034) neutralise
+	// les renommages d'un même parti. Côté Sénat les `groupeCode` sont assez
+	// stables (SOC/CRC/UC/UMP) mais on partage la mécanique avec l'AN pour
+	// uniformité et pour gérer d'éventuels renommages futurs.
 	if (senateur.mandats.length >= 2) {
-		const principalGroupe = (m: MandatSenat) =>
-			m.appartenancesGroupe.find((a) => a.groupeCode !== 'NI' && a.groupeCode !== 'AUCUN')
-				?.groupeCode ?? null;
+		const familleOfMandat = (m: MandatSenat): string | null => {
+			const stable = m.appartenancesGroupe.find(
+				(a) => a.groupeCode !== 'NI' && a.groupeCode !== 'AUCUN'
+			);
+			if (!stable?.groupeCode) return null;
+			return familleSenat(famillesIdx, stable.groupeCode);
+		};
 		const sorted = [...senateur.mandats].sort((a, b) =>
 			a.datePriseFonction.localeCompare(b.datePriseFonction)
 		);
 		for (let i = 1; i < sorted.length; i++) {
-			const prev = principalGroupe(sorted[i - 1]);
-			const cur = principalGroupe(sorted[i]);
+			const prev = familleOfMandat(sorted[i - 1]);
+			const cur = familleOfMandat(sorted[i]);
 			if (prev && cur && prev !== cur) {
 				badges.push('recomposition');
 				break;
