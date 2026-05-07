@@ -17,7 +17,11 @@
 
 	const stats = $derived(mandat ? mandat.stats : personne.carriere);
 	const circo = $derived(mandat?.circonscription ?? personne.mandats.at(-1)?.circonscription ?? null);
-	const href = $derived(mandat ? `/deputes/${personne.id}/?leg=${mandat.legislature}` : `/deputes/${personne.id}/`);
+	const href = $derived(
+		mandat
+			? `/assemblee/deputes/${personne.id}/?leg=${mandat.legislature}`
+			: `/assemblee/deputes/${personne.id}/`
+	);
 
 	function pct(n: number | null): string {
 		if (n === null) return 'N/A';

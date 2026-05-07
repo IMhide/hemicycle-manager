@@ -28,15 +28,15 @@
 	const flatResults = $derived.by(() => {
 		const out: Item[] = [];
 		for (const p of results.personnes)
-			out.push({ kind: 'personne', href: `/deputes/${p.id}/`, data: p });
+			out.push({ kind: 'personne', href: `/assemblee/deputes/${p.id}/`, data: p });
 		for (const s of results.senateurs)
 			out.push({ kind: 'senateur', href: `/senat/senateurs/${s.id}/`, data: s });
 		for (const g of results.groupes)
-			out.push({ kind: 'groupe', href: `/groupes/${g.legislature}/${g.id}/`, data: g });
+			out.push({ kind: 'groupe', href: `/assemblee/groupes/${g.legislature}/${g.id}/`, data: g });
 		for (const g of results.groupesSenat)
 			out.push({ kind: 'groupeSenat', href: `/senat/triennats/${g.triennat}/`, data: g });
 		for (const s of results.scrutins)
-			out.push({ kind: 'scrutin', href: `/scrutins/${s.uid}/`, data: s });
+			out.push({ kind: 'scrutin', href: `/assemblee/scrutins/${s.uid}/`, data: s });
 		return out;
 	});
 
@@ -230,7 +230,7 @@
 								: 'hover:bg-assembly-border/30'}"
 							onmouseenter={() => (activeIndex = flatIdx)}
 							onclick={() =>
-								selectItem({ kind: 'personne', href: `/deputes/${p.id}/`, data: p })}
+								selectItem({ kind: 'personne', href: `/assemblee/deputes/${p.id}/`, data: p })}
 						>
 							<img
 								src={p.identite.photoUrl}
@@ -328,7 +328,7 @@
 							onclick={() =>
 								selectItem({
 									kind: 'groupe',
-									href: `/groupes/${g.legislature}/${g.id}/`,
+									href: `/assemblee/groupes/${g.legislature}/${g.id}/`,
 									data: g
 								})}
 						>
@@ -421,7 +421,7 @@
 								: 'hover:bg-assembly-border/30'}"
 							onmouseenter={() => (activeIndex = flatIdx)}
 							onclick={() =>
-								selectItem({ kind: 'scrutin', href: `/scrutins/${s.uid}/`, data: s })}
+								selectItem({ kind: 'scrutin', href: `/assemblee/scrutins/${s.uid}/`, data: s })}
 						>
 							<div class="text-center flex-shrink-0 w-12">
 								<div class="text-[9px] text-assembly-muted leading-none">n°</div>

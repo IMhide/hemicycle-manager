@@ -81,11 +81,11 @@
 	}
 
 	function selectPersonne(id: string) {
-		goto(`/deputes/${id}/?leg=${data.legCourante}`);
+		goto(`/assemblee/deputes/${id}/?leg=${data.legCourante}`);
 	}
 
 	function basculerLeg(num: number) {
-		goto(`/legislatures/${num}/`);
+		goto(`/assemblee/legislatures/${num}/`);
 	}
 
 	function formatDate(iso: string): string {
@@ -175,7 +175,7 @@
 		<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
 			{#each sortedGroupes as g (g.id)}
 				<a
-					href="/groupes/{g.legislature}/{g.id}/"
+					href="/assemblee/groupes/{g.legislature}/{g.id}/"
 					class="card flex items-center gap-2 px-2.5 py-2 hover:border-assembly-accent/60 transition-colors min-w-0"
 					style="border-left: 3px solid {g.couleur}"
 				>
@@ -194,7 +194,7 @@
 	<div>
 		<div class="flex items-baseline justify-between gap-3 mb-3">
 			<h2 class="title-display text-xl">Scrutins récents</h2>
-			<a href="/scrutins/" class="text-xs text-assembly-muted hover:text-assembly-accent">
+			<a href="/assemblee/scrutins/" class="text-xs text-assembly-muted hover:text-assembly-accent">
 				Voir tous les scrutins →
 			</a>
 		</div>
@@ -206,7 +206,7 @@
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
 				{#each recentScrutins as s (s.uid)}
 					<a
-						href="/scrutins/{s.uid}/"
+						href="/assemblee/scrutins/{s.uid}/"
 						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
 					>
 						<div class="text-center flex-shrink-0 w-12">

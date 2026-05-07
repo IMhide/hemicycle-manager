@@ -401,8 +401,8 @@
 					{@const tier = tierFor(rank, championDeputes.length)}
 					<a
 						href={mandat
-							? `/deputes/${personne.id}/?leg=${mandat.legislature}`
-							: `/deputes/${personne.id}/`}
+							? `/assemblee/deputes/${personne.id}/?leg=${mandat.legislature}`
+							: `/assemblee/deputes/${personne.id}/`}
 						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors {tier.cls}"
 					>
 						<div
@@ -468,7 +468,7 @@
 				{#each championGroupes as g, i (g.id)}
 					{@const rank = i + 1}
 					<a
-						href="/groupes/{g.legislature}/{g.id}/"
+						href="/assemblee/groupes/{g.legislature}/{g.id}/"
 						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
 						style="border-left: 4px solid {g.couleur}"
 					>
@@ -530,7 +530,7 @@
 						<div class="flex flex-wrap gap-1.5 pl-15">
 							{#each bloc.groupes as g (g.id)}
 								<a
-									href="/groupes/{g.legislature}/{g.id}/"
+									href="/assemblee/groupes/{g.legislature}/{g.id}/"
 									class="text-[11px] px-2 py-1 rounded border border-assembly-border hover:border-assembly-accent transition-colors flex items-center gap-1.5"
 									style="border-left: 3px solid {g.couleur}"
 								>
@@ -610,7 +610,7 @@
 					{@const rank = currentMeta.rank(mandat)!}
 					{@const tier = tierFor(rank, coupesSorted.length)}
 					<a
-						href="/deputes/{personne.id}/?leg={scopeLeg}"
+						href="/assemblee/deputes/{personne.id}/?leg={scopeLeg}"
 						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors {tier.cls}"
 					>
 						<div
@@ -661,7 +661,7 @@
 						<div class="space-y-1.5">
 							{#each top as { personne, mandat }, i (personne.id)}
 								<a
-									href="/deputes/{personne.id}/?leg={scopeLeg}"
+									href="/assemblee/deputes/{personne.id}/?leg={scopeLeg}"
 									class="flex items-center gap-3 p-2 rounded hover:bg-assembly-border/30 transition-colors"
 								>
 									<div

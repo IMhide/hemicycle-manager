@@ -327,7 +327,7 @@
 				<div class="space-y-1.5">
 					{#each visible as s (s.uid)}
 						<a
-							href="/scrutins/{s.uid}/"
+							href="/assemblee/scrutins/{s.uid}/"
 							class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
 						>
 							<div class="text-center flex-shrink-0 w-16">
