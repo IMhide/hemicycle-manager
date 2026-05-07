@@ -23,14 +23,10 @@
 			</div>
 
 			<nav class="flex items-center gap-1 text-sm flex-shrink-0">
-				<a href="/assemblee" class="btn-ghost hidden md:inline-block" title="Hémicycle Assemblée nationale">🏛️ AN</a>
-				<a href="/senat" class="btn-ghost hidden md:inline-block" title="Hémicycle Sénat">🏛️ Sénat</a>
-				<a href="/assemblee/deputes" class="btn-ghost" title="Députés">Députés</a>
-				<a href="/senat/senateurs" class="btn-ghost" title="Sénateurs">Sénateurs</a>
-				<a href="/assemblee/groupes" class="btn-ghost" title="Groupes">Groupes</a>
-				<a href="/assemblee/scrutins" class="btn-ghost hidden md:inline-block" title="Scrutins">Scrutins</a>
-				<a href="/assemblee/classements" class="btn-ghost hidden md:inline-block" title="Classements AN">🏆 AN</a>
-				<a href="/senat/classements" class="btn-ghost hidden md:inline-block" title="Classements Sénat">🏆 Sénat</a>
+				<a href="/elus" class="btn-ghost" title="Tous les élus">Élus</a>
+				<a href="/assemblee" class="btn-ghost" title="Assemblée nationale">🏛️ AN</a>
+				<a href="/senat" class="btn-ghost" title="Sénat">🏛️ Sénat</a>
+				<a href="/classement" class="btn-ghost hidden md:inline-block" title="Classement global">🏆 Classement</a>
 				<a href="/faq" class="btn-ghost" title="FAQ — Comment ça marche ?">📚</a>
 			</nav>
 		</div>

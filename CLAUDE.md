@@ -30,7 +30,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 
 **Toutes les décisions structurantes** (sémantique des métriques, choix techniques, sources, contraintes infra) sont consignées dans **[`decisions/`](decisions/README.md)** au format ADR (Architecture Decision Records).
 
-**À chaque ouverture de session sur ce repo**, lis l'index : [`decisions/README.md`](decisions/README.md). Il liste les 29 décisions actives avec leur statut et leurs tags. Tu peux ouvrir n'importe quelle ADR pour les détails.
+**À chaque ouverture de session sur ce repo**, lis l'index : [`decisions/README.md`](decisions/README.md). Il liste les 32 décisions actives avec leur statut et leurs tags. Tu peux ouvrir n'importe quelle ADR pour les détails.
 
 **Avant de proposer un changement** qui touche à :
 
@@ -56,6 +56,9 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 - la **sémantique des délégations de vote** Sénat → vérifie ADR 0027 (ignorées en v1)
 - la **granularité temporelle Sénat** (triennat = analogue de la législature AN, session = brique data sous-jacente) → vérifie ADR 0028
 - le **scope ère Macron Sénat** (3 triennats `2017-2020`, `2020-2023`, `2023-2026`, à parité avec 15ᵉ/16ᵉ/17ᵉ AN) → vérifie ADR 0029
+- l'**architecture des routes** (`/assemblee/*`, `/senat/*`, `/elus/*`, `/classement` cross-chambre, racine neutre) → vérifie ADR 0030
+- le **manifest bicaméral** `elus.json` (eluId hash sha256-8, matching `prénom + nom + dateNaissance`, overrides) → vérifie ADR 0031
+- la **sémantique de la carrière cross-chambre** (moyenne simple, sélecteur de mandat unique, badge `Bicameral`) → vérifie ADR 0032
 
 Si la décision te semble obsolète ou si tu veux la changer : **propose explicitement à l'utilisateur** de la marquer "déprécié" ou "remplacée par #NNNN", ne la contourne pas en silence.
 
@@ -77,13 +80,15 @@ npm run dev                # serveur de dev sur localhost:5173
 npm run build              # build statique dans build/
 npm run preview            # vérifier le build en local
 npm run check              # type-check Svelte/TS
-npm run test:unit          # tests unitaires Node:test (131 tests : parser dosleg, layout, triennats, …)
-npm run data:fetch         # télécharge + transforme AN puis Sénat
+npm run test:unit          # tests unitaires Node:test (166 tests : parser dosleg, layout, triennats, manifest élus…)
+npm run data:fetch         # télécharge + transforme AN, Sénat, puis build manifest élus
 npm run data:fetch:an      #   AN seul (~30s warm cache)
 npm run data:fetch:senat   #   Sénat seul (~3s warm, ~2 min cold)
-npm run data:smoke         # smoke-test AN + Sénat (40+67=107 assertions)
+npm run data:build:elus    #   manifest bicaméral elus.json (croise AN + Sénat, ADR 0031)
+npm run data:smoke         # smoke-test AN + Sénat + Élus (40+67+20=127 assertions)
 npm run data:smoke:an      #   AN seul
 npm run data:smoke:senat   #   Sénat seul
+npm run data:smoke:elus    #   Élus seul
 npm run decisions:index    # regen decisions/README.md
 ```
 
@@ -97,7 +102,7 @@ Pour un redéploiement manuel (par ex. sans changement de code), passer par le s
 
 ## 🧭 Architecture rapide
 
-Architecture multi-législature (15ᵉ + 16ᵉ + 17ᵉ AN) + 3 triennats Sénat (2017-2020, 2020-2023, 2023-2026) à parité. Modèle `Personne + Mandat[]` (AN) et `Senateur + MandatSenat[]` (Sénat). Datasets disjoints (cf ADR 0015 / 0023-0029).
+Architecture symétrique AN/Sénat avec hub cross-chambre (cf ADR 0030-0032). Routes `/assemblee/*` (15ᵉ + 16ᵉ + 17ᵉ AN), `/senat/*` (3 triennats ère Macron), `/elus/*` (hub bicaméral, **seule fiche détail** d'une personne), `/classement` (classement global cross-chambre). Modèle `Personne + Mandat[]` (AN) et `Senateur + MandatSenat[]` (Sénat) **non touchés** — le manifest `elus.json` les croise sans fusion data lourde.
 
 ```
 src/
@@ -107,61 +112,69 @@ src/
                                # Sénat : HemicycleSenat, SenateurCard, MiniSenateurCard,
                                #         SenateurRow, TriennatTabs, VoteHistoryItemSenat,
                                #         FrondeurSenatCard, GroupVoteBarSenat
+                               # Cross-chambre (ADR 0030-0032) : EluCard, MandatSelecteur,
+                               #         RetourButton (history.back générique)
     data.ts                    # loaders AN (loadPersonnes, loadHistorique, loadGroupes, loadLegislatures)
                                # + loaders Sénat (loadSenateurs, loadGroupesSenat, loadTriennats…)
+    elus.ts                    # ── HUB CROSS-CHAMBRE (ADR 0031) ──
+                               # Types Elu, EluManifest. Loaders loadElusManifest, loadElu.
+                               # Cache module + lookups synchrones :
+                               #   lookupEluByPaId(paId) / lookupEluByMatricule(matricule)
+                               #   lookupEluUrlForPaIdLeg(paId, leg) → /elus/[id]?tab=an-N
+                               #   lookupEluUrlForMatriculeTriennat(mat, p) → /elus/[id]?tab=senat-P
+                               # Alimenté une fois via +layout.ts, utilisé partout.
     hemicycle.ts               # géométrie SVG AN (seats.json — voir ADR 0008)
     hemicycle-senat.ts         # géométrie SVG Sénat 348 sièges (Kurea, ADR 0026)
     political-order.ts         # ordre gauche-droite + scores CHES 2024 (cf ADR 0007 + ADR 0020)
-                               # AN : 17 groupes 15ᵉ + 12 groupes 16ᵉ + 14 groupes 17ᵉ
-                               # Sénat : CRC, GEST, RDSE, UC, RTLI, UMP, LREM, AUCUN…
     triennats.ts               # table figée 3 triennats ère Macron + helpers (ADR 0028 + 0029)
     badges.ts                  # mapping pur badge id → display (label/emoji/tier/desc)
-                               # calcul délégué au pipeline (cf ADR 0017)
-    color-mode.svelte.ts       # store mode coloration hémicycle AN (gradient / groupe), localStorage
-                               # Sénat : mode `gradient` figé, pas de toggle
-    search-index.ts            # recherche globale lazy-loaded (indexe Personne + Senateur)
+                               # + badgeCarriereCrossDisplay (Bicameral tier legend, ADR 0032)
+    color-mode.svelte.ts       # store mode coloration hémicycle AN (gradient / groupe)
+    search-index.ts            # recherche globale lazy-loaded (Personne + Senateur)
     types.ts                   # AN : Personne, Mandat, … / Sénat : Senateur, MandatSenat,
                                # TriennatStats, GroupeSenat, TriennatMeta…
-                               # DOIT rester en phase avec scripts/fetch-data.ts et fetch-data-senat.ts
   routes/
-    +page.svelte               # home AN — hémicycle leg courante + scrutins récents
-    +page.ts                   # charge la leg courante (= max num)
-    deputes/                   # /deputes/ liste filtrable cross-leg + /deputes/[id]/?leg=N
-    groupes/[legislature]/[id]/ # fiche groupe AN scopée par leg
-    scrutins/                  # /scrutins/ + /scrutins/[uid]/ (groupe au moment du vote)
-    classements/               # /classements/ AN — Championnat + Coupes
-    faq/                       # /faq/ — FAQ ludique (préredue) avec ancres
-    legislatures/[num]/        # (SPA) home par législature AN
-    senat/                     # ── PHASE 3 SÉNAT (mergée 2026-05-07) ──
-      +page.svelte             #   home Sénat (= triennat en cours)
-      triennats/               #   /senat/triennats/ index 3 triennats
-        [periode]/             #   home par triennat ; sélecteur [Carrière][2023-2026][2020-2023][2017-2020]
-      senateurs/               #   liste filtrable + /senat/senateurs/[matricule]/
-      scrutins/                #   liste paginée + /senat/scrutins/[uid]/
-      groupes/[periode]/[code]/ #  fiche groupe Sénat scopée par triennat
-      classements/             #   /senat/classements/ — Championnat + Coupes par triennat
+    +layout.ts                 # charge elus.json UNE FOIS (ADR 0031, ADR 0030)
+    +page.svelte               # racine NEUTRE — présentation produit + 4 cartes + À propos
+    assemblee/                 # ── AN ──
+      +page.svelte             #   home AN (anciennement /)
+      deputes/                 #   /assemblee/deputes/ liste cross-leg (PAS de [id], ADR 0030)
+      groupes/[leg]/[id]/      #   fiche groupe AN scopée par leg
+      scrutins/                #   /assemblee/scrutins/ + [uid] (groupe au moment du vote)
+      classements/             #   Championnat + Coupes par leg
+      legislatures/[num]/      #   (SPA) home par législature
+    senat/                     # ── SÉNAT ── (PAS de [matricule], ADR 0030)
+      +page.svelte, triennats/, senateurs/, scrutins/, groupes/, classements/
+    elus/                      # ── HUB CROSS-CHAMBRE (ADR 0030-0032) ──
+      +page.svelte             #   liste cross-chambre dédupliquée
+      [id]/+page.svelte        #   FICHE UNIQUE (sélecteur Carrière/AN/Sénat, bouton retour)
+    classement/                #   /classement (singulier) — Top élus par overallCarriere
+    faq/                       # /faq/ — FAQ ludique avec ancres (#elu-carriere ajouté)
 scripts/
-  fetch-data.ts                # pipeline AN — AMO30 + AMO10/AMO20 (ADR 0018, 0019)
-                               # LEGISLATURES = [15, 16, 17]
-  fetch-data-senat.ts          # pipeline Sénat — api-senat + ODSEN_*.csv + dosleg.zip
-                               # cf ADR 0023..0029. SCOPE_DATE_DEBUT = 2017-09-24 (ère Macron).
-                               # Output sous static/data/senat/
-  smoke-test.ts                # validation AN 40/40
-  smoke-test-senat.ts          # validation Sénat 67/67 (incl. garde scope ADR 0029)
-  extract-seats.ts             # extrait seats.json AN (Serrulien/hemicycle-france)
-  extract-senat-seats.ts       # extrait senat-seats.json (Kurea/visu_senat MIT, ADR 0026)
+  fetch-data.ts                # pipeline AN
+  fetch-data-senat.ts          # pipeline Sénat
+  build-elus-manifest.ts       # ── PIPELINE CROSS-CHAMBRE (ADR 0031) ──
+                               # Croise personnes.json + senateurs.json → elus.json
+                               # Lit static/data/elus-overrides.json (commité)
+  smoke-test.ts                # AN 40/40
+  smoke-test-senat.ts          # Sénat 67/67
+  smoke-test-elus.ts           # Élus 20/20 (manifest, eluId, Pilato/Larcher, bicaméraux)
   decisions-index.ts           # regen decisions/README.md
   lib/
-    cache.ts                   # downloadFile/Zip + cache HTTP conditionnel (ADR 0021)
-                               # mutualisé AN + Sénat
-    dosleg-parser.ts           # parser SQL streaming + CSV ISO-8859-1 (Sénat) — TDD strict
-    senat-layout.ts            # layout 348 sièges adapté Kurea — TDD strict
+    cache.ts                   # cache HTTP conditionnel (ADR 0021)
+    dosleg-parser.ts           # parser SQL/CSV Sénat — TDD strict
+    senat-layout.ts            # layout 348 sièges Kurea — TDD strict
     senat-transform.ts         # sessionsCovering, groupeAuVote
-    *.test.ts                  # 131 tests unitaires Node:test (npm run test:unit)
+    elus-manifest.ts           # ── builder manifest cross-chambre (ADR 0031) ──
+                               # normaliseKey, eluId hash, buildElusManifest, overrides
+                               # TDD strict (35 tests dans elus-manifest.test.ts)
+    *.test.ts                  # 166 tests unitaires (npm run test:unit)
+static/data/
+  elus-overrides.json          # COMMITÉ (exception au gitignore static/data/)
+                               # forceFusion / forceSeparation pour cas exotiques (ADR 0031)
 decisions/
-  README.md                    # index auto-généré (NE PAS éditer à la main)
-  TEMPLATE.md                  # trame pour nouvelles décisions
-  NNNN-slug.md                 # 29 ADR actuelles
+  README.md                    # index auto-généré (32 ADR)
+  NNNN-slug.md                 # ADR 0001-0032
 deploy/
   nginx.conf                   # config Nginx du container
 Dockerfile                     # multi-stage node:22-alpine + nginx:1.27-alpine
