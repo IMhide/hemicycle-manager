@@ -57,6 +57,7 @@ import {
 import { downloadFile, downloadZip, ensureDir, extractIfNeeded } from './lib/cache.ts';
 import { parseOdsenCsv, streamCopyBlocks } from './lib/dosleg-parser.ts';
 import { sessionsCovering, groupeAuVote } from './lib/senat-transform.ts';
+import { readApiSenateursOrEmpty, type ApiSenateurRaw } from './lib/senat-sources.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'static', 'data', 'senat');
@@ -81,18 +82,7 @@ const SCOPE_DATE_DEBUT = TRIENNATS[0].dateDebut; // '2017-09-24'
 // Types raw (intermédiaires, scopés à ce script)
 // ────────────────────────────────────────────────────────────────────────────
 
-interface ApiSenateur {
-	matricule: string;
-	nom: string;
-	prenom: string;
-	civilite: string;
-	siege: number | null;
-	serie: '1' | '2' | null;
-	urlAvatar: string;
-	groupe?: { code: string; libelle: string; ordre: number };
-	circonscription?: { code: string; libelle: string };
-	categorieProfessionnelle?: { code: string; libelle: string };
-}
+type ApiSenateur = ApiSenateurRaw;
 
 interface OdsenGeneralRow {
 	Matricule: string;
@@ -151,7 +141,11 @@ async function main() {
 	console.log('\n3/5  Parsing des sources');
 
 	console.log('  • api-senat/senateurs.json…');
-	const apiActive = JSON.parse(await readFile(apiPath, 'utf8')) as ApiSenateur[];
+	// Source api-senat = enrichissement (siege/serie/photo/groupe live), cf ADR 0025.
+	// Si le CDN senat.fr renvoie un payload vide ou invalide (cas observé 2026-05-07 :
+	// 200 OK + 0 octet pendant régénération CDN), on bascule sur ODSEN+dosleg pour
+	// l'identité et les mandats — `siege`/`serie` seront simplement `null` ce build.
+	const apiActive = readApiSenateursOrEmpty(await readFile(apiPath, 'utf8'));
 	const apiByMat = new Map(apiActive.map((s) => [s.matricule, s]));
 	console.log(`    → ${apiActive.length} sénateurs en exercice`);
 

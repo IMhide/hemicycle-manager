@@ -76,6 +76,13 @@ export async function remoteHead(url: string): Promise<RemoteHead | null> {
  * 2. **Fresh download** sinon. Pas de `curl -C -` (resume) parce que les CDN
  *    parlementaires re-publient parfois le même fichier avec des bytes
  *    différents et la même taille.
+ * 3. **Garde anti-payload-vide** : si la source répond `Content-Length: 0` (ou
+ *    si le download donne un fichier vide), on **refuse d'écraser** un cache
+ *    local valide (taille > 0). Si aucun cache n'existe, le download vide est
+ *    conservé et `meta.json` n'est **pas écrit** — un éventuel cache local plus
+ *    ancien (BuildKit cache mount) reste donc intact pour le run suivant.
+ *    Cas concret : `senat.fr/api-senat/senateurs.json` peut renvoyer 200 OK +
+ *    0 octet pendant une régénération côté CDN (cf incident 2026-05-07).
  *
  * `FORCE_CACHE=1` court-circuite la vérification HEAD (utile en dev).
  */
@@ -106,6 +113,21 @@ export async function downloadFile(url: string, target: string): Promise<void> {
 		const sizeMb = (remote.contentLength! / 1024 / 1024).toFixed(1);
 		const lm = remote.lastModified ? ` (Last-Modified: ${remote.lastModified})` : '';
 		console.log(`  ↻ cache hit: ${target} ${sizeMb} MB${lm}`);
+		return;
+	}
+
+	// Garde anti-payload-vide AVANT le download : si HEAD distant répond 0 octet
+	// et qu'on a déjà un cache local valide, on conserve le cache.
+	if (
+		remote &&
+		remote.contentLength === 0 &&
+		existsSync(target) &&
+		fs.statSync(target).size > 0
+	) {
+		const localSize = fs.statSync(target).size;
+		console.log(
+			`  ⚠ source répond Content-Length: 0 — cache local conservé (${(localSize / 1024).toFixed(1)} KB) : ${target}`
+		);
 		return;
 	}
 
@@ -154,6 +176,16 @@ export async function downloadFile(url: string, target: string): Promise<void> {
 
 	const stats = fs.statSync(target);
 	console.log(`  ✓ ${(stats.size / 1024 / 1024).toFixed(1)} MB → ${target}`);
+
+	// Garde post-download : un fichier vide (curl ok mais 0 octet) ne doit pas
+	// être marqué comme valide via meta.json. Sans cette garde, le run suivant
+	// considère le cache comme "frais" et le pipeline parse 0 octet.
+	if (stats.size === 0) {
+		console.log(
+			`  ⚠ téléchargement vide (0 octet) — meta.json non écrit, cache laissé invalide : ${target}`
+		);
+		return;
+	}
 
 	const finalRemote = remote ?? (await remoteHead(url));
 	if (finalRemote) {

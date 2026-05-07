@@ -30,7 +30,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 
 **Toutes les décisions structurantes** (sémantique des métriques, choix techniques, sources, contraintes infra) sont consignées dans **[`decisions/`](decisions/README.md)** au format ADR (Architecture Decision Records).
 
-**À chaque ouverture de session sur ce repo**, lis l'index : [`decisions/README.md`](decisions/README.md). Il liste les 32 décisions actives avec leur statut et leurs tags. Tu peux ouvrir n'importe quelle ADR pour les détails.
+**À chaque ouverture de session sur ce repo**, lis l'index : [`decisions/README.md`](decisions/README.md). Il liste les 33 décisions actives avec leur statut et leurs tags. Tu peux ouvrir n'importe quelle ADR pour les détails.
 
 **Avant de proposer un changement** qui touche à :
 
@@ -52,6 +52,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 - le **scope ou la granularité Sénat** (sessions vs mandats individuels, fusion bicamérale différée) → vérifie ADR 0023 (partiellement remplacée par 0028 sur la granularité et 0029 sur le scope temporel)
 - l'**identifiant matricule Sénat** (vs PA-id AN) → vérifie ADR 0024
 - les **sources Sénat** (api-senat live > ODSEN_*.csv > dosleg.zip) → vérifie ADR 0025
+- la **résilience pipeline Sénat** quand `api-senat/senateurs.json` est cassé (200 OK + 0 octet, JSON invalide) → vérifie ADR 0033 (fallback ODSEN+dosleg, garde anti-payload-vide dans `cache.ts`)
 - l'**hémicycle Sénat 348 sièges** (layout adapté de Kurea/visu_senat) → vérifie ADR 0026
 - la **sémantique des délégations de vote** Sénat → vérifie ADR 0027 (ignorées en v1)
 - la **granularité temporelle Sénat** (triennat = analogue de la législature AN, session = brique data sous-jacente) → vérifie ADR 0028
@@ -80,7 +81,7 @@ npm run dev                # serveur de dev sur localhost:5173
 npm run build              # build statique dans build/
 npm run preview            # vérifier le build en local
 npm run check              # type-check Svelte/TS
-npm run test:unit          # tests unitaires Node:test (166 tests : parser dosleg, layout, triennats, manifest élus…)
+npm run test:unit          # tests unitaires Node:test (174 tests : parser dosleg, layout, triennats, manifest élus, sources Sénat…)
 npm run data:fetch         # télécharge + transforme AN, Sénat, puis build manifest élus
 npm run data:fetch:an      #   AN seul (~30s warm cache)
 npm run data:fetch:senat   #   Sénat seul (~3s warm, ~2 min cold)
@@ -162,19 +163,22 @@ scripts/
   decisions-index.ts           # regen decisions/README.md
   lib/
     cache.ts                   # cache HTTP conditionnel (ADR 0021)
+                               # + gardes anti-payload-vide (ADR 0033)
     dosleg-parser.ts           # parser SQL/CSV Sénat — TDD strict
     senat-layout.ts            # layout 348 sièges Kurea — TDD strict
     senat-transform.ts         # sessionsCovering, groupeAuVote
+    senat-sources.ts           # readApiSenateursOrEmpty — fallback gracieux
+                               # api-senat → ODSEN+dosleg (ADR 0033)
     elus-manifest.ts           # ── builder manifest cross-chambre (ADR 0031) ──
                                # normaliseKey, eluId hash, buildElusManifest, overrides
                                # TDD strict (35 tests dans elus-manifest.test.ts)
-    *.test.ts                  # 166 tests unitaires (npm run test:unit)
+    *.test.ts                  # 174 tests unitaires (npm run test:unit)
 static/data/
   elus-overrides.json          # COMMITÉ (exception au gitignore static/data/)
                                # forceFusion / forceSeparation pour cas exotiques (ADR 0031)
 decisions/
-  README.md                    # index auto-généré (32 ADR)
-  NNNN-slug.md                 # ADR 0001-0032
+  README.md                    # index auto-généré (33 ADR)
+  NNNN-slug.md                 # ADR 0001-0033
 deploy/
   nginx.conf                   # config Nginx du container
 Dockerfile                     # multi-stage node:22-alpine + nginx:1.27-alpine
