@@ -30,7 +30,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 
 **Toutes les décisions structurantes** (sémantique des métriques, choix techniques, sources, contraintes infra) sont consignées dans **[`decisions/`](decisions/README.md)** au format ADR (Architecture Decision Records).
 
-**À chaque ouverture de session sur ce repo**, lis l'index : [`decisions/README.md`](decisions/README.md). Il liste les 33 décisions actives avec leur statut et leurs tags. Tu peux ouvrir n'importe quelle ADR pour les détails.
+**À chaque ouverture de session sur ce repo**, lis l'index : [`decisions/README.md`](decisions/README.md). Il liste les 34 décisions actives avec leur statut et leurs tags. Tu peux ouvrir n'importe quelle ADR pour les détails.
 
 **Avant de proposer un changement** qui touche à :
 
@@ -53,6 +53,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 - l'**identifiant matricule Sénat** (vs PA-id AN) → vérifie ADR 0024
 - les **sources Sénat** (api-senat live > ODSEN_*.csv > dosleg.zip) → vérifie ADR 0025
 - la **résilience pipeline Sénat** quand `api-senat/senateurs.json` est cassé (200 OK + 0 octet, JSON invalide) → vérifie ADR 0033 (fallback ODSEN+dosleg, garde anti-payload-vide dans `cache.ts`)
+- les **familles politiques** (badge Recomposition fidèle, neutralisation des renommages LFI-NUPES/LFI-NFP, LaREM/RE/EPR, MODEM/Dem, etc.) → vérifie ADR 0034 et `static/data/groupes-familles.json`
 - l'**hémicycle Sénat 348 sièges** (layout adapté de Kurea/visu_senat) → vérifie ADR 0026
 - la **sémantique des délégations de vote** Sénat → vérifie ADR 0027 (ignorées en v1)
 - la **granularité temporelle Sénat** (triennat = analogue de la législature AN, session = brique data sous-jacente) → vérifie ADR 0028
@@ -81,7 +82,7 @@ npm run dev                # serveur de dev sur localhost:5173
 npm run build              # build statique dans build/
 npm run preview            # vérifier le build en local
 npm run check              # type-check Svelte/TS
-npm run test:unit          # tests unitaires Node:test (174 tests : parser dosleg, layout, triennats, manifest élus, sources Sénat…)
+npm run test:unit          # tests unitaires Node:test (191 tests : parser dosleg, layout, triennats, manifest élus, sources Sénat, familles politiques…)
 npm run data:fetch         # télécharge + transforme AN, Sénat, puis build manifest élus
 npm run data:fetch:an      #   AN seul (~30s warm cache)
 npm run data:fetch:senat   #   Sénat seul (~3s warm, ~2 min cold)
@@ -169,16 +170,20 @@ scripts/
     senat-transform.ts         # sessionsCovering, groupeAuVote
     senat-sources.ts           # readApiSenateursOrEmpty — fallback gracieux
                                # api-senat → ODSEN+dosleg (ADR 0033)
+    groupes-familles.ts        # familleAN/familleSenat — table d'équivalences
+                               # AN+Sénat pour neutraliser renommages (ADR 0034)
     elus-manifest.ts           # ── builder manifest cross-chambre (ADR 0031) ──
                                # normaliseKey, eluId hash, buildElusManifest, overrides
                                # TDD strict (35 tests dans elus-manifest.test.ts)
-    *.test.ts                  # 174 tests unitaires (npm run test:unit)
+    *.test.ts                  # 191 tests unitaires (npm run test:unit)
 static/data/
   elus-overrides.json          # COMMITÉ (exception au gitignore static/data/)
                                # forceFusion / forceSeparation pour cas exotiques (ADR 0031)
+  groupes-familles.json        # COMMITÉ (exception au gitignore static/data/)
+                               # Table familles politiques pour badge Recomposition (ADR 0034)
 decisions/
-  README.md                    # index auto-généré (33 ADR)
-  NNNN-slug.md                 # ADR 0001-0033
+  README.md                    # index auto-généré (34 ADR)
+  NNNN-slug.md                 # ADR 0001-0034
 deploy/
   nginx.conf                   # config Nginx du container
 Dockerfile                     # multi-stage node:22-alpine + nginx:1.27-alpine

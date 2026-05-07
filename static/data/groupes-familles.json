@@ -1,0 +1,111 @@
+{
+  "$schema": "Source de vérité des familles politiques pour le badge Recomposition (ADR 0034). Un groupe absent de cette table est traité comme sa propre famille (pas de fusion). Chaque entrée doit citer le source (libellé Etalab) pour audit.",
+  "familles": {
+    "FAMILLE_LFI": {
+      "label": "La France insoumise",
+      "groupes": [
+        { "chambre": "AN", "id": "PO730958", "libelle": "FI — La France insoumise (15ᵉ)" },
+        { "chambre": "AN", "id": "PO800490", "libelle": "LFI - NUPES (16ᵉ)" },
+        { "chambre": "AN", "id": "PO845413", "libelle": "LFI-NFP (17ᵉ)" },
+        { "chambre": "SENAT", "code": "CRC", "libelle": "PCF/LFI Sénat (Communiste Républicain Citoyen et Écologiste)" }
+      ]
+    },
+    "FAMILLE_MACRONIE": {
+      "label": "Macronie (LREM/RE/EPR)",
+      "groupes": [
+        { "chambre": "AN", "id": "PO730964", "libelle": "LaREM — La République en Marche (15ᵉ)" },
+        { "chambre": "AN", "id": "PO800538", "libelle": "RE — Renaissance (16ᵉ)" },
+        { "chambre": "AN", "id": "PO845407", "libelle": "EPR — Ensemble pour la République (17ᵉ)" },
+        { "chambre": "SENAT", "code": "LREM", "libelle": "RDPI Sénat (Rassemblement des démocrates, progressistes et indépendants)" }
+      ]
+    },
+    "FAMILLE_LR": {
+      "label": "Les Républicains / Droite Républicaine",
+      "groupes": [
+        { "chambre": "AN", "id": "PO730934", "libelle": "LR — Les Républicains (15ᵉ)" },
+        { "chambre": "AN", "id": "PO800508", "libelle": "LR — Les Républicains (16ᵉ)" },
+        { "chambre": "AN", "id": "PO845425", "libelle": "DR — Droite Républicaine (17ᵉ)" },
+        { "chambre": "SENAT", "code": "UMP", "libelle": "Les Républicains Sénat" }
+      ]
+    },
+    "FAMILLE_PS": {
+      "label": "Parti socialiste / Nouvelle Gauche / SOC",
+      "groupes": [
+        { "chambre": "AN", "id": "PO758835", "libelle": "SOC — Socialistes et apparentés (15ᵉ)" },
+        { "chambre": "AN", "id": "PO730946", "libelle": "NG — Nouvelle Gauche (15ᵉ, ancien nom de SOC)" },
+        { "chambre": "AN", "id": "PO800496", "libelle": "SOC — Socialistes (membre intergroupe NUPES) (16ᵉ)" },
+        { "chambre": "AN", "id": "PO830170", "libelle": "SOC — Socialistes et apparentés (16ᵉ après scission NUPES)" },
+        { "chambre": "AN", "id": "PO845419", "libelle": "SOC — Socialistes et apparentés (17ᵉ)" },
+        { "chambre": "SENAT", "code": "SOC", "libelle": "Socialiste, Écologiste et Républicain (Sénat)" }
+      ]
+    },
+    "FAMILLE_GDR": {
+      "label": "Gauche démocrate et républicaine (PCF/Outre-mer)",
+      "groupes": [
+        { "chambre": "AN", "id": "PO730940", "libelle": "GDR — Gauche démocrate et républicaine (15ᵉ)" },
+        { "chambre": "AN", "id": "PO800502", "libelle": "GDR-NUPES (16ᵉ)" },
+        { "chambre": "AN", "id": "PO845514", "libelle": "GDR — Gauche Démocrate et Républicaine (17ᵉ)" }
+      ]
+    },
+    "FAMILLE_ECOLO": {
+      "label": "Écologistes",
+      "groupes": [
+        { "chambre": "AN", "id": "PO771789", "libelle": "EDS — Écologie Démocratie Solidarité (15ᵉ)" },
+        { "chambre": "AN", "id": "PO800526", "libelle": "Ecolo-NUPES (16ᵉ)" },
+        { "chambre": "AN", "id": "PO845439", "libelle": "EcoS — Écologiste et Social (17ᵉ)" },
+        { "chambre": "SENAT", "code": "GEST", "libelle": "Écologiste - Solidarité et Territoires (Sénat)" }
+      ]
+    },
+    "FAMILLE_MODEM": {
+      "label": "MoDem / Démocrates",
+      "groupes": [
+        { "chambre": "AN", "id": "PO730970", "libelle": "MODEM — Mouvement Démocrate (15ᵉ, premier groupe)" },
+        { "chambre": "AN", "id": "PO774834", "libelle": "Dem — MoDem et Démocrates apparentés (15ᵉ, second groupe)" },
+        { "chambre": "AN", "id": "PO800484", "libelle": "Dem — Démocrate (16ᵉ)" },
+        { "chambre": "AN", "id": "PO845454", "libelle": "Dem — Les Démocrates (17ᵉ)" }
+      ]
+    },
+    "FAMILLE_HORIZONS": {
+      "label": "Horizons (Édouard Philippe)",
+      "groupes": [
+        { "chambre": "AN", "id": "PO771923", "libelle": "Agir ensemble (15ᵉ, ancêtre Horizons)" },
+        { "chambre": "AN", "id": "PO800514", "libelle": "HOR — Horizons et apparentés (16ᵉ)" },
+        { "chambre": "AN", "id": "PO845470", "libelle": "HOR — Horizons & Indépendants (17ᵉ)" }
+      ]
+    },
+    "FAMILLE_LIOT": {
+      "label": "LIOT — Libertés, Indépendants, Outre-mer et Territoires",
+      "groupes": [
+        { "chambre": "AN", "id": "PO759900", "libelle": "LT — Libertés et Territoires (15ᵉ, ancêtre LIOT)" },
+        { "chambre": "AN", "id": "PO800532", "libelle": "LIOT (16ᵉ)" },
+        { "chambre": "AN", "id": "PO845485", "libelle": "LIOT (17ᵉ)" }
+      ]
+    },
+    "FAMILLE_UDI": {
+      "label": "UDI / Centristes (UDI-AGIR, UDI-I, LC)",
+      "groupes": [
+        { "chambre": "AN", "id": "PO744425", "libelle": "UDI-AGIR (15ᵉ, premier groupe)" },
+        { "chambre": "AN", "id": "PO765636", "libelle": "UDI-I (15ᵉ)" },
+        { "chambre": "AN", "id": "PO767217", "libelle": "UDI-AGIR (15ᵉ, second groupe)" },
+        { "chambre": "AN", "id": "PO771889", "libelle": "UDI-I (15ᵉ, second groupe)" },
+        { "chambre": "AN", "id": "PO730952", "libelle": "LC — Les Constructifs (15ᵉ)" },
+        { "chambre": "SENAT", "code": "UC", "libelle": "Union Centriste (Sénat)" }
+      ]
+    },
+    "FAMILLE_RN": {
+      "label": "Rassemblement National",
+      "groupes": [
+        { "chambre": "AN", "id": "PO800520", "libelle": "RN (16ᵉ)" },
+        { "chambre": "AN", "id": "PO845401", "libelle": "RN (17ᵉ)" }
+      ]
+    },
+    "FAMILLE_UDR": {
+      "label": "UDR — Union des Droites",
+      "groupes": [
+        { "chambre": "AN", "id": "PO845520", "libelle": "AD — À Droite (17ᵉ, sigle initial)" },
+        { "chambre": "AN", "id": "PO847173", "libelle": "UDR (17ᵉ, premier groupe)" },
+        { "chambre": "AN", "id": "PO872880", "libelle": "UDR — Union des droites pour la République (17ᵉ)" }
+      ]
+    }
+  }
+}

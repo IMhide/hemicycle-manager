@@ -43,6 +43,12 @@ import type {
 	BuildMeta
 } from '../src/lib/types.ts';
 import { asArray, daysBetween, downloadZip, ensureDir, extractIfNeeded } from './lib/cache.ts';
+import {
+	buildFamillesIndex,
+	familleAN,
+	type FamillesIndex,
+	type FamillesManifest
+} from './lib/groupes-familles.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'static', 'data');
@@ -851,7 +857,7 @@ function computeOverallsCarriere(personnes: Personne[]) {
 }
 
 /** Calcul de la carrière agrégée (cumul pondéré, cf ADR 0017) + badges carrière. */
-function computeCarriere(personne: PartialPersonne): CarriereAggregee {
+function computeCarriere(personne: PartialPersonne, famillesIdx: FamillesIndex): CarriereAggregee {
 	const mandats = [...personne.mandatsByLeg.values()];
 	const carriere: CarriereAggregee = {
 		presence: { numerator: 0, denominator: 0, rate: 0 },
@@ -895,16 +901,20 @@ function computeCarriere(personne: PartialPersonne): CarriereAggregee {
 	if (mandats.length >= 2) carriere.badgesCarriere.push('reelu');
 	if (mandats.length >= 3) carriere.badgesCarriere.push('veteran');
 
-	// Recomposition : groupe principal de chaque mandat différent du précédent
+	// Recomposition : famille politique principale de chaque mandat différente
+	// du précédent. La comparaison passe par la table `groupes-familles.json`
+	// (cf ADR 0034) pour neutraliser les renommages d'un même parti entre
+	// législatures (LFI/LFI-NUPES/LFI-NFP, LaREM/RE/EPR, MODEM/Dem, etc.).
 	if (mandats.length >= 2) {
 		const sorted = [...mandats].sort((a, b) => a.legislature - b.legislature);
-		const principalGroupe = (m: Mandat) => {
+		const familleOf = (m: Mandat): string | null => {
 			const stable = m.appartenancesGroupe.find((a) => !a.isTransitoireNI);
-			return stable?.groupeId ?? null;
+			if (!stable?.groupeId) return null;
+			return familleAN(famillesIdx, stable.groupeId);
 		};
 		for (let i = 1; i < sorted.length; i++) {
-			const prev = principalGroupe(sorted[i - 1]);
-			const cur = principalGroupe(sorted[i]);
+			const prev = familleOf(sorted[i - 1]);
+			const cur = familleOf(sorted[i]);
 			if (prev && cur && prev !== cur) {
 				carriere.badgesCarriere.push('recomposition');
 				break;
@@ -976,6 +986,17 @@ async function main() {
 	await ensureDir(join(OUT_DIR, 'scrutins'));
 	await ensureDir(join(OUT_DIR, 'groupes'));
 	await ensureDir(join(OUT_DIR, 'historique'));
+
+	// Table de familles politiques (cf ADR 0034) — utilisée par computeCarriere
+	// pour neutraliser les renommages de groupes (LFI-NUPES → LFI-NFP, etc.).
+	const famillesPath = join(ROOT, 'static', 'data', 'groupes-familles.json');
+	const famillesManifest = JSON.parse(
+		await readFile(famillesPath, 'utf8')
+	) as FamillesManifest;
+	const famillesIdx = buildFamillesIndex(famillesManifest);
+	console.log(
+		`   Familles politiques : ${Object.keys(famillesManifest.familles).length} familles, ${famillesIdx.an.size} groupes AN mappés\n`
+	);
 
 	// ── Stage 1 : download
 	console.log('1/5  Téléchargement des sources');
@@ -1078,7 +1099,7 @@ async function main() {
 	// Carrière agrégée + badges carrière
 	const personnesFull: Personne[] = [];
 	for (const p of personnes.values()) {
-		const carriere = computeCarriere(p);
+		const carriere = computeCarriere(p, famillesIdx);
 		const mandats = [...p.mandatsByLeg.values()].sort((a, b) => a.legislature - b.legislature);
 		personnesFull.push({
 			id: p.id,

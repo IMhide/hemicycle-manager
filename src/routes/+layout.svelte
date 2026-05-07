@@ -58,11 +58,6 @@
 				>
 				<a href="/senat" class={navClass(isSenat)} title="Sénat">🏛️ Sénat</a>
 				<a
-					href="/classement"
-					class="{navClass(pathname.startsWith('/classement'))} hidden md:inline-block"
-					title="Classement global">🏆 Classement</a
-				>
-				<a
 					href="/faq"
 					class={navClass(pathname.startsWith('/faq'))}
 					title="FAQ — Comment ça marche ?">📚</a

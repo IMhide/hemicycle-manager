@@ -19,6 +19,10 @@ static/data/**/
 # Petit fichier JSON commité (modification = audit/PR), source de vérité du
 # matching cross-chambre Larcher/Schiappa/etc. Le pipeline le lit en input.
 !static/data/elus-overrides.json
+# Exception : table de familles politiques pour neutraliser les renommages de
+# groupes (LFI/LFI-NUPES/LFI-NFP, etc.). Source de vérité du badge Recomposition
+# (cf ADR 0034). Modification = audit/PR.
+!static/data/groupes-familles.json
 
 # Editor / OS
 .DS_Store
