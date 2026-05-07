@@ -121,50 +121,40 @@ Mergée en une seule PR cumulant Phase 1 (16ᵉ+17ᵉ) et Phase 2 (15ᵉ).
 - [x] **`/deputes/[id]`** : historique de vote dans une box à hauteur **fixe** (~10 votes visibles, plafonnée à `min(700px, 70vh)`), scroll **interne**. Bouton « Charger 10 de plus » désormais **à l'intérieur** du scroll (on découvre les nouveaux votes en continuant à scroller). PAGE_SIZE constant = 10 (anciennement 50/+100). Compteur `X / N affichés` sous la box. Reset du `scrollTop` + `visibleCount` au changement de filtre ou de législature
 - [x] Classe utilitaire `.vote-scroll` ajoutée dans `app.css` (max-height + scrollbar-gutter stable)
 
-## 🌐 Phase 3 — Au-delà de l'AN (Sénat, ministres, président)
+## ✅ Phase 3 Sénat — pipeline + UI + scope ère Macron (mergée 2026-05-07, PR #8)
 
-Phase 3a+3b démarre 2026-05-06 par le **pipeline Sénat** (PR A `feat/senat-pipeline`). 4 PR successives planifiées (cf plan d'implémentation interne). Décisions cadrées dans ADR 0023..0027 :
-- ADR 0023 — scope, granularité (session annuelle), pas de fusion bicamérale en v1 (différée à Phase 3c)
-- ADR 0024 — identifiant matricule (≠ PA-id AN, espaces disjoints)
-- ADR 0025 — sources : api-senat live > ODSEN_*.csv > dosleg.zip
-- ADR 0026 — hémicycle 348 sièges adapté de Kurea/visu_senat (MIT)
-- ADR 0027 — délégations de vote ignorées en v1 (`senmatdel`)
+3 triennats `2017-2020`, `2020-2023`, `2023-2026` à parité avec 15ᵉ/16ᵉ/17ᵉ AN. ADR 0023..0029 figées (0023 et 0028 partiellement remplacées par 0029 sur le scope temporel).
 
-### ✅ PR A — Pipeline + types + smoke-test (en cours, branche `feat/senat-pipeline`)
+### Pipeline data ✅
+- [x] `scripts/fetch-data-senat.ts` (~1437 lignes) — sources cascade api-senat > ODSEN_*.csv > dosleg.zip (ADR 0025), filtre scope ère Macron `SCOPE_DATE_DEBUT = 2017-09-24` (ADR 0029)
+- [x] Helpers libs `cache.ts`, `dosleg-parser.ts`, `senat-layout.ts`, `senat-transform.ts` (TDD strict, 131 tests)
+- [x] Identifiant matricule disjoint du PA-id AN (ADR 0024)
+- [x] Délégations de vote ignorées en v1 (ADR 0027)
+- [x] Output `static/data/senat/` : **672 sénateurs**, 2 029 scrutins, 705k votes, 9 sessions, **3 triennats**, 348 places hémicycle
+- [x] Pipeline cold ~2 min / warm ~3 s (parsing SQL streaming 124 MB en 0.9 s)
 
-- [x] 5 ADR Sénat (0023-0027) écrites + indexées
-- [x] Refactor `scripts/lib/cache.ts` (utilitaires partagés AN/Sénat) + 19 tests unitaires
-- [x] Types `Senateur`, `MandatSenat`, `SessionStats`, `GroupeSenat`, `SessionMeta`, `ScrutinSenatDetail`… ajoutés à `src/lib/types.ts` (append-only, AN intact)
-- [x] Loaders `loadSenateurs`, `loadGroupesSenat(sesann)`, etc. dans `src/lib/data.ts`
-- [x] Codes groupes Sénat dans `political-order.ts` : CRC, GEST, RDSE, UC, RTLI, UMP, AUCUN + variantes historiques RI, GD, ECO, UMP-A, UMP-R, RDSE-A
-- [x] `scripts/lib/dosleg-parser.ts` (TDD strict) : streamCopyBlocks SQL + parseOdsenCsv ISO-8859-1 + decodePostgresLiteral + splitCsvLine
-- [x] `scripts/lib/senat-layout.ts` (TDD strict) : extracteur layout 348 sièges Kurea avec correction de l'anomalie (siège 16 manquant) + trigonométrie reproduite
-- [x] `scripts/extract-senat-seats.ts` + `src/lib/generated/senat-seats.json` commité (28 KB, 348 sièges)
-- [x] `scripts/lib/senat-transform.ts` (TDD strict) : sessionsCovering + groupeAuVote
-- [x] `scripts/fetch-data-senat.ts` (pipeline central, ~970 lignes)
-- [x] `scripts/smoke-test-senat.ts` : **47/47 ✅** (Patriat 08061X siège 1 LREM, Larcher 86034E siège 9 UMP, vétérans, transfuges, distribution, garde anti-fusion)
-- [x] **Tests unitaires totaux : 102/102 ✅**
-- [x] Output `static/data/senat/` : 1935 sénateurs, 3 348 mandats, 4 662 scrutins, 1.61M votes, 20 sessions, 348 places hémicycle, ~97 MB JSON
-- [x] `package.json` : 6 scripts npm (`data:fetch:an`, `data:fetch:senat`, etc.) + `test:unit`
-- [x] Dockerfile : 2ᵉ cache mount BuildKit `politidex-senat`
-- [x] Pipeline cold ~2 min / warm ~3 s (parsing SQL streaming 124 MB en 0.9s — 70× plus rapide que la cible)
+### Modèle & types ✅
+- [x] Types Sénat append-only à `src/lib/types.ts` : `Senateur`, `MandatSenat`, `TriennatStats`, `SessionStats`, `GroupeSenat`, `TriennatMeta`…
+- [x] Table figée des 3 triennats ère Macron + helpers (`src/lib/triennats.ts`, ADR 0028 + 0029)
+- [x] Codes groupes Sénat dans `political-order.ts` : CRC, GEST, RDSE, UC, RTLI, UMP, LREM, AUCUN + variantes historiques
 
-### ✅ Refacto Triennat (2026-05-07, branche `feat/senat-pipeline`)
+### Routes & UI ✅
+- [x] `/senat/` (home triennat en cours), `/senat/triennats/`, `/senat/triennats/[periode]/`
+- [x] `/senat/senateurs/` (liste filtrable), `/senat/senateurs/[matricule]/` (fiche détail avec onglets `[Carrière] [2023-2026] [2020-2023] [2017-2020]`)
+- [x] `/senat/scrutins/`, `/senat/scrutins/[uid]/`, `/senat/groupes/[periode]/[code]/`
+- [x] `/senat/classements/` (Championnat + Coupes par triennat)
+- [x] FAQ enrichie : ancres `#senat-overall`, `#senat-triennat`, `#senat-loyaute`, `#senat-delegations`, `#senat-bicamerale`, `#senat-hemicycle`
+- [x] Composant `HemicycleSenat.svelte` avec **fallback gradient** : pour les triennats anciens (sans `place` réelle api-senat), les sénateurs sont placés sur les sièges libres selon le rank groupe / coordonnée x du siège. Bypass quand la salle est entièrement remplie (cas du triennat en cours préservé)
+- [x] Composant `TriennatTabs.svelte` (ordre antichrono, pas d'indicateur ⚡)
+- [x] Bouton Carrière fonctionnel sur la liste et sur la fiche (URL `?triennat=carriere` matérialise un choix explicite)
+- [x] Mode `gradient` figé sur les hémicycles Sénat (pas de toggle de couleur)
 
-**ADR 0028 implémentée** : le **triennat** (3 ans entre 2 renouvellements) remplace la session annuelle comme unité de regroupement principale Sénat. Pas de double niveau triennat/session (trop d'impact UX). 7 triennats figés depuis 2006.
-
-- [x] Types `TriennatId`, `Triennat`, `TriennatStats`, `TriennatMeta` + table figée 7 triennats (`src/lib/triennats.ts`)
-- [x] 26 tests unitaires triennats (128/128 ✅ au total)
-- [x] Pipeline `fetch-data-senat.ts` calcule les **deux niveaux** (`sessionsStats` data-only + `triennatStats` exposé UI) : output `triennats.json` + `groupes/{periode}.json`
-- [x] Smoke-test étendu : assertions ADR 0028 § "Garde anti-régression" (62/62 ✅)
-- [x] Loaders `loadTriennats`, `loadGroupesSenat(periode)` + `search-index.ts` adapté
-- [x] Composant `TriennatTabs.svelte` (remplace `SessionTabs`) — ordre antichrono, `⚡` sur en cours, InfoTip vers FAQ
-- [x] Routes : `/senat/triennats/`, `/senat/triennats/[periode]/`, `/senat/groupes/[periode]/[code]/`
-- [x] Fiche détail sénateur : default tab = Carrière si pas de mandat sur triennat en cours, sinon triennat en cours ⚡
-- [x] Classements (Championnat + Coupes) par triennat
-- [x] FAQ : ancre `#senat-triennat` (renommée depuis `#senat-cohorte`)
-- [x] Pipeline run : 1935 sénateurs, 4662 scrutins, **7 triennats**, 348 places hémicycle
-- [x] Type-check : 0 erreurs, 3 warnings préexistants (côté AN)
+### Validation ✅
+- [x] `npm run check` 0 erreurs (warnings préexistants AN inchangés)
+- [x] `npm run test:unit` 131/131
+- [x] `npm run data:smoke:senat` 67/67 (incl. garde scope ADR 0029, garde anti-régression triennats ADR 0028)
+- [x] CI Build & type-check vert
+- [x] Auto-deploy Coolify déclenché au merge
 
 ### 🔮 Suite (différée — UX first, score plus tard)
 
@@ -173,7 +163,6 @@ Phase 3a+3b démarre 2026-05-06 par le **pipeline Sénat** (PR A `feat/senat-pip
   - Présence : sémantique différente côté Sénat (délégations de vote ignorées en v1, cf ADR 0027) — impact sur le dénominateur ?
   - Participation : transposable telle quelle, mais à valider sur les scrutins sénatoriaux (publics solennels vs ordinaires ?)
   - Décider si on garde la même pondération `0.55 / 0.35 / 0.10` ou si le Sénat justifie une recalibration (et écrire une ADR si oui)
-- [ ] Tests UI manuels : `npm run dev` puis vérifier les routes Sénat (home, triennats, sénateurs, scrutins, groupes, classements, FAQ)
 
 ### 🚧 Phase 3c — fusion bicamérale (différée)
 
