@@ -164,11 +164,33 @@ Mergée en une seule PR cumulant Phase 1 (16ᵉ+17ᵉ) et Phase 2 (15ᵉ).
   - Participation : transposable telle quelle, mais à valider sur les scrutins sénatoriaux (publics solennels vs ordinaires ?)
   - Décider si on garde la même pondération `0.55 / 0.35 / 0.10` ou si le Sénat justifie une recalibration (et écrire une ADR si oui)
 
-### 🚧 Phase 3c — fusion bicamérale (différée)
+### 🧭 Refonte de la navigation (prochaine étape, démarrage 2026-05-08)
 
-- [ ] Politique de matching `(nom normalisé + dateNaissance)` cross-chambre AN↔Sénat (~50 cas attendus)
-- [ ] ADR de cadrage à écrire au démarrage
-- [ ] Refacto `Personne` pour porter `mandats: (MandatAN | MandatSenat)[]` ou structure équivalente
+Maintenant que le Sénat est mergé, la navigation header doit refléter les 2 univers (AN + Sénat) sans devenir un arbre de Noël. Pistes à arbitrer avec l'utilisateur :
+
+- [ ] **Switcher AN ↔ Sénat** en header (toggle visible) qui re-route vers le pendant (ex. `/deputes/` ↔ `/senat/senateurs/`, `/scrutins/` ↔ `/senat/scrutins/`)
+- [ ] **Mégamenu** "Députés / Sénateurs / Scrutins / Classements / Hémicycle" avec sous-éléments AN+Sénat
+- [ ] Mettre la **recherche globale** (déjà unifiée AN+Sénat dans `search-index.ts`) plus en avant
+- [ ] Cohérence cross-pages : libellés, espacements, comportement des sélecteurs entre routes AN et Sénat (audit visuel à faire)
+
+### 🔗 Lien fiches Député ↔ Sénateur (Phase 3c, démarrage 2026-05-08)
+
+But : permettre de naviguer d'une fiche député vers la fiche sénateur de la même personne (et inversement), sans fusion data lourde au premier jet. ~50 cas attendus (Larcher, Dussopt, etc.).
+
+3 stratégies à arbitrer (cf discussion 2026-05-07) :
+
+- **A. Lien manuel UI seulement** : sur la fiche député, badge "aussi sénateur → fiche Sénat". Pas de matching automatique, pas de modèle data fusionné.
+- **B. Matching auto + fusion** au pipeline (`(nom normalisé + dateNaissance)`) → `personId` cross-chambre, fiche unifiée avec onglets `[AN] [Sénat]`. Refacto modèle lourd.
+- **C. Hybride** : matching auto au pipeline génère un manifest `bicameral.json`, mais les fiches restent séparées et se cross-linkent via ce manifest. Mini-investissement, zéro régression sur les modèles existants, ouverture vers (B) plus tard.
+
+Tâches communes :
+
+- [ ] **Choisir la stratégie** (A/B/C) avec l'utilisateur
+- [ ] **ADR de cadrage** à écrire au démarrage
+- [ ] **Politique de matching** `(nom normalisé + dateNaissance)` — gérer les cas de noms d'usage différents, accents, particules
+- [ ] Si stratégie B : refacto `Personne` pour porter `mandats: (MandatAN | MandatSenat)[]` ou structure équivalente
+- [ ] Si stratégie C : `scripts/build-bicameral-manifest.ts` qui croise `personnes.json` (AN) et `senateurs.json` (Sénat) → `static/data/bicameral.json`
+- [ ] **Garde anti-fusion** côté smoke-test (ADR 0023) à supprimer ou inverser le jour où on fusionne
 
 ### À venir (au-delà du Sénat)
 
