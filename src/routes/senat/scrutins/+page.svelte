@@ -157,12 +157,16 @@
 			</button>
 			{#each triennatsSorted.slice(0, 6) as tri (tri.id)}
 				<button
+					title={tri.enCours ? 'Triennat en cours' : undefined}
 					class="px-2 py-1 rounded text-[11px] {scopeTriennat === tri.id
 						? 'bg-assembly-accent text-assembly-bg font-semibold'
-						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'} {tri.enCours &&
+					scopeTriennat !== tri.id
+						? 'bg-assembly-accent/5'
+						: ''}"
 					onclick={() => (scopeTriennat = tri.id as TriennatId)}
 				>
-					{tri.id}{#if tri.enCours} ⚡{/if}
+					{tri.id}
 				</button>
 			{/each}
 		</div>

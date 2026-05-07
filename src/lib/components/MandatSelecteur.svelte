@@ -5,8 +5,8 @@
 	 * Présente : [Carrière] [AN-15] [AN-16] [AN-17] [Sénat-2017-2020] [Sénat-2020-2023] [Sénat-2023-2026]
 	 *
 	 * Ordre chronologique ascendant. AN d'abord puis Sénat (les bicaméraux sont
-	 * rares mais cohérents). Indicateur ⚡ pour les mandats en cours
-	 * (`fin === null`).
+	 * rares mais cohérents). Les mandats en cours (`fin === null`) sont
+	 * signalés par un fond légèrement teinté — pas d'icône bruyante.
 	 *
 	 * Encode l'état actif via querystring `?tab=...` :
 	 *   - `?tab=carriere` (défaut)
@@ -83,20 +83,20 @@
 	{#each ordered as m (m.chambre + (m.chambre === 'AN' ? m.legislature : m.triennat))}
 		<button
 			type="button"
+			title={isCurrent(m) ? 'Mandat en cours' : undefined}
 			class="px-4 py-2 text-sm font-semibold transition-colors border-b-2 -mb-px flex items-center gap-1.5 {isActive(
 				m
 			)
 				? 'border-assembly-accent text-assembly-accent'
-				: 'border-transparent text-assembly-muted hover:text-slate-200'}"
+				: 'border-transparent text-assembly-muted hover:text-slate-200'} {isCurrent(m)
+				? 'bg-assembly-accent/5'
+				: ''}"
 			onclick={() => selectMandat(m)}
 		>
 			<span class="text-[10px] opacity-60">
 				{m.chambre === 'AN' ? '🏛️ AN' : '🏛️ Sén.'}
 			</span>
 			<span>{libelle(m)}</span>
-			{#if isCurrent(m)}
-				<span title="En cours" class="text-[10px]">⚡</span>
-			{/if}
 			<span class="text-[10px] font-normal opacity-60">({annees(m)})</span>
 		</button>
 	{/each}

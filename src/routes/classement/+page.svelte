@@ -2,28 +2,26 @@
 	/**
 	 * Classement global cross-chambre par `overallCarriere` (cf ADR 0030).
 	 *
-	 * Tri exclusif : `overallCarriere` desc. Pas de scope période, pas de
-	 * filtre score — c'est le classement *global* qui assume la posture
-	 * ludique cross-chambre (la rigueur scope-aware reste dans
-	 * /assemblee/classements/ et /senat/classements/).
+	 * Tri exclusif : `overallCarriere` desc. **Aucun filtre chambre** — c'est
+	 * la valeur ajoutée vs `/assemblee/classements/` et `/senat/classements/`,
+	 * qui assurent eux la rigueur scope-aware par chambre. Ici on assume
+	 * la posture ludique cross-chambre, et toute restriction (AN/Sénat/Bicaméral)
+	 * volerait l'intérêt de la page.
 	 *
-	 * Filtres UI : recherche par nom, chambre (AN seul / Sénat seul /
-	 * Bicaméral). Le score reste `overallCarriere` peu importe le filtre.
+	 * Seule recherche par nom autorisée — utile pour retrouver une personne
+	 * dans 1856 élus.
 	 *
 	 * Médailles 🥇 🥈 🥉 sur Top 3. Pagination Top 50 + lazy load.
 	 *
 	 * Items linkent vers `/elus/[eluId]?tab=carriere` (vue cross-chambre).
 	 */
-	import type { Elu } from '$lib/elus';
 	import { eluCategorie } from '$lib/elus';
 
 	let { data } = $props();
 
-	type Chambre = 'tous' | 'an' | 'senat' | 'bicameral';
 	const PAGE_SIZE = 50;
 
 	let q = $state('');
-	let chambre = $state<Chambre>('tous');
 	let visibleCount = $state(PAGE_SIZE);
 
 	function normalize(s: string): string {
@@ -45,11 +43,8 @@
 
 	const filtered = $derived.by(() => {
 		const qn = normalize(q.trim());
-		return sorted.filter((e) => {
-			if (chambre !== 'tous' && eluCategorie(e) !== chambre) return false;
-			if (qn === '') return true;
-			return normalize(`${e.prenom} ${e.nom}`).includes(qn);
-		});
+		if (qn === '') return sorted;
+		return sorted.filter((e) => normalize(`${e.prenom} ${e.nom}`).includes(qn));
 	});
 
 	const visible = $derived(filtered.slice(0, visibleCount));
@@ -64,7 +59,7 @@
 		return 'Bicaméral';
 	}
 
-	/** Médaille pour les 3 premiers (rang absolu, sans dépendre des filtres). */
+	/** Médaille pour les 3 premiers (rang absolu, sans dépendre du filtre recherche). */
 	function medal(rang: number): string | null {
 		if (rang === 1) return '🥇';
 		if (rang === 2) return '🥈';
@@ -72,7 +67,7 @@
 		return null;
 	}
 
-	/** Rang absolu (= position dans `sorted`, indépendant des filtres). */
+	/** Rang absolu (= position dans `sorted`, indépendant de la recherche). */
 	const rangById = $derived.by(() => {
 		const m = new Map<string, number>();
 		for (let i = 0; i < sorted.length; i++) m.set(sorted[i].id, i + 1);
@@ -81,7 +76,6 @@
 
 	$effect(() => {
 		void q;
-		void chambre;
 		visibleCount = PAGE_SIZE;
 	});
 </script>
@@ -94,43 +88,34 @@
 	<header class="mb-6">
 		<h1 class="title-display text-3xl">🏆 Classement global</h1>
 		<p class="text-assembly-muted text-sm mt-1">
-			Tous les élus PolitiDex triés par <strong>Overall carrière</strong> (moyenne simple
-			cross-chambre, cf <a class="underline hover:text-assembly-accent" href="/faq#elu-carriere"
-				>ADR 0032</a
-			>). Le score reste le même peu importe le filtre — c'est le classement <em>global</em>, qui assume la
-			posture ludique.
+			Tous les élus PolitiDex toutes chambres confondues, triés par <strong>Overall carrière</strong>
+			(moyenne simple cross-chambre, cf
+			<a class="underline hover:text-assembly-accent" href="/faq#elu-carriere">ADR 0032</a>). Pour
+			le détail scope-aware par chambre, voir
+			<a class="underline hover:text-assembly-accent" href="/assemblee/classements/">classement AN</a>
+			et
+			<a class="underline hover:text-assembly-accent" href="/senat/classements/">classement Sénat</a
+			>.
 		</p>
 	</header>
 
-	<div class="flex flex-wrap gap-3 mb-6">
+	<div class="mb-6">
 		<input
 			type="search"
-			class="card px-3 py-2 text-sm flex-1 min-w-[240px]"
+			class="card px-3 py-2 text-sm w-full max-w-md"
 			placeholder="Rechercher un nom ou prénom…"
 			bind:value={q}
 		/>
-		<div class="flex flex-wrap gap-1">
-			{#each [['tous', 'Tous'], ['an', '🏛️ AN'], ['senat', '🏛️ Sénat'], ['bicameral', '🏛️🏛️ Bicaméral']] as [val, label] (val)}
-				<button
-					class="btn px-3 py-1 text-xs {chambre === val
-						? 'bg-assembly-accent text-assembly-bg'
-						: 'border border-assembly-border text-assembly-muted hover:text-assembly-text'}"
-					onclick={() => (chambre = val as Chambre)}
-				>
-					{label}
-				</button>
-			{/each}
-		</div>
 	</div>
 
 	<div class="text-xs text-assembly-muted mb-2 tabular-nums">
-		{filtered.length} élu{filtered.length > 1 ? 's' : ''} affiché{filtered.length > 1 ? 's' : ''} ·
+		{filtered.length} élu{filtered.length > 1 ? 's' : ''} ·
 		Top {Math.min(visibleCount, filtered.length)} visibles
 	</div>
 
 	{#if visible.length === 0}
 		<div class="card p-8 text-sm text-assembly-muted italic text-center">
-			Aucun élu ne correspond à ces critères.
+			Aucun élu ne correspond à cette recherche.
 		</div>
 	{:else}
 		<div class="card divide-y divide-assembly-border/40">
