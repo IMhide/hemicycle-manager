@@ -140,7 +140,15 @@ async function main() {
 				`got ${distincts.size}`
 			);
 		}
-		check('Vallaud badge transfuge', vallaud.carriere.badgesCarriere.includes('transfuge'));
+		// Sémantique post-ADR 0034 : le badge transfuge se calcule sur les
+		// **familles politiques** (pas les groupeId bruts). Vallaud passe de
+		// SOC NUPES (PO800496) à SOC scission (PO830170) en 16ᵉ — deux groupes
+		// distincts mais même famille FAMILLE_PS → pas transfuge. Idem côté
+		// 15ᵉ : NG (PO730946) → SOC (PO758835) sont aussi FAMILLE_PS.
+		check(
+			'Vallaud PAS transfuge (NG/SOC/SOC NUPES = même famille PS, ADR 0034)',
+			!vallaud.carriere.badgesCarriere.includes('transfuge')
+		);
 	}
 
 	const lepen = personnes.find((p) => p.id === 'PA720614');

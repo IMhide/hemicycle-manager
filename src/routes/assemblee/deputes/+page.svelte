@@ -1,10 +1,24 @@
 <script lang="ts">
 	import MemberRow from '$lib/components/MemberRow.svelte';
 	import InfoTip from '$lib/components/InfoTip.svelte';
+	import FiltresElus from '$lib/components/FiltresElus.svelte';
 	import { POLITICAL_ORDER } from '$lib/political-order';
 	import type { Personne, Mandat, Groupe } from '$lib/types';
 
 	let { data } = $props();
+
+	const BADGES_CARRIERE = [
+		{ id: 'reelu', label: 'Réélu·e', emoji: '🔁' },
+		{ id: 'veteran', label: 'Vétéran', emoji: '🎖️' },
+		{ id: 'recomposition', label: 'Recomposition', emoji: '🔀' },
+		{ id: 'transfuge', label: 'Transfuge', emoji: '🚪' }
+	];
+	const BADGES_MANDAT = [
+		{ id: 'top-loyaliste', label: 'Top loyaliste', emoji: '🤝' },
+		{ id: 'frondeur', label: 'Frondeur·euse', emoji: '🔥' },
+		{ id: 'presence-or', label: 'Présence en or', emoji: '🎯' },
+		{ id: 'absent-remarquable', label: 'Absent·e remarquable', emoji: '👻' }
+	];
 
 	type SortKey = 'nom' | 'presence' | 'loyaute' | 'frondes' | 'participation';
 
@@ -15,7 +29,9 @@
 	let search = $state('');
 	let sortKey: SortKey = $state('nom');
 	let groupFilter = $state<Set<string>>(new Set());
-	let civFilter = $state<'all' | 'M.' | 'Mme'>('all');
+	let sexeFilter = $state<'tous' | 'M' | 'F'>('tous');
+	let famillesSelected = $state<string[]>([]);
+	let badgesSelected = $state<string[]>([]);
 	let visibleCount = $state(60);
 	let onlyPresidents = $state(false);
 	/** null = vue carrière (cross-leg), sinon scope par législature */
@@ -57,7 +73,9 @@
 	function clearFilters() {
 		search = '';
 		groupFilter = new Set();
-		civFilter = 'all';
+		sexeFilter = 'tous';
+		famillesSelected = [];
+		badgesSelected = [];
 		onlyPresidents = false;
 		sortKey = 'nom';
 		visibleCount = 60;
@@ -94,14 +112,48 @@
 			.filter((x): x is { personne: Personne; mandat: Mandat | null; groupe: Groupe | null } => !!x);
 	});
 
+	const famByGroupe = $derived(
+		(data.famillesByGroupeIdAN ?? {}) as Record<string, string>
+	);
+
+	function eluFamilles(p: Personne, m: Mandat | null): string[] {
+		// Scope-aware : si on est sur une législature précise, on regarde la
+		// famille du mandat scopé seulement. En vue Carrière, on prend l'union
+		// des familles traversées par tous les mandats.
+		const mandats = m ? [m] : p.mandats;
+		const set = new Set<string>();
+		for (const md of mandats) {
+			const stable = md.appartenancesGroupe.find((a) => !a.isTransitoireNI);
+			if (stable?.groupeId) {
+				const fam = famByGroupe[stable.groupeId] ?? stable.groupeId;
+				set.add(fam);
+			}
+		}
+		return [...set];
+	}
+
+	function badgesForScope(p: Personne, m: Mandat | null): string[] {
+		// Scope-aware : carrière → badges carrière, législature → badges du mandat.
+		if (scopeLeg === null) return p.carriere.badgesCarriere ?? [];
+		return m?.badgesMandat ?? [];
+	}
+
 	const filtered = $derived.by(() => {
 		const q = search.trim().toLowerCase();
-		return enriched.filter(({ personne, groupe }) => {
+		return enriched.filter(({ personne, mandat, groupe }) => {
 			if (q) {
 				const hay = `${personne.identite.prenom} ${personne.identite.nom}`.toLowerCase();
 				if (!hay.includes(q)) return false;
 			}
-			if (civFilter !== 'all' && personne.identite.civ !== civFilter) return false;
+			if (sexeFilter !== 'tous' && personne.identite.sexe !== sexeFilter) return false;
+			if (famillesSelected.length > 0) {
+				const fams = eluFamilles(personne, mandat);
+				if (!fams.some((f) => famillesSelected.includes(f))) return false;
+			}
+			if (badgesSelected.length > 0) {
+				const bs = badgesForScope(personne, mandat);
+				if (!badgesSelected.some((b) => bs.includes(b))) return false;
+			}
 			if (groupFilter.size > 0) {
 				if (!groupe || !groupFilter.has(groupe.id)) return false;
 			}
@@ -161,7 +213,9 @@
 	$effect(() => {
 		void search;
 		void groupFilter;
-		void civFilter;
+		void sexeFilter;
+		void famillesSelected;
+		void badgesSelected;
 		void onlyPresidents;
 		void sortKey;
 		void scopeLeg;
@@ -249,21 +303,13 @@
 				</select>
 			</div>
 
-			<div>
-				<div class="text-xs uppercase tracking-widest text-assembly-muted mb-1.5">Civilité</div>
-				<div class="flex gap-1">
-					{#each [['all', 'Tous'], ['M.', 'M.'], ['Mme', 'Mme']] as [key, label] (key)}
-						<button
-							class="btn px-3 py-1 text-xs flex-1 {civFilter === key
-								? 'bg-assembly-accent text-assembly-bg'
-								: 'border border-assembly-border text-assembly-muted hover:text-assembly-text'}"
-							onclick={() => (civFilter = key as 'all' | 'M.' | 'Mme')}
-						>
-							{label}
-						</button>
-					{/each}
-				</div>
-			</div>
+			<FiltresElus
+				bind:sexe={sexeFilter}
+				bind:famillesSelected
+				bind:badgesSelected
+				familles={data.familles}
+				badges={scopeLeg === null ? BADGES_CARRIERE : BADGES_MANDAT}
+			/>
 
 			{#if scopeLeg !== null}
 				<div>
@@ -312,9 +358,9 @@
 				</div>
 			{/if}
 
-			{#if search || groupFilter.size > 0 || civFilter !== 'all' || onlyPresidents || sortKey !== 'nom'}
+			{#if search || groupFilter.size > 0 || sexeFilter !== 'tous' || famillesSelected.length > 0 || badgesSelected.length > 0 || onlyPresidents || sortKey !== 'nom'}
 				<button class="btn-ghost w-full text-xs" onclick={clearFilters}>
-					Réinitialiser les filtres
+					Réinitialiser tous les filtres
 				</button>
 			{/if}
 		</aside>
@@ -346,10 +392,11 @@
 				</div>
 			{:else}
 				<div class="grid grid-cols-1 xl:grid-cols-2 gap-2">
-					{#each visible as { personne, mandat } (personne.id)}
+					{#each visible as { personne, mandat, groupe } (personne.id)}
 						<MemberRow
 							{personne}
 							{mandat}
+							{groupe}
 							{highlight}
 							isPresident={presidentIds.has(personne.id)}
 						/>

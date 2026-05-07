@@ -19,8 +19,10 @@ import {
 	buildElusManifest,
 	type Personne,
 	type Senateur,
-	type EluOverrides
+	type EluOverrides,
+	type GroupesIndex
 } from './lib/elus-manifest.ts';
+import { buildFamillesIndex, type FamillesManifest } from './lib/groupes-familles.ts';
 
 const ROOT = process.cwd();
 const STATIC_DATA = join(ROOT, 'static', 'data');
@@ -44,6 +46,7 @@ async function main() {
 	const personnesPath = join(STATIC_DATA, 'personnes.json');
 	const senateursPath = join(STATIC_DATA, 'senat', 'senateurs.json');
 	const overridesPath = join(STATIC_DATA, 'elus-overrides.json');
+	const famillesPath = join(STATIC_DATA, 'groupes-familles.json');
 	const outPath = join(STATIC_DATA, 'elus.json');
 
 	if (!existsSync(personnesPath)) {
@@ -64,8 +67,59 @@ async function main() {
 	console.log(`📥 Lecture elus-overrides.json…`);
 	const overrides = await readOverrides(overridesPath);
 
+	console.log(`📥 Lecture groupes-familles.json…`);
+	const famillesManifest = existsSync(famillesPath)
+		? await readJson<FamillesManifest>(famillesPath)
+		: { familles: {} };
+	const famillesIdx = buildFamillesIndex(famillesManifest);
+
+	console.log(`📥 Lecture groupes AN + Sénat…`);
+	const groupesIdx: GroupesIndex = { an: new Map(), senat: new Map() };
+	// Liste des législatures via legislatures.json (déjà produit par fetch-data.ts)
+	const legsPath = join(STATIC_DATA, 'legislatures.json');
+	const legs = existsSync(legsPath)
+		? (await readJson<Array<{ num: number }>>(legsPath)).map((l) => l.num)
+		: [];
+	for (const leg of legs) {
+		const path = join(STATIC_DATA, 'groupes', `${leg}.json`);
+		if (!existsSync(path)) continue;
+		const gs = await readJson<Array<{ id: string; libelleAbrege: string; couleur: string }>>(
+			path
+		);
+		for (const g of gs) {
+			groupesIdx.an.set(`AN:${leg}:${g.id}`, {
+				libelleAbrege: g.libelleAbrege,
+				couleur: g.couleur
+			});
+		}
+	}
+	// Sénat : triennats via senat/triennats.json
+	const trisPath = join(STATIC_DATA, 'senat', 'triennats.json');
+	const tris = existsSync(trisPath)
+		? (await readJson<Array<{ id: string }>>(trisPath)).map((t) => t.id)
+		: [];
+	for (const tri of tris) {
+		const path = join(STATIC_DATA, 'senat', 'groupes', `${tri}.json`);
+		if (!existsSync(path)) continue;
+		const gs = await readJson<Array<{ code: string; libelleAbrege: string; couleur: string }>>(
+			path
+		);
+		for (const g of gs) {
+			groupesIdx.senat.set(`SENAT:${tri}:${g.code}`, {
+				libelleAbrege: g.libelleAbrege,
+				couleur: g.couleur
+			});
+		}
+	}
+
 	console.log(`🔨 Build manifest cross-chambre…`);
-	const manifest = buildElusManifest(personnes, senateurs, overrides);
+	const manifest = buildElusManifest(
+		personnes,
+		senateurs,
+		overrides,
+		famillesIdx,
+		groupesIdx
+	);
 
 	await writeFile(outPath, JSON.stringify(manifest), 'utf-8');
 

@@ -1158,13 +1158,17 @@ function computeCarriere(senateur: Senateur, famillesIdx: FamillesIndex) {
 		}
 	}
 
-	// Transfuge : ≥ 2 appartenances stables (hors NI/AUCUN) dans un même mandat
+	// Transfuge : ≥ 2 **familles politiques** distinctes en cours de mandat
+	// (hors NI/AUCUN). Symétrique au fix AN (cf ADR 0034) — sans la cascade
+	// famille, un sénateur traversant 2 groupes mappés à la même famille
+	// serait à tort marqué transfuge.
 	for (const m of senateur.mandats) {
-		const stables = m.appartenancesGroupe.filter(
-			(a) => a.groupeCode !== 'NI' && a.groupeCode !== 'AUCUN'
-		);
-		const distincts = new Set(stables.map((a) => a.groupeCode));
-		if (distincts.size >= 2) {
+		const familles = new Set<string>();
+		for (const a of m.appartenancesGroupe) {
+			if (a.groupeCode === 'NI' || a.groupeCode === 'AUCUN') continue;
+			familles.add(familleSenat(famillesIdx, a.groupeCode));
+		}
+		if (familles.size >= 2) {
 			badges.push('transfuge');
 			break;
 		}

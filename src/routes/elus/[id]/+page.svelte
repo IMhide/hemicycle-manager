@@ -28,6 +28,7 @@
 	import RetourButton from '$lib/components/RetourButton.svelte';
 	import VoteHistoryItem from '$lib/components/VoteHistoryItem.svelte';
 	import VoteHistoryItemSenat from '$lib/components/VoteHistoryItemSenat.svelte';
+	import TimelineCarriere from '$lib/components/TimelineCarriere.svelte';
 
 	let { data } = $props();
 
@@ -291,14 +292,39 @@
 		<div class="depute-card-col">
 			{#if selected.kind === 'carriere'}
 				<EluCard {elu} />
+				<TimelineCarriere
+					mode={{ kind: 'carriere' }}
+					{personne}
+					{senateur}
+					{groupesByIdAN}
+					{groupesByCodeSenat}
+				/>
 			{:else if selected.kind === 'an' && personne && mandatActifAN}
 				<DeputeCard {personne} groupe={groupePrincipalAN} mandat={mandatActifAN} />
+				{#if mandatActifAN.appartenancesGroupe.length > 1}
+					<TimelineCarriere
+						mode={{ kind: 'an-mandat', mandat: mandatActifAN }}
+						{personne}
+						senateur={null}
+						{groupesByIdAN}
+						{groupesByCodeSenat}
+					/>
+				{/if}
 			{:else if selected.kind === 'senat' && senateur}
 				<SenateurCard
 					{senateur}
 					groupe={groupePrincipalSenat}
 					triennat={selected.triennat}
 				/>
+				{#if mandatActifSenat && mandatActifSenat.appartenancesGroupe.length > 1}
+					<TimelineCarriere
+						mode={{ kind: 'senat-mandat', mandat: mandatActifSenat, triennat: selected.triennat }}
+						personne={null}
+						{senateur}
+						{groupesByIdAN}
+						{groupesByCodeSenat}
+					/>
+				{/if}
 			{:else}
 				<div class="card p-6 text-sm text-assembly-muted italic">
 					Données indisponibles pour cette vue.

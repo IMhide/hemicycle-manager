@@ -44,12 +44,17 @@ export interface MandatStats {
 	volume: number;
 }
 
+export interface AppartenanceGroupeMin {
+	groupeId: string;
+	isTransitoireNI: boolean;
+}
+
 export interface PersonneMandat {
 	legislature: number;
 	datePriseFonction: string;
 	dateFinFonction: string | null;
 	stats: MandatStats;
-	appartenancesGroupe: unknown[];
+	appartenancesGroupe: AppartenanceGroupeMin[];
 }
 
 export interface PersonneCarriere {
@@ -82,11 +87,15 @@ export interface TriennatStats {
 	stats: MandatStats;
 }
 
+export interface AppartenanceGroupeSenatMin {
+	groupeCode: string;
+}
+
 export interface MandatSenat {
 	datePriseFonction: string;
 	dateFinFonction: string | null;
 	triennats: TriennatStats[];
-	appartenancesGroupe: unknown[];
+	appartenancesGroupe: AppartenanceGroupeSenatMin[];
 }
 
 export interface SenateurCarriere {
@@ -120,6 +129,10 @@ export type EluMandatRef =
 			debut: string;
 			fin: string | null;
 			overall: number;
+			groupeId: string | null;
+			groupeLibelleAbrege: string | null;
+			groupeCouleur: string | null;
+			famille: string | null;
 	  }
 	| {
 			chambre: 'SENAT';
@@ -127,6 +140,10 @@ export type EluMandatRef =
 			debut: string;
 			fin: string | null;
 			overall: number;
+			groupeCode: string | null;
+			groupeLibelleAbrege: string | null;
+			groupeCouleur: string | null;
+			famille: string | null;
 	  };
 
 export type BadgeCarriereCross = 'Recomposition' | 'Transfuge' | 'Veteran' | 'Reelu' | 'Bicameral';
@@ -239,10 +256,27 @@ function senateurInScope(s: Senateur): boolean {
  * Croise `personnes` AN et `senateurs` Sénat avec les `overrides` éventuels
  * pour produire un `EluManifest` cross-chambre stable.
  */
+export interface GroupeMin {
+	libelleAbrege: string;
+	couleur: string;
+}
+
+export interface GroupesIndex {
+	/** Clé "AN:<leg>:<groupeId>" → infos d'affichage */
+	an: Map<string, GroupeMin>;
+	/** Clé "SENAT:<triennat>:<groupeCode>" → infos d'affichage */
+	senat: Map<string, GroupeMin>;
+}
+
 export function buildElusManifest(
 	personnes: Personne[],
 	senateurs: Senateur[],
-	overrides: EluOverrides
+	overrides: EluOverrides,
+	famillesIdx: { an: Map<string, string>; senat: Map<string, string> } = {
+		an: new Map(),
+		senat: new Map()
+	},
+	groupesIdx: GroupesIndex = { an: new Map(), senat: new Map() }
 ): EluManifest {
 	const warnings: string[] = [];
 
@@ -427,7 +461,7 @@ export function buildElusManifest(
 	let countBicameral = 0;
 
 	for (const [bucketKey, bucket] of buckets) {
-		const elu = bucketToElu(bucketKey, bucket);
+		const elu = bucketToElu(bucketKey, bucket, famillesIdx, groupesIdx);
 		if (!elu) continue;
 		if (bucket.personnes.length > 0 && bucket.senateurs.length > 0) countBicameral++;
 		elus.push(elu);
@@ -453,7 +487,12 @@ export function buildElusManifest(
 // Conversion bucket → Elu
 // ────────────────────────────────────────────────────────────────────────────
 
-function bucketToElu(bucketKey: string, bucket: BuildElusBucket): Elu | null {
+function bucketToElu(
+	bucketKey: string,
+	bucket: BuildElusBucket,
+	famillesIdx: { an: Map<string, string>; senat: Map<string, string> },
+	groupesIdx: GroupesIndex
+): Elu | null {
 	const personne = bucket.personnes[0] ?? null;
 	const senateur = bucket.senateurs[0] ?? null;
 	if (!personne && !senateur) return null;
@@ -484,32 +523,50 @@ function bucketToElu(bucketKey: string, bucket: BuildElusBucket): Elu | null {
 	const mandats: EluMandatRef[] = [];
 	if (personne) {
 		for (const m of personne.mandats) {
+			const stableApp = m.appartenancesGroupe.find((a) => !a.isTransitoireNI);
+			const groupeId = stableApp?.groupeId ?? null;
+			const famille = groupeId ? famillesIdx.an.get(groupeId) ?? groupeId : null;
+			const groupeInfo = groupeId
+				? groupesIdx.an.get(`AN:${m.legislature}:${groupeId}`) ?? null
+				: null;
 			mandats.push({
 				chambre: 'AN',
 				legislature: m.legislature,
 				debut: m.datePriseFonction,
 				fin: m.dateFinFonction,
-				overall: m.stats.overall
+				overall: m.stats.overall,
+				groupeId,
+				groupeLibelleAbrege: groupeInfo?.libelleAbrege ?? null,
+				groupeCouleur: groupeInfo?.couleur ?? null,
+				famille
 			});
 		}
 	}
 	if (senateur) {
-		// Côté Sénat, un mandat couvre potentiellement plusieurs triennats et
-		// un même triennat peut être traversé par plusieurs mandats successifs
-		// (réélection au milieu d'un triennat). Pour la fiche Élu (cf ADR 0028
-		// + ADR 0032 §"Sélecteur de mandat"), un onglet = un triennat unique.
-		// On dédoublonne en gardant le `TriennatStats` du **dernier** mandat
-		// qui couvre ce triennat (le plus récent reflète le scoring final), et
-		// on retient la date de prise de fonction la plus ancienne pour le tri.
 		const byTriennat = new Map<
 			string,
-			{ debut: string; fin: string | null; overall: number }
+			{
+				debut: string;
+				fin: string | null;
+				overall: number;
+				groupeCode: string | null;
+				groupeLibelleAbrege: string | null;
+				groupeCouleur: string | null;
+				famille: string | null;
+			}
 		>();
 		for (const m of senateur.mandats) {
+			const stableApp = m.appartenancesGroupe.find(
+				(a) => a.groupeCode !== 'NI' && a.groupeCode !== 'AUCUN'
+			);
+			const groupeCode = stableApp?.groupeCode ?? null;
+			const famille = groupeCode ? famillesIdx.senat.get(groupeCode) ?? groupeCode : null;
 			for (const tri of m.triennats) {
 				const existing = byTriennat.get(tri.triennat);
 				if (!existing || m.datePriseFonction > existing.debut) {
-					// Dernier mandat qui touche ce triennat → on garde ses stats.
+					const groupeInfo = groupeCode
+						? groupesIdx.senat.get(`SENAT:${tri.triennat}:${groupeCode}`) ?? null
+						: null;
 					byTriennat.set(tri.triennat, {
 						debut: existing
 							? existing.debut < m.datePriseFonction
@@ -517,7 +574,11 @@ function bucketToElu(bucketKey: string, bucket: BuildElusBucket): Elu | null {
 								: m.datePriseFonction
 							: m.datePriseFonction,
 						fin: m.dateFinFonction,
-						overall: tri.stats.overall
+						overall: tri.stats.overall,
+						groupeCode,
+						groupeLibelleAbrege: groupeInfo?.libelleAbrege ?? null,
+						groupeCouleur: groupeInfo?.couleur ?? null,
+						famille
 					});
 				}
 			}
@@ -528,7 +589,11 @@ function bucketToElu(bucketKey: string, bucket: BuildElusBucket): Elu | null {
 				triennat,
 				debut: ref.debut,
 				fin: ref.fin,
-				overall: ref.overall
+				overall: ref.overall,
+				groupeCode: ref.groupeCode,
+				groupeLibelleAbrege: ref.groupeLibelleAbrege,
+				groupeCouleur: ref.groupeCouleur,
+				famille: ref.famille
 			});
 		}
 	}
@@ -542,7 +607,7 @@ function bucketToElu(bucketKey: string, bucket: BuildElusBucket): Elu | null {
 	const stats = collectMandatStatsForElu(personne, senateur, mandats);
 	const overallCarriere = computeOverallCarriere(stats);
 	const radarCarriere = computeRadarCarriere(stats);
-	const badgesCarriere = computeBadgesCarriere(mandats);
+	const badgesCarriere = computeBadgesCarriere(mandats, personne, senateur);
 
 	return {
 		id,
@@ -633,7 +698,11 @@ function avg(xs: number[]): number {
 	return s / xs.length;
 }
 
-function computeBadgesCarriere(mandats: EluMandatRef[]): BadgeCarriereCross[] {
+function computeBadgesCarriere(
+	mandats: EluMandatRef[],
+	personne: Personne | null,
+	senateur: Senateur | null
+): BadgeCarriereCross[] {
 	const badges: BadgeCarriereCross[] = [];
 
 	// Bicameral : ≥1 mandat AN ET ≥1 mandat Sénat
@@ -645,10 +714,20 @@ function computeBadgesCarriere(mandats: EluMandatRef[]): BadgeCarriereCross[] {
 	if (mandats.length >= 3) badges.push('Veteran');
 
 	// Reelu : 2 mandats consécutifs DANS LA MÊME CHAMBRE (cf ADR 0032)
-	// "Consécutifs" : deux items mandats triés chrono asc dans la même chambre,
-	// sans gap d'une autre chambre entre eux.
 	const reelu = mandatsContainConsecutiveSameChambre(mandats);
 	if (reelu) badges.push('Reelu');
+
+	// Recomposition / Transfuge : on hérite des badges déjà calculés au niveau
+	// chambre (cf ADR 0016 + ADR 0034 pour la sémantique famille). Côté Elu
+	// cross-chambre, on agrège : si la personne a le badge dans EITHER son
+	// volet AN OR son volet Sénat, on le propage. Pas de re-calcul cross-
+	// chambre pour l'instant (les cas bicaméraux sont rares — ~10 — et ce
+	// raffinement viendra dans une ADR dédiée si besoin).
+	const lower = new Set<string>();
+	for (const b of personne?.carriere.badgesCarriere ?? []) lower.add(b);
+	for (const b of senateur?.carriere.badgesCarriere ?? []) lower.add(b);
+	if (lower.has('recomposition')) badges.push('Recomposition');
+	if (lower.has('transfuge')) badges.push('Transfuge');
 
 	return badges;
 }

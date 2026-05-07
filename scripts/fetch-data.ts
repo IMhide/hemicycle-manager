@@ -922,11 +922,24 @@ function computeCarriere(personne: PartialPersonne, famillesIdx: FamillesIndex):
 		}
 	}
 
-	// Transfuge : ≥ 2 appartenances stables (hors NI-bridge) dans un même mandat
+	// Transfuge : ≥ 2 **familles politiques** distinctes en cours de mandat
+	// (cf ADR 0016 + ADR 0034). On compare les familles (et non les `groupeId`
+	// bruts) pour neutraliser :
+	//   - les renommages d'un même parti à mi-mandat (MODEM → Dem en 15ᵉ),
+	//   - les passages NI temporaires (membre du gouvernement qui suspend),
+	//   - les NI transitoires de début de législature.
+	// Sans cette garde, Géraldine Bannier passant de MODEM (PO730970) à Dem
+	// (PO774834) en 15ᵉ — même famille — comptait comme transfuge.
+	const NI_GROUPS = new Set(['PO723569', 'PO793087', 'PO840056']);
 	for (const m of mandats) {
-		const stables = m.appartenancesGroupe.filter((a) => !a.isTransitoireNI);
-		const distincts = new Set(stables.map((a) => a.groupeId));
-		if (distincts.size >= 2) {
+		const familles = new Set<string>();
+		for (const a of m.appartenancesGroupe) {
+			if (a.isTransitoireNI) continue;
+			if (NI_GROUPS.has(a.groupeId)) continue;
+			const fam = familleAN(famillesIdx, a.groupeId);
+			familles.add(fam);
+		}
+		if (familles.size >= 2) {
 			carriere.badgesCarriere.push('transfuge');
 			break;
 		}
