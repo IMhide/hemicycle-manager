@@ -1,9 +1,9 @@
 <!--
 	Racine neutre `/` (cf ADR 0030).
 
-	Hub d'orientation entre les espaces AN, Sénat, Élus et Classement global.
+	Hub d'orientation entre les espaces AN, Sénat, Élus.
 	Pas de données live (ancienne home AN déplacée sous /assemblee/) —
-	présentation produit + 4 portes d'entrée + bloc « À propos » assumant
+	présentation produit + 3 portes d'entrée + bloc « À propos » assumant
 	la posture éditoriale du projet.
 -->
 <svelte:head>
@@ -24,7 +24,7 @@
 		</p>
 	</header>
 
-	<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 		<a
 			href="/assemblee"
 			class="card p-6 hover:border-assembly-accent/60 transition-colors flex flex-col gap-2"
@@ -54,16 +54,6 @@
 			<div class="text-sm text-assembly-muted">
 				Liste cross-chambre dédupliquée — une fiche par personne, qu'elle soit députée,
 				sénatrice ou les deux.
-			</div>
-		</a>
-		<a
-			href="/classement"
-			class="card p-6 hover:border-assembly-accent/60 transition-colors flex flex-col gap-2"
-		>
-			<div class="text-2xl">🏆</div>
-			<div class="title-display text-xl">Classement global</div>
-			<div class="text-sm text-assembly-muted">
-				Top élus toutes chambres confondues, par Overall carrière (moyenne simple cross-chambre).
 			</div>
 		</a>
 	</div>
