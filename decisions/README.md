@@ -4,9 +4,9 @@
 
 Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque décision est un fichier dédié au format [ADR](https://adr.github.io). Pour ajouter une décision : créer `decisions/NNNN-slug.md` avec la trame de `TEMPLATE.md`, puis lancer `npm run decisions:index`.
 
-**32 décisions** consignées.
+**33 décisions** consignées.
 
-**Tags** : `data`(14) · `senat`(8) · `métriques`(6) · `sémantique`(6) · `ux`(6) · `scope`(6) · `déploiement`(4) · `identité`(4) · `pipeline`(4) · `multi-chambre`(4) · `sourcing`(3) · `roadmap`(3) · `modèle`(3) · `pipeline-data`(2) · `hémicycle`(2) · `layout`(2) · `gouvernance`(2) · `build`(2) · `routes`(2) · `badges`(2) · `sources`(2) · `etalab`(2) · `overall`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `groupes`(1) · `phase-1`(1) · `ches`(1) · `multi-legislature`(1) · `performance`(1) · `métrique`(1) · `exemplarité`(1) · `v1`(1) · `à-revisiter`(1) · `granularite-temporelle`(1) · `classements`(1) · `parite-an`(1) · `ere-macron`(1)
+**Tags** : `data`(15) · `senat`(9) · `métriques`(6) · `sémantique`(6) · `ux`(6) · `scope`(6) · `pipeline`(5) · `déploiement`(4) · `identité`(4) · `multi-chambre`(4) · `sourcing`(3) · `build`(3) · `roadmap`(3) · `modèle`(3) · `sources`(3) · `pipeline-data`(2) · `hémicycle`(2) · `layout`(2) · `gouvernance`(2) · `routes`(2) · `badges`(2) · `etalab`(2) · `overall`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `groupes`(1) · `phase-1`(1) · `ches`(1) · `multi-legislature`(1) · `performance`(1) · `métrique`(1) · `exemplarité`(1) · `v1`(1) · `à-revisiter`(1) · `granularite-temporelle`(1) · `classements`(1) · `parite-an`(1) · `ere-macron`(1) · `robustesse`(1)
 
 ## Index chronologique
 
@@ -44,6 +44,7 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 | 0030 | [Architecture des routes : `/assemblee/`, `/senat/`, `/elus/`, racine neutre](0030-routes-par-chambre-elus-hub.md) | ✅ accepté | `routes` `ux` `scope` `multi-chambre` | 2026-05-08 |
 | 0031 | [Modèle Élu cross-chambre : manifest bicaméral, ID synthétique](0031-modele-elu-cross-chambre-manifest.md) | ✅ accepté | `data` `modèle` `identité` `multi-chambre` `senat` | 2026-05-08 |
 | 0032 | [Sémantique de la carrière cross-chambre sur la fiche Élu](0032-semantique-carriere-cross-chambre.md) | ✅ accepté | `sémantique` `métriques` `ux` `multi-chambre` `overall` | 2026-05-08 |
+| 0033 | [`api-senat/senateurs.json` est une source optionnelle (fallback ODSEN+dosleg)](0033-fallback-api-senat-optionnelle.md) | ✅ accepté | `data` `pipeline` `sources` `senat` `robustesse` `build` | 2026-05-08 |
 
 ## Résumés
 
@@ -238,3 +239,9 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 > La vue Carrière sur `/elus/[eluId]` est un agrégat ludique des mandats AN et Sénat de l'élu, sans prétention de comparabilité scientifique cross-chambre. Les arbitrages :
 
 📄 [Lire la décision complète](0032-semantique-carriere-cross-chambre.md)
+
+### 0033 — `api-senat/senateurs.json` est une source optionnelle (fallback ODSEN+dosleg)
+
+> `senat.fr/api-senat/senateurs.json` est une source d'enrichissement optionnelle. Si elle est inutilisable au moment du build (vide, JSON invalide, non-tableau), le pipeline :
+
+📄 [Lire la décision complète](0033-fallback-api-senat-optionnelle.md)
