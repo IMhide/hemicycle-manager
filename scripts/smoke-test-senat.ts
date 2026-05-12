@@ -563,6 +563,31 @@ async function main() {
 		`got ${((scAvec.length / scrutinsIdx.length) * 100).toFixed(1)}%`
 	);
 
+	// Cas canonique : matching cross-chambre N3.c (versionAutreChambre)
+	// Mesuré : 80/219 (36,5%) des textes 2023-2026 sont matchés à l'AN.
+	const textes2326 = textes.filter((t) => t.triennat === '2023-2026');
+	const textes2326Match = textes2326.filter((t) => t.versionAutreChambre);
+	const pctMatch2326 = textes2326.length === 0 ? 0 : textes2326Match.length / textes2326.length;
+	check(
+		'≥ 20% des textes Sénat 2023-2026 ont une versionAutreChambre AN (N3.c, cible ~36%)',
+		pctMatch2326 >= 0.2,
+		`got ${(pctMatch2326 * 100).toFixed(1)}% (${textes2326Match.length}/${textes2326.length})`
+	);
+	check(
+		'Chaque versionAutreChambre Sénat a un texteAnId non vide',
+		textes2326Match.every((t) => !!t.versionAutreChambre && !!t.versionAutreChambre.texteAnId),
+		'au moins un versionAutreChambre est mal formé'
+	);
+	check(
+		'matchedVia ∈ {slug, titre} pour tous les matches Sénat',
+		textes2326Match.every(
+			(t) =>
+				!!t.versionAutreChambre &&
+				(t.versionAutreChambre.matchedVia === 'slug' || t.versionAutreChambre.matchedVia === 'titre')
+		),
+		'matchedVia invalide'
+	);
+
 	// ─── M. Bilan
 	console.log('\n' + '═'.repeat(60));
 	console.log(`  ${pass} pass / ${fail} fail (total ${pass + fail})`);

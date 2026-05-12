@@ -136,17 +136,31 @@
 						(dont {t.nbVotesSolennels} solennel{t.nbVotesSolennels > 1 ? 's' : ''})
 					{/if}
 				</div>
-				{#if t.senatUrl}
-					<div class="mt-2">
-						<a
-							href={t.senatUrl}
-							target="_blank"
-							rel="noopener noreferrer"
-							class="text-xs inline-flex items-center gap-1 text-assembly-accent hover:underline"
-							title="Voir le dossier équivalent sur le site du Sénat (navette parlementaire)"
-						>
-							Dossier Sénat <span aria-hidden="true">↗</span>
-						</a>
+				{#if t.versionAutreChambre || t.senatUrl}
+					<div class="mt-2 flex flex-wrap gap-3">
+						{#if t.versionAutreChambre}
+							<a
+								href="/senat/textes/{encodeURIComponent(t.versionAutreChambre.texteSenatId)}"
+								class="text-xs inline-flex items-center gap-1 text-assembly-accent hover:underline"
+								title={t.versionAutreChambre.matchedVia === 'slug'
+									? 'Version Sénat appariée via l’URL du dossier officiel'
+									: 'Version Sénat appariée par titre (fuzzy)'}
+							>
+								<span aria-hidden="true">⇄</span>
+								Voir la version Sénat
+							</a>
+						{/if}
+						{#if t.senatUrl}
+							<a
+								href={t.senatUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="text-xs inline-flex items-center gap-1 text-assembly-muted hover:text-assembly-accent hover:underline"
+								title="Dossier officiel sur senat.fr"
+							>
+								Dossier Sénat <span aria-hidden="true">↗</span>
+							</a>
+						{/if}
 					</div>
 				{/if}
 			</div>

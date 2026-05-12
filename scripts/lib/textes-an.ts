@@ -361,7 +361,8 @@ export function aggregeTextesAN(
 			nbScrutins: scrutinsTri.length,
 			nbVotesSolennels,
 			enrichiDossiersAN: !!dossier,
-			senatUrl
+			senatUrl,
+			versionAutreChambre: null // sera muté par build-cross-chambre.ts (N3.c)
 		});
 	}
 
