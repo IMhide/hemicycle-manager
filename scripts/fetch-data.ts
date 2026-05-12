@@ -38,6 +38,7 @@ import type {
 	LegislatureMeta,
 	ScrutinIndex,
 	ScrutinDetail,
+	Texte,
 	VotePosition,
 	VoteHistoryItem,
 	BuildMeta
@@ -49,6 +50,8 @@ import {
 	type FamillesIndex,
 	type FamillesManifest
 } from './lib/groupes-familles.ts';
+import { parseDossiersDir } from './lib/dossiers-an.ts';
+import { aggregeTextesAN, type ScrutinPourAgreg } from './lib/textes-an.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'static', 'data');
@@ -100,6 +103,12 @@ const sourceScrutins = (leg: number) => {
 	const filename = leg === 15 ? 'Scrutins_XV.json.zip' : 'Scrutins.json.zip';
 	return `https://data.assemblee-nationale.fr/static/openData/repository/${leg}/loi/scrutins/${filename}`;
 };
+
+/** Dump des dossiers parlementaires (~9 MB). Contient les métadonnées officielles
+ *  des textes : titre propre, code procédure, initiateurs, dates clés. Sert à
+ *  enrichir les `Texte` aggrégés (cf scripts/lib/dossiers-an.ts). */
+const SOURCE_DOSSIERS =
+	'https://data.assemblee-nationale.fr/static/openData/repository/17/loi/dossiers_legislatifs/Dossiers_Legislatifs.json.zip';
 
 /** Seuil pour identifier le NI-bridge transitoire (en jours).
  *  En 16ᵉ le délai d'inscription au groupe a été ~6 jours (22→28 juin 2022).
@@ -475,11 +484,16 @@ async function parseScrutins(extractDir: string, legislature: number) {
 
 	const index: ScrutinIndex[] = [];
 	const details = new Map<string, ScrutinDetail>();
+	/** Données ancillaires nécessaires à l'agrégation des textes (cf textes-an.ts).
+	 *  Conservées séparément pour ne pas alourdir ScrutinIndex public. */
+	const aggregInputs: ScrutinPourAgreg[] = [];
 
 	for (const file of files) {
 		const raw = JSON.parse(await readFile(join(dir, file), 'utf8'));
 		const s = raw.scrutin;
 		const decompte = s.syntheseVote?.decompte;
+		const dossierRef: string | null = s.objet?.dossierLegislatif?.dossierRef ?? null;
+		const typeVote: string = s.typeVote?.libelleTypeVote ?? 'inconnu';
 
 		const idx: ScrutinIndex = {
 			uid: s.uid,
@@ -491,9 +505,19 @@ async function parseScrutins(extractDir: string, legislature: number) {
 			pour: parseInt(decompte?.pour ?? '0', 10),
 			contre: parseInt(decompte?.contre ?? '0', 10),
 			abstention: parseInt(decompte?.abstentions ?? '0', 10),
-			demandeur: s.demandeur?.texte ?? null
+			demandeur: s.demandeur?.texte ?? null,
+			texteId: null // rempli après agrégation (cf main)
 		};
 		index.push(idx);
+		aggregInputs.push({
+			uid: idx.uid,
+			legislature,
+			date: idx.date,
+			titre: idx.titre,
+			dossierRef,
+			typeVote,
+			sort: idx.sort
+		});
 
 		const votes: Record<string, VotePosition> = {};
 		const groupesVent: ScrutinDetail['groupes'] = [];
@@ -539,14 +563,14 @@ async function parseScrutins(extractDir: string, legislature: number) {
 		details.set(s.uid, {
 			...idx,
 			objet: s.objet?.libelle ?? idx.titre,
-			typeVote: s.typeVote?.libelleTypeVote ?? 'inconnu',
+			typeVote,
 			votes,
 			groupes: groupesVent,
 			frondeurs
 		});
 	}
 
-	return { index, details };
+	return { index, details, aggregInputs };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -1032,6 +1056,10 @@ async function main() {
 		enrichZips.set(leg, zp);
 	}
 
+	// Dump dossiers parlementaires (~9 MB) — métadonnées des textes législatifs
+	const dossiersZip = join(CACHE_DIR, 'dossiers-an.json.zip');
+	await downloadZip(SOURCE_DOSSIERS, dossiersZip);
+
 	// ── Stage 2 : extract (réutilise les dossiers si le ZIP n'a pas bougé)
 	console.log('\n2/5  Extraction');
 	const acteursDir = join(CACHE_DIR, 'acteurs-extracted');
@@ -1054,6 +1082,9 @@ async function main() {
 		}
 		enrichDirs.set(leg, ed);
 	}
+
+	const dossiersDir = join(CACHE_DIR, 'dossiers-an-extracted');
+	await extractIfNeeded(dossiersZip, dossiersDir, 'json/dossierParlementaire', 50, 'dossiers AN');
 
 	// ── Stage 3 : transform — groupes + personnes + mandats
 	console.log('\n3/5  Transformation');
@@ -1088,17 +1119,38 @@ async function main() {
 	const allScrutinsIndex: ScrutinIndex[] = [];
 	const allScrutinsDetails = new Map<string, ScrutinDetail>();
 	const historiques = new Map<string, VoteHistoryItem[]>();
+	/** Entrées d'agrégation collectées sur toutes les législatures (cf textes-an.ts). */
+	const allAggregInputs: ScrutinPourAgreg[] = [];
 
 	for (const leg of LEGISLATURES) {
 		console.log(`  • Scrutins ${leg}ᵉ…`);
 		const t0 = Date.now();
-		const { index, details } = await parseScrutins(scrutinsDirs.get(leg)!, leg);
+		const { index, details, aggregInputs } = await parseScrutins(scrutinsDirs.get(leg)!, leg);
 		console.log(`    → ${index.length} scrutins en ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 		allScrutinsIndex.push(...index);
 		for (const [u, d] of details) allScrutinsDetails.set(u, d);
+		allAggregInputs.push(...aggregInputs);
 
 		console.log(`    • Stats sur les mandats ${leg}ᵉ…`);
 		computeStatsForLegislature(leg, personnes, index, details, historiques);
+	}
+
+	// Agrégation des textes législatifs (croise scrutins + dump dossiers)
+	console.log('\n  • Agrégation des textes législatifs…');
+	const dossiersDirJson = join(dossiersDir, 'json', 'dossierParlementaire');
+	const dossiers = await parseDossiersDir(dossiersDirJson, new Set(LEGISLATURES));
+	console.log(`    → ${dossiers.length} dossiers parlementaires retenus (légis ${LEGISLATURES.join('+')})`);
+	const { textes, scrutinToTexte } = aggregeTextesAN(allAggregInputs, dossiers);
+	const nbEnrichis = textes.filter((t) => t.enrichiDossiersAN).length;
+	console.log(
+		`    → ${textes.length} textes (${nbEnrichis} enrichis par le dump dossiers, ${textes.length - nbEnrichis} sur signature seule)`
+	);
+	// Injection des texteId dans les index et les details
+	for (const idx of allScrutinsIndex) {
+		idx.texteId = scrutinToTexte.get(idx.uid) ?? null;
+	}
+	for (const detail of allScrutinsDetails.values()) {
+		detail.texteId = scrutinToTexte.get(detail.uid) ?? null;
 	}
 
 	// Finalisation des stats puis rangs, badges et overalls mandat par législature
@@ -1176,6 +1228,9 @@ async function main() {
 	await writeFile(join(OUT_DIR, 'scrutins-index.json'), JSON.stringify(allScrutinsIndex));
 	console.log(`  ✓ scrutins-index.json (${allScrutinsIndex.length} scrutins)`);
 
+	await writeFile(join(OUT_DIR, 'textes.json'), JSON.stringify(textes));
+	console.log(`  ✓ textes.json (${textes.length} textes)`);
+
 	let written = 0;
 	for (const [uid, detail] of allScrutinsDetails) {
 		await writeFile(join(OUT_DIR, 'scrutins', `${uid}.json`), JSON.stringify(detail));
@@ -1199,10 +1254,12 @@ async function main() {
 			personnes: personnesFull.length,
 			mandats: mandatsTotal,
 			groupes: [...groupesByLeg.values()].reduce((s, l) => s + l.length, 0),
-			scrutins: allScrutinsIndex.length
+			scrutins: allScrutinsIndex.length,
+			textes: textes.length
 		},
 		sources: {
 			acteurs: SOURCE_ACTEURS,
+			dossiers: SOURCE_DOSSIERS,
 			...Object.fromEntries(LEGISLATURES.map((leg) => [`scrutins_${leg}`, sourceScrutins(leg)]))
 		}
 	};
