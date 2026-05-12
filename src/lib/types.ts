@@ -280,6 +280,16 @@ export interface Texte {
 	enrichiDossiersAN: boolean;
 }
 
+/** Entrée minimale pour afficher le nom d'un acteur Etalab. Utilisé pour
+ *  les initiateurs de textes législatifs qui peuvent être des ministres
+ *  (non-députés, absents de personnes.json). Cf ADR 0035. */
+export interface ActeurNom {
+	id: string; // PA-id Etalab
+	civ: string; // "M.", "Mme", "" si non renseigné
+	prenom: string;
+	nom: string;
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Build metadata
 // ────────────────────────────────────────────────────────────────────────────
@@ -293,6 +303,10 @@ export interface BuildMeta {
 		groupes: number;
 		scrutins: number;
 		textes: number;
+		/** Nombre d'acteurs Etalab (députés + ministres + sénateurs + anciens) dans
+		 *  `acteurs-noms.json`, utilisé pour afficher les initiateurs de textes
+		 *  non-députés (cf ADR 0035). */
+		acteurs: number;
 	};
 	sources: Record<string, string>;
 }

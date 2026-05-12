@@ -9,7 +9,7 @@
 	 * - timeline complète des scrutins, groupés par lecture/date
 	 */
 	import { lookupEluUrlForPaIdLeg } from '$lib/elus';
-	import type { Personne, ScrutinIndex } from '$lib/types';
+	import type { Personne, ScrutinIndex, ActeurNom } from '$lib/types';
 
 	let { data } = $props();
 
@@ -18,6 +18,13 @@
 	const personneById = $derived.by(() => {
 		const m = new Map<string, Personne>();
 		for (const p of data.personnes) m.set(p.id, p);
+		return m;
+	});
+	/** Index des noms d'acteurs (députés + ministres + sénateurs, cf ADR 0035).
+	 *  Utilisé pour afficher les initiateurs non-députés (ministres déposants). */
+	const acteurNomById = $derived.by(() => {
+		const m = new Map<string, ActeurNom>();
+		for (const a of data.acteursNoms) m.set(a.id, a);
 		return m;
 	});
 
@@ -165,6 +172,7 @@
 				<span class="text-assembly-muted">À l'initiative de </span>
 				{#each t.initiateurs as paId, i}
 					{@const personne = personneById.get(paId)}
+					{@const acteur = acteurNomById.get(paId)}
 					{#if personne}
 						<a
 							href={lookupEluUrlForPaIdLeg(paId, t.legislature)}
@@ -173,8 +181,16 @@
 							{personne.identite.prenom}
 							{personne.identite.nom}
 						</a>
+					{:else if acteur}
+						<span
+							class="text-assembly-fg"
+							title="Acteur non-député (typiquement ministre déposant un projet de loi)"
+						>
+							{acteur.prenom}
+							{acteur.nom}
+						</span>
 					{:else}
-						<span>{paId}</span>
+						<span class="text-assembly-muted/70" title="Acteur inconnu">{paId}</span>
 					{/if}
 					{#if i < t.initiateurs.length - 1}<span class="text-assembly-muted">, </span>{/if}
 				{/each}

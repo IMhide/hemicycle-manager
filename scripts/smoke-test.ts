@@ -14,7 +14,15 @@
 import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Personne, Groupe, LegislatureMeta, ScrutinIndex, BuildMeta, Texte } from '../src/lib/types.ts';
+import type {
+	Personne,
+	Groupe,
+	LegislatureMeta,
+	ScrutinIndex,
+	BuildMeta,
+	Texte,
+	ActeurNom
+} from '../src/lib/types.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = join(ROOT, 'static', 'data');
@@ -315,6 +323,37 @@ async function main() {
 		'Aucun texte id=sig-* n\'est marqué enrichi',
 		sigEnrichi.length === 0,
 		`${sigEnrichi.length} avec id sig- mais enrichi`
+	);
+
+	// ─── Manifest acteurs-noms (cf ADR 0035)
+	console.log('\n10. Manifest des noms d\'acteurs (députés + ministres + sénateurs)');
+	const acteursNoms = await loadJson<ActeurNom[]>('acteurs-noms.json');
+	check(`acteurs-noms.json non vide`, acteursNoms.length > 0, `got ${acteursNoms.length}`);
+	check(
+		`≈ 2 500-15 000 acteurs (députés + ministres + sénateurs + anciens)`,
+		acteursNoms.length >= 2500 && acteursNoms.length <= 15000,
+		`got ${acteursNoms.length}`
+	);
+	// Cas canonique : Sébastien Lecornu (PA643210) doit y figurer car il est
+	// initiateur du PLF 2026 alors qu'il n'est PAS député (= absent de personnes.json).
+	const lecornu = acteursNoms.find((a) => a.id === 'PA643210');
+	check('Sébastien Lecornu (PA643210, ministre non-député) présent', !!lecornu);
+	check(
+		'Lecornu a un nom complet',
+		!!lecornu && !!lecornu.nom && !!lecornu.prenom
+	);
+	// Tous les initiateurs de tous les textes doivent être trouvables (sinon UX cassée)
+	const acteursIdsManifest = new Set(acteursNoms.map((a) => a.id));
+	const initiateursOrphelins: string[] = [];
+	for (const tx of textes) {
+		for (const pa of tx.initiateurs) {
+			if (!acteursIdsManifest.has(pa)) initiateursOrphelins.push(pa);
+		}
+	}
+	check(
+		'Tous les initiateurs de textes sont dans le manifest acteurs-noms',
+		initiateursOrphelins.length === 0,
+		`${initiateursOrphelins.length} orphelins (échantillon: ${initiateursOrphelins.slice(0, 3).join(', ')})`
 	);
 
 	console.log(`\n──────────────────`);

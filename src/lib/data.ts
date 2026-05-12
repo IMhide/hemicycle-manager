@@ -13,6 +13,7 @@ import type {
 	ScrutinIndex,
 	ScrutinDetail,
 	Texte,
+	ActeurNom,
 	BuildMeta,
 	VoteHistoryItem,
 	Senateur,
@@ -80,6 +81,15 @@ export function loadTextes(fetchFn: typeof fetch) {
 export async function loadTexte(fetchFn: typeof fetch, id: string): Promise<Texte | null> {
 	const all = await loadTextes(fetchFn);
 	return all.find((t) => t.id === id) ?? null;
+}
+
+// ─────────────────── Acteurs (noms uniquement) ───────────────────
+// Manifest léger contenant le nom de TOUS les acteurs Etalab (députés,
+// sénateurs, ministres, etc.) pour afficher les initiateurs de textes
+// (cf ADR 0035). Distinct de personnes.json qui ne contient que les députés.
+
+export function loadActeursNoms(fetchFn: typeof fetch) {
+	return fetchJson<ActeurNom[]>(fetchFn, '/acteurs-noms.json');
 }
 
 // ─────────────────── Meta ───────────────────
