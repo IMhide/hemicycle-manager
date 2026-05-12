@@ -41,6 +41,7 @@ function scrutin(
 		legislature: 17,
 		titre,
 		dossierRef,
+		seanceRef: null,
 		typeVote: 'scrutin public ordinaire',
 		sort: 'adopté',
 		...opts
@@ -48,6 +49,21 @@ function scrutin(
 }
 
 const dossierVide: DossierAN[] = [];
+
+function dossierFixture(id: string, titre: string, opts: Partial<DossierAN> = {}): DossierAN {
+	return {
+		id,
+		legislature: 17,
+		titre,
+		titreChemin: null,
+		senatUrl: null,
+		procedure: { code: 'proposition-loi-ordinaire', libelle: 'Proposition de loi ordinaire' },
+		initiateurs: [],
+		timeline: { dateDepotAN: null, dateProcedureAccelere: null, datePromulgation: null },
+		type: 'DossierLegislatif_Type',
+		...opts
+	};
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Cas de base : agrégation simple par signature titre
@@ -249,5 +265,103 @@ describe('aggregeTextesAN — multi-législature', () => {
 		assert.equal(textes.length, 2);
 		const legs = textes.map((t) => t.legislature).sort();
 		assert.deepEqual(legs, [16, 17]);
+	});
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Cascade seanceRef → dossierRef → signature (méthode Poligraph)
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('aggregeTextesAN — cascade seanceRef (méthode Poligraph)', () => {
+	test('seanceRef match unique → id DLR, texte enrichi', () => {
+		const scrutins: ScrutinPourAgreg[] = [
+			scrutin('V1', '2026-04-14', "l'amendement n° 5 à l'article 1 du projet de loi de finances pour 2026 (première lecture).", null, {
+				seanceRef: 'RUANR5L17S2026IDS29850'
+			})
+		];
+		const dossiers = [dossierFixture('DLR5L17N52428', 'Projet de loi de finances pour 2026', {
+			procedure: { code: 'projet-loi-finances', libelle: "Projet de loi de finances de l'année" }
+		})];
+		const reunionMap = new Map([['RUANR5L17S2026IDS29850', new Set(['DLR5L17N52428'])]]);
+		const { textes, scrutinToTexte } = aggregeTextesAN(scrutins, dossiers, reunionMap);
+		assert.equal(textes.length, 1);
+		assert.equal(textes[0].id, 'DLR5L17N52428');
+		assert.equal(textes[0].titre, 'Projet de loi de finances pour 2026');
+		assert.equal(textes[0].enrichiDossiersAN, true);
+		assert.equal(scrutinToTexte.get('V1'), 'DLR5L17N52428');
+	});
+
+	test("seanceRef avec plusieurs candidats → désambiguïsation par signature titre (PLF gagne contre loi organique de report)", () => {
+		const scrutins: ScrutinPourAgreg[] = [
+			scrutin('V1', '2026-04-14', "l'amendement n° 2390 après l'article 12 du projet de loi de finances pour 2026 (première lecture).", null, {
+				seanceRef: 'RUANR5L17S2026IDS29850'
+			})
+		];
+		const dossiers = [
+			dossierFixture('DLR5L17N52428', 'Projet de loi de finances pour 2026', {
+				procedure: { code: 'projet-loi-finances', libelle: "Projet de loi de finances de l'année" }
+			}),
+			dossierFixture('DLR5L17N52655', 'Proposition de loi organique visant à reporter le renouvellement général')
+		];
+		const reunionMap = new Map([
+			['RUANR5L17S2026IDS29850', new Set(['DLR5L17N52428', 'DLR5L17N52655'])]
+		]);
+		const { textes } = aggregeTextesAN(scrutins, dossiers, reunionMap);
+		assert.equal(textes.length, 1);
+		assert.equal(textes[0].id, 'DLR5L17N52428'); // le PLF gagne, pas la loi organique
+		assert.equal(textes[0].enrichiDossiersAN, true);
+	});
+
+	test("seanceRef multi-candidats sans correspondance titre → fallback dossierRef côté scrutin si présent", () => {
+		const scrutins: ScrutinPourAgreg[] = [
+			scrutin('V1', '2026-04-14', "l'ensemble de la proposition de loi visant à instaurer X (première lecture).", 'DLR_FALLBACK', {
+				seanceRef: 'RUANR-AMBIGU'
+			})
+		];
+		const dossiers = [
+			dossierFixture('DLR_OTHER_1', 'Texte complètement différent A'),
+			dossierFixture('DLR_OTHER_2', 'Texte complètement différent B')
+		];
+		const reunionMap = new Map([['RUANR-AMBIGU', new Set(['DLR_OTHER_1', 'DLR_OTHER_2'])]]);
+		const { textes } = aggregeTextesAN(scrutins, dossiers, reunionMap);
+		assert.equal(textes.length, 1);
+		assert.equal(textes[0].id, 'DLR_FALLBACK'); // fallback sur le dossierRef du scrutin
+	});
+
+	test("Pas de seanceRef, pas de dossierRef → fallback signature pure", () => {
+		const scrutins: ScrutinPourAgreg[] = [
+			scrutin('V1', '2026-04-14', "l'ensemble de la proposition de loi visant à Y (première lecture).", null, {
+				seanceRef: null
+			})
+		];
+		const { textes } = aggregeTextesAN(scrutins, [], new Map());
+		assert.equal(textes.length, 1);
+		assert.match(textes[0].id, /^sig-/);
+		assert.equal(textes[0].enrichiDossiersAN, false);
+	});
+
+	test('seanceRef vide map (PLF tout entier 906 scrutins) → tous rattachés au même DLR', () => {
+		const scrutins: ScrutinPourAgreg[] = Array.from({ length: 50 }, (_, i) =>
+			scrutin(
+				`V${i}`,
+				`2025-10-${(i % 28) + 1}`.padEnd(10, '0'),
+				`l'amendement n° ${i} à l'article ${(i % 10) + 1} du projet de loi de finances pour 2026 (première lecture).`,
+				null,
+				{ seanceRef: `RUANR-PLF-${i % 5}` } // 5 séances différentes
+			)
+		);
+		const dossiers = [dossierFixture('DLR5L17N52428', 'Projet de loi de finances pour 2026', {
+			procedure: { code: 'projet-loi-finances', libelle: "Projet de loi de finances de l'année" }
+		})];
+		const reunionMap = new Map(
+			Array.from({ length: 5 }, (_, i) => [`RUANR-PLF-${i}`, new Set(['DLR5L17N52428'])])
+		);
+		const { textes, scrutinToTexte } = aggregeTextesAN(scrutins, dossiers, reunionMap);
+		assert.equal(textes.length, 1);
+		assert.equal(textes[0].id, 'DLR5L17N52428');
+		assert.equal(textes[0].nbScrutins, 50);
+		for (let i = 0; i < 50; i++) {
+			assert.equal(scrutinToTexte.get(`V${i}`), 'DLR5L17N52428');
+		}
 	});
 });

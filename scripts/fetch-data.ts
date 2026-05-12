@@ -493,6 +493,7 @@ async function parseScrutins(extractDir: string, legislature: number) {
 		const s = raw.scrutin;
 		const decompte = s.syntheseVote?.decompte;
 		const dossierRef: string | null = s.objet?.dossierLegislatif?.dossierRef ?? null;
+		const seanceRef: string | null = s.seanceRef ?? null;
 		const typeVote: string = s.typeVote?.libelleTypeVote ?? 'inconnu';
 
 		const idx: ScrutinIndex = {
@@ -515,6 +516,7 @@ async function parseScrutins(extractDir: string, legislature: number) {
 			date: idx.date,
 			titre: idx.titre,
 			dossierRef,
+			seanceRef,
 			typeVote,
 			sort: idx.sort
 		});
@@ -1135,12 +1137,22 @@ async function main() {
 		computeStatsForLegislature(leg, personnes, index, details, historiques);
 	}
 
-	// Agrégation des textes législatifs (croise scrutins + dump dossiers)
+	// Agrégation des textes législatifs (croise scrutins + dump dossiers,
+	// avec matching seanceRef↔reunionRef en source d'autorité, cf ADR 0035)
 	console.log('\n  • Agrégation des textes législatifs…');
 	const dossiersDirJson = join(dossiersDir, 'json', 'dossierParlementaire');
-	const dossiers = await parseDossiersDir(dossiersDirJson, new Set(LEGISLATURES));
-	console.log(`    → ${dossiers.length} dossiers parlementaires retenus (légis ${LEGISLATURES.join('+')})`);
-	const { textes, scrutinToTexte } = aggregeTextesAN(allAggregInputs, dossiers);
+	const { dossiers, reunionToDossierIds } = await parseDossiersDir(
+		dossiersDirJson,
+		new Set(LEGISLATURES)
+	);
+	console.log(
+		`    → ${dossiers.length} dossiers retenus, ${reunionToDossierIds.size} réunions indexées`
+	);
+	const { textes, scrutinToTexte } = aggregeTextesAN(
+		allAggregInputs,
+		dossiers,
+		reunionToDossierIds
+	);
 	const nbEnrichis = textes.filter((t) => t.enrichiDossiersAN).length;
 	console.log(
 		`    → ${textes.length} textes (${nbEnrichis} enrichis par le dump dossiers, ${textes.length - nbEnrichis} sur signature seule)`
