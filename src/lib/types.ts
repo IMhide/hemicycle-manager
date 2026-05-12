@@ -587,3 +587,76 @@ export interface TexteSenat {
 	 *  Texte AN correspondant — utilisable pour `/assemblee/textes/[id]`. */
 	versionAutreChambre: { texteAnId: string; matchedVia: 'slug' | 'titre' } | null;
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Texte unifié cross-chambre (N3.d, cf ADR 0036)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** État global d'un texte unifié, cascade ADR 0036 :
+ *  promulgue > rejete > retire/caduc > en-cours. */
+export type TexteUnifieEtat =
+	| 'promulgue'
+	| 'rejete'
+	| 'retire'
+	| 'caduc'
+	| 'fusionne'
+	| 'en-cours'
+	| 'inconnu';
+
+/** Référence légère vers un texte spécifique d'une chambre (sous-objet
+ *  de `TexteUnifie`). Sert à conserver les liens vers les fiches
+ *  chambre-spécifiques `/assemblee/textes/[id]` et `/senat/textes/[id]`. */
+export interface TexteUnifieChambreRef {
+	/** id natif côté chambre (DLR…/sig-… côté AN, loicod côté Sénat). */
+	texteId: string;
+	titre: string;
+	dateDebut: string;
+	dateFin: string;
+	nbScrutins: number;
+	sortFinal: string;
+}
+
+/** Objet `TexteUnifie` — un texte législatif vu cross-chambre.
+ *  Cf ADR 0036 pour la résolution des sources d'autorité.
+ *
+ *  Le `TexteUnifie` est l'entité canonique côté UI : une URL `/textes/[id]`
+ *  par texte, peu importe combien de chambres l'ont examiné.
+ *
+ *  Pour ~90% des textes, un seul des deux côtés `an`/`senat` est non-null
+ *  (textes mono-chambre). Les ~10% bicaméraux ont les deux côtés et la
+ *  fiche affiche les deux colonnes côte à côte. */
+export interface TexteUnifie {
+	/** Id canonique stable : id AN si présent, sinon id Sénat. Cf ADR 0036. */
+	id: string;
+	/** Titre canonique court (AN prioritaire, fallback titre Sénat nettoyé). */
+	titre: string;
+	/** Type éditorial (AN prioritaire, sinon projection Sénat). */
+	type: TexteType;
+	/** Libellé long du type. */
+	typeLibelle: string;
+	/** État global après cascade. */
+	etat: TexteUnifieEtat;
+	/** N° de loi promulguée si applicable (`loi.loinumjo` Sénat). */
+	numeroLoi: string | null;
+	/** Date de promulgation au JO si applicable. */
+	datePromulgation: string | null;
+	/** URL Légifrance du texte au JO si applicable. */
+	urlJO: string | null;
+	/** URL du dossier officiel sur senat.fr (extrait dump AN, N3.a). */
+	senatUrl: string | null;
+	/** PA-ids des initiateurs (AN expose, Sénat n'expose pas). */
+	initiateurs: string[];
+	/** Libellé de la procédure (AN expose, Sénat n'expose pas directement). */
+	procedureLibelle: string | null;
+	/** Période globale : min(débuts) → max(fins). */
+	dateDebut: string;
+	dateFin: string;
+	/** Total scrutins toutes chambres confondues. */
+	nbScrutins: number;
+	/** Indique si bicaméral (les deux chambres ont eu des scrutins sur ce texte). */
+	bicameral: boolean;
+	/** Côté AN si présent. */
+	an: TexteUnifieChambreRef | null;
+	/** Côté Sénat si présent. */
+	senat: TexteUnifieChambreRef | null;
+}

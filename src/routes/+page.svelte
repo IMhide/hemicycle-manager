@@ -24,7 +24,7 @@
 		</p>
 	</header>
 
-	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 		<a
 			href="/assemblee"
 			class="card p-6 hover:border-assembly-accent/60 transition-colors flex flex-col gap-2"
@@ -54,6 +54,17 @@
 			<div class="text-sm text-assembly-muted">
 				Liste cross-chambre dédupliquée — une fiche par personne, qu'elle soit députée,
 				sénatrice ou les deux.
+			</div>
+		</a>
+		<a
+			href="/textes"
+			class="card p-6 hover:border-assembly-accent/60 transition-colors flex flex-col gap-2"
+		>
+			<div class="text-2xl">📜</div>
+			<div class="title-display text-xl">Textes législatifs</div>
+			<div class="text-sm text-assembly-muted">
+				Vue cross-chambre — chaque texte regroupe les votes AN et Sénat sur un même dossier
+				législatif (navette parlementaire).
 			</div>
 		</a>
 	</div>
