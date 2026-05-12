@@ -94,4 +94,35 @@ describe('readApiSenateursOrEmpty', () => {
 		const res = readApiSenateursOrEmpty('[]');
 		assert.deepEqual(res, []);
 	});
+
+	test('JSON avec caractère de contrôle U+0001 dans une string → strippé puis parsé', () => {
+		// Cas réel mesuré 2026-05-13 : api-senat sert un payload avec U+0001 dans
+		// le champ "twitter" qui invalide le JSON sans strip.
+		const logs: string[] = [];
+		const payload =
+			'[{"matricule":"08061X","nom":"Patriat","prenom":"François","twitter":"","siege":1}]';
+		const res = readApiSenateursOrEmpty(payload, (m) => logs.push(m));
+		assert.equal(res.length, 1, 'le sanitize doit permettre le parse');
+		assert.equal(res[0].matricule, '08061X');
+		assert.equal(res[0].siege, 1);
+		assert.equal(logs.length, 0, 'aucun warning ne doit être émis');
+	});
+
+	test('JSON avec multiple chars de contrôle → tous strippés', () => {
+		const logs: string[] = [];
+		const payload =
+			'[{"matricule":"X","nom":"N","prenom":"P"}]';
+		const res = readApiSenateursOrEmpty(payload, (m) => logs.push(m));
+		assert.equal(res.length, 1);
+		assert.equal(res[0].nom, 'N');
+		assert.equal(res[0].prenom, 'P');
+	});
+
+	test('JSON avec \\n \\t \\r entre tokens (whitespaces JSON valides) → préservés', () => {
+		const logs: string[] = [];
+		const payload = '[\n  {\n\t"matricule": "X",\r\n\t"nom": "Doe"\n  }\n]';
+		const res = readApiSenateursOrEmpty(payload, (m) => logs.push(m));
+		assert.equal(res.length, 1);
+		assert.equal(res[0].matricule, 'X');
+	});
 });
