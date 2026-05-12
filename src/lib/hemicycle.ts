@@ -45,11 +45,14 @@ export const TOTAL_SEATS = SEAT_MAP_INTERNAL.size;
  *  hexagons; circles of r=5.5 fill the cell without overlap. */
 export const SEAT_RADIUS = 5.5;
 
-/** Color palette for vote positions. */
+/** Color palette for vote positions.
+ *  `absent` est volontairement un gris clair franc (slate-400) pour que les
+ *  députés absents soient visibles dans l'hémicycle d'un scrutin, et non
+ *  fantômes comme avec l'ancien `#1e293b` à opacity 0.25. */
 export const VOTE_COLORS = {
 	pour: '#22c55e',
 	contre: '#ef4444',
 	abstention: '#eab308',
 	nonVotant: '#64748b',
-	absent: '#1e293b'
+	absent: '#94a3b8'
 } as const;

@@ -82,7 +82,8 @@
 	}
 
 	function opacityForPersonne(p: Personne, m: Mandat): number {
-		if (mode.kind === 'vote' && !mode.votes[p.id]) return 0.25;
+		// En mode vote, les absents ont déjà la couleur grise (VOTE_COLORS.absent),
+		// on les rend pleinement visibles. Pour les autres modes, l'estompage est conservé.
 		if (mode.kind === 'highlight-groupe') {
 			const app = appartenanceContextuelle(m);
 			if (app?.groupeId !== mode.groupeId) return 0.2;
