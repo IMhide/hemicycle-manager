@@ -12,6 +12,7 @@ import type {
 	LegislatureMeta,
 	ScrutinIndex,
 	ScrutinDetail,
+	Texte,
 	BuildMeta,
 	VoteHistoryItem,
 	Senateur,
@@ -68,6 +69,17 @@ export function loadScrutinsIndex(fetchFn: typeof fetch) {
 
 export function loadScrutinDetail(fetchFn: typeof fetch, uid: string) {
 	return fetchJson<ScrutinDetail>(fetchFn, `/scrutins/${uid}.json`);
+}
+
+// ─────────────────── Textes législatifs (cf ADR 0035) ───────────────────
+
+export function loadTextes(fetchFn: typeof fetch) {
+	return fetchJson<Texte[]>(fetchFn, '/textes.json');
+}
+
+export async function loadTexte(fetchFn: typeof fetch, id: string): Promise<Texte | null> {
+	const all = await loadTextes(fetchFn);
+	return all.find((t) => t.id === id) ?? null;
 }
 
 // ─────────────────── Meta ───────────────────
