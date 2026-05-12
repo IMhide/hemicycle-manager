@@ -325,6 +325,30 @@ async function main() {
 		`${sigEnrichi.length} avec id sig- mais enrichi`
 	);
 
+	// Cas canonique 8 : navette cross-chambre (N3.a) — senatUrl propagé depuis dump AN.
+	// Mesuré : 32% des dossiers AN 17ᵉ ont un senatChemin → on attend ≥ 25% sur les
+	// textes enrichis 17ᵉ (le pool de textes ayant un DLR officiel).
+	const textes17Enrichis = textes.filter((t) => t.legislature === 17 && t.enrichiDossiersAN);
+	const textes17AvecSenat = textes17Enrichis.filter((t) => t.senatUrl !== null);
+	const pctSenat =
+		textes17Enrichis.length === 0 ? 0 : textes17AvecSenat.length / textes17Enrichis.length;
+	check(
+		'≥ 25% des textes 17ᵉ enrichis ont un senatUrl (navette N3.a, cible ~32%)',
+		pctSenat >= 0.25,
+		`got ${(pctSenat * 100).toFixed(1)}% (${textes17AvecSenat.length}/${textes17Enrichis.length})`
+	);
+	check(
+		'Tous les senatUrl sont des URL absolues http(s)://',
+		textes17AvecSenat.every((t) => /^https?:\/\//.test(t.senatUrl!)),
+		'au moins un senatUrl est mal formé'
+	);
+	const sigAvecSenat = textes.filter((t) => t.id.startsWith('sig-') && t.senatUrl !== null);
+	check(
+		'Aucun texte id=sig-* n\'a de senatUrl (ne peut venir que du dump dossiers)',
+		sigAvecSenat.length === 0,
+		`${sigAvecSenat.length} avec id sig- mais senatUrl renseigné`
+	);
+
 	// ─── Manifest acteurs-noms (cf ADR 0035)
 	console.log('\n10. Manifest des noms d\'acteurs (députés + ministres + sénateurs)');
 	const acteursNoms = await loadJson<ActeurNom[]>('acteurs-noms.json');

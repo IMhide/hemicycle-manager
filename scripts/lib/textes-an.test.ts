@@ -191,6 +191,39 @@ describe('aggregeTextesAN — enrichissement via dump dossiers', () => {
 		// id préfixé par sig- pour distinguer des dossierRef
 		assert.match(textes[0].id, /^sig-/);
 	});
+
+	test('Texte enrichi avec senatUrl → propagé sur le Texte (N3.a navette)', () => {
+		const scrutins: ScrutinPourAgreg[] = [
+			scrutin('V1', '2026-05-05', "l'ensemble de la proposition de loi pour la sécurité (première lecture).", 'DLR5L17N99999')
+		];
+		const dossiers: DossierAN[] = [
+			dossierFixture('DLR5L17N99999', 'Sécurité publique', {
+				senatUrl: 'https://www.senat.fr/dossier-legislatif/ppl25-597.html'
+			})
+		];
+		const { textes } = aggregeTextesAN(scrutins, dossiers);
+		assert.equal(textes.length, 1);
+		assert.equal(textes[0].senatUrl, 'https://www.senat.fr/dossier-legislatif/ppl25-597.html');
+	});
+
+	test('Texte sans senatUrl (dossier sans navette) → senatUrl = null', () => {
+		const scrutins: ScrutinPourAgreg[] = [
+			scrutin('V1', '2026-05-05', "l'ensemble de la proposition de loi A (première lecture).", 'DLR5L17N11111')
+		];
+		const dossiers: DossierAN[] = [
+			dossierFixture('DLR5L17N11111', 'Texte resté à l\'AN', { senatUrl: null })
+		];
+		const { textes } = aggregeTextesAN(scrutins, dossiers);
+		assert.equal(textes[0].senatUrl, null);
+	});
+
+	test('Texte signature (non enrichi) → senatUrl = null par défaut', () => {
+		const scrutins: ScrutinPourAgreg[] = [
+			scrutin('V1', '2026-05-05', "l'ensemble de la proposition de loi visant à Y (première lecture).")
+		];
+		const { textes } = aggregeTextesAN(scrutins, dossierVide);
+		assert.equal(textes[0].senatUrl, null);
+	});
 });
 
 // ────────────────────────────────────────────────────────────────────────────

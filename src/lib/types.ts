@@ -278,6 +278,10 @@ export interface Texte {
 	/** Indique si le texte est enrichi par le dump dossiers (titre officiel,
 	 *  procédure, initiateurs, timeline). false = identifiant fallback signature. */
 	enrichiDossiersAN: boolean;
+	/** URL du dossier équivalent sur le site du Sénat quand connu (extrait
+	 *  de `titreDossier.senatChemin` du dump dossiers AN). Premier jalon
+	 *  navette cross-chambre, cf handoff N3.a. ~32% des dossiers AN 17ᵉ. */
+	senatUrl: string | null;
 }
 
 /** Entrée minimale pour afficher le nom d'un acteur Etalab. Utilisé pour
