@@ -105,9 +105,27 @@ const TYPE_TEXTE_PATTERN = new RegExp(
 	'i'
 );
 
-/** Suffixes optionnels insérés après le type de texte qu'on doit ignorer (navette). */
+/** Suffixes optionnels insérés après le type de texte qu'on doit ignorer.
+ *
+ *  Couvre les bruits "navette" entre `<type texte>` et `<visant à X>`, qui
+ *  apparaissent dans les titres de scrutins Sénat (et plus rarement AN) avec
+ *  des formulations très variables :
+ *   - "adoptée par l'Assemblée nationale [après engagement de la procédure
+ *     accélérée | après déclaration d'urgence | en nouvelle/première lecture | …]"
+ *   - "adopté avec modifications par le Sénat"
+ *   - "adopté définitivement par l'Assemblée nationale"
+ *   - "considéré comme adopté par l'Assemblée nationale en application de
+ *     l'article 49, alinéa 3, de la Constitution"
+ *
+ *  Stratégie : on reconnaît un verbe d'action (adopt|modifi|rejet|transmis|
+ *  considér…) en début, et on absorbe tout jusqu'à la virgule suivante OU
+ *  jusqu'au prochain mot-clé de "lien" ("visant à", "relatif à", "relative à",
+ *  "portant", "tendant à", "pour", "de", "à"…) qui démarre la partie utile.
+ *
+ *  Le pattern matche en tête (`^`), avec virgules absorbées, et insensible
+ *  à la casse. */
 const NAVETTE_PREFIX_PATTERN =
-	/^\s*,?\s*(?:adopt[ée]e? par le s[ée]nat|modifi[ée]e? par le s[ée]nat|rejet[ée]e? par le s[ée]nat|adopt[ée]e? par l[' ]assembl[ée]e nationale)\s*,?\s*/i;
+	/^\s*,?\s*(?:adopt[ée]e?|modifi[ée]e?|rejet[ée]e?|transmis(?:e)?|consid[ée]r[ée]e?(?:\s+comme\s+(?:adopt[ée]e?|modifi[ée]e?))?)(?=\s)[^,]*?(?=\s*,\s*(?:visant\s+[àa]|relati(?:f|ve|fs|ves)?s?\s+(?:[àa]|aux?)|tendant\s+[àa]|portant|pour\s+\d|en\s+faveur\s+|sur\s+l|de\s+(?:finances|programmation|r[èe]glement)\s)|\s*,\s*$)\s*,?\s*/i;
 
 /** Suffixes de fin de titre à couper (lectures, suite, CMP, etc.). */
 const TAIL_PATTERN =
