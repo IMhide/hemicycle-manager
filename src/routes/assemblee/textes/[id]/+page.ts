@@ -1,16 +1,17 @@
 import type { PageLoad } from './$types';
 import { error } from '@sveltejs/kit';
-import { loadTexte, loadScrutinsIndex, loadPersonnes } from '$lib/data';
+import { loadTexte, loadScrutinsIndex, loadPersonnes, loadActeursNoms } from '$lib/data';
 
 export const prerender = false;
 export const ssr = false;
 
 export const load: PageLoad = async ({ fetch, params }) => {
 	const id = decodeURIComponent(params.id);
-	const [texte, scrutinsIndex, personnes] = await Promise.all([
+	const [texte, scrutinsIndex, personnes, acteursNoms] = await Promise.all([
 		loadTexte(fetch, id),
 		loadScrutinsIndex(fetch),
-		loadPersonnes(fetch)
+		loadPersonnes(fetch),
+		loadActeursNoms(fetch).catch(() => [])
 	]);
 	if (!texte) throw error(404, `Texte ${id} introuvable`);
 	// On extrait seulement les scrutins du texte (déjà ordonnés chronologiquement)
@@ -18,5 +19,5 @@ export const load: PageLoad = async ({ fetch, params }) => {
 	const scrutinsDuTexte = texte.scrutins
 		.map((uid) => scrutinIndexByUid.get(uid))
 		.filter((s) => !!s);
-	return { texte, scrutins: scrutinsDuTexte, personnes };
+	return { texte, scrutins: scrutinsDuTexte, personnes, acteursNoms };
 };

@@ -52,6 +52,7 @@ import {
 } from './lib/groupes-familles.ts';
 import { parseDossiersDir } from './lib/dossiers-an.ts';
 import { aggregeTextesAN, type ScrutinPourAgreg } from './lib/textes-an.ts';
+import { buildActeursNoms, writeActeursNoms } from './lib/acteurs-noms.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'static', 'data');
@@ -1243,6 +1244,13 @@ async function main() {
 	await writeFile(join(OUT_DIR, 'textes.json'), JSON.stringify(textes));
 	console.log(`  ✓ textes.json (${textes.length} textes)`);
 
+	// Manifest des noms de TOUS les acteurs (députés + sénateurs + ministres + …),
+	// utilisé pour afficher les initiateurs de dossiers législatifs même quand
+	// l'acteur n'est pas député (cas typique : ministre déposant un projet de loi).
+	const acteursNoms = await buildActeursNoms(join(acteursDir, 'json', 'acteur'));
+	await writeActeursNoms(join(OUT_DIR, 'acteurs-noms.json'), acteursNoms);
+	console.log(`  ✓ acteurs-noms.json (${acteursNoms.length} acteurs)`);
+
 	let written = 0;
 	for (const [uid, detail] of allScrutinsDetails) {
 		await writeFile(join(OUT_DIR, 'scrutins', `${uid}.json`), JSON.stringify(detail));
@@ -1267,7 +1275,8 @@ async function main() {
 			mandats: mandatsTotal,
 			groupes: [...groupesByLeg.values()].reduce((s, l) => s + l.length, 0),
 			scrutins: allScrutinsIndex.length,
-			textes: textes.length
+			textes: textes.length,
+			acteurs: acteursNoms.length
 		},
 		sources: {
 			acteurs: SOURCE_ACTEURS,
