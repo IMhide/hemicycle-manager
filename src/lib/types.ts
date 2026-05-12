@@ -282,6 +282,12 @@ export interface Texte {
 	 *  de `titreDossier.senatChemin` du dump dossiers AN). Premier jalon
 	 *  navette cross-chambre, cf handoff N3.a. ~32% des dossiers AN 17ᵉ. */
 	senatUrl: string | null;
+	/** Référence vers la version Sénat du même texte (N3.c navette).
+	 *  null = pas de version Sénat trouvée dans le dataset (texte non transmis
+	 *  ou Sénat n'a pas eu de scrutin nominal sur ce texte). Quand non-null,
+	 *  contient l'id du TexteSenat correspondant — utilisable pour
+	 *  `/senat/textes/[id]`. */
+	versionAutreChambre: { texteSenatId: string; matchedVia: 'slug' | 'titre' } | null;
 }
 
 /** Entrée minimale pour afficher le nom d'un acteur Etalab. Utilisé pour
@@ -576,4 +582,8 @@ export interface TexteSenat {
 	/** Indique si le texte est enrichi par le dump dosleg (id = `loicod`).
 	 *  false = identifiant fallback signature. */
 	enrichiDosleg: boolean;
+	/** Référence vers la version AN du même texte (N3.c navette).
+	 *  null = pas de version AN trouvée. Quand non-null, contient l'id du
+	 *  Texte AN correspondant — utilisable pour `/assemblee/textes/[id]`. */
+	versionAutreChambre: { texteAnId: string; matchedVia: 'slug' | 'titre' } | null;
 }

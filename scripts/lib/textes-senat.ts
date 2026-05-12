@@ -256,7 +256,8 @@ export function aggregeTextesSenat(
 			urlJO,
 			sortFinal,
 			nbScrutins: scrutinsTri.length,
-			enrichiDosleg: !!dossier
+			enrichiDosleg: !!dossier,
+			versionAutreChambre: null // sera muté par build-cross-chambre.ts (N3.c)
 		});
 	}
 

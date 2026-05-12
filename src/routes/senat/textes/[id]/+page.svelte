@@ -106,17 +106,31 @@
 						? 's'
 						: ''}
 				</div>
-				{#if t.urlJO}
-					<div class="mt-2">
-						<a
-							href={t.urlJO}
-							target="_blank"
-							rel="noopener noreferrer"
-							class="text-xs inline-flex items-center gap-1 text-assembly-accent hover:underline"
-							title="Texte au Journal Officiel (Légifrance)"
-						>
-							Texte au JO <span aria-hidden="true">↗</span>
-						</a>
+				{#if t.versionAutreChambre || t.urlJO}
+					<div class="mt-2 flex flex-wrap gap-3">
+						{#if t.versionAutreChambre}
+							<a
+								href="/assemblee/textes/{encodeURIComponent(t.versionAutreChambre.texteAnId)}"
+								class="text-xs inline-flex items-center gap-1 text-assembly-accent hover:underline"
+								title={t.versionAutreChambre.matchedVia === 'slug'
+									? 'Version Assemblée appariée via l’URL du dossier officiel'
+									: 'Version Assemblée appariée par titre (fuzzy)'}
+							>
+								<span aria-hidden="true">⇄</span>
+								Voir la version Assemblée
+							</a>
+						{/if}
+						{#if t.urlJO}
+							<a
+								href={t.urlJO}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="text-xs inline-flex items-center gap-1 text-assembly-muted hover:text-assembly-accent hover:underline"
+								title="Texte au Journal Officiel (Légifrance)"
+							>
+								Texte au JO <span aria-hidden="true">↗</span>
+							</a>
+						{/if}
 					</div>
 				{/if}
 			</div>

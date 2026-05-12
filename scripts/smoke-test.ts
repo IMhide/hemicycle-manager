@@ -349,6 +349,32 @@ async function main() {
 		`${sigAvecSenat.length} avec id sig- mais senatUrl renseigné`
 	);
 
+	// Cas canonique 9 : matching cross-chambre N3.c (versionAutreChambre)
+	// Mesuré 2026-05-13 : 64/201 (31,8%) des textes 17ᵉ sont matchés au Sénat.
+	const textes17AvecMatch = textes.filter((t) => t.legislature === 17 && t.versionAutreChambre);
+	const pctMatch17 = textes17AvecMatch.length / textes17Enrichis.length;
+	check(
+		'≥ 15% des textes 17ᵉ enrichis ont une versionAutreChambre Sénat (N3.c, cible ~30%)',
+		pctMatch17 >= 0.15,
+		`got ${(pctMatch17 * 100).toFixed(1)}% (${textes17AvecMatch.length}/${textes17Enrichis.length})`
+	);
+	check(
+		'Chaque versionAutreChambre AN a un texteSenatId non vide',
+		textes17AvecMatch.every(
+			(t) => !!t.versionAutreChambre && !!t.versionAutreChambre.texteSenatId
+		),
+		'au moins un versionAutreChambre est mal formé'
+	);
+	check(
+		'matchedVia ∈ {slug, titre} pour tous les matches',
+		textes17AvecMatch.every(
+			(t) =>
+				!!t.versionAutreChambre &&
+				(t.versionAutreChambre.matchedVia === 'slug' || t.versionAutreChambre.matchedVia === 'titre')
+		),
+		'matchedVia invalide'
+	);
+
 	// ─── Manifest acteurs-noms (cf ADR 0035)
 	console.log('\n10. Manifest des noms d\'acteurs (députés + ministres + sénateurs)');
 	const acteursNoms = await loadJson<ActeurNom[]>('acteurs-noms.json');
