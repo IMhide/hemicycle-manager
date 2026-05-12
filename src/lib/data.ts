@@ -23,7 +23,8 @@ import type {
 	ScrutinSenatIndex,
 	ScrutinSenatDetail,
 	BuildMetaSenat,
-	VoteHistoryItemSenat
+	VoteHistoryItemSenat,
+	TexteSenat
 } from './types';
 import type { TriennatId } from './triennats';
 
@@ -155,6 +156,17 @@ export function loadScrutinsSenatIndex(fetchFn: typeof fetch) {
 
 export function loadScrutinSenatDetail(fetchFn: typeof fetch, uid: string) {
 	return fetchJsonSenat<ScrutinSenatDetail>(fetchFn, `/scrutins/${uid}.json`);
+}
+
+// ─────────────────── Textes législatifs Sénat (N3.b navette) ───────────────────
+
+export function loadTextesSenat(fetchFn: typeof fetch) {
+	return fetchJsonSenat<TexteSenat[]>(fetchFn, '/textes.json');
+}
+
+export async function loadTexteSenat(fetchFn: typeof fetch, id: string): Promise<TexteSenat | null> {
+	const all = await loadTextesSenat(fetchFn);
+	return all.find((t) => t.id === id) ?? null;
 }
 
 // ─────────────────── Meta Sénat ───────────────────

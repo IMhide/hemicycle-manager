@@ -458,6 +458,9 @@ export interface ScrutinSenatIndex {
 	contre: number;
 	abstention: number;
 	nonVotant: number;
+	/** Id du TexteSenat auquel ce scrutin appartient, ou `null` (motion, scrutin
+	 *  de procédure sans dossier identifiable). Cf textes-senat.ts. N3.b navette. */
+	texteId: string | null;
 }
 
 export interface ScrutinSenatDetail extends ScrutinSenatIndex {
@@ -491,4 +494,86 @@ export interface BuildMetaSenat {
 		votesNominatifs: number;
 	};
 	sources: Record<string, string>;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Textes législatifs Sénat (N3.b navette, symétrique de Texte côté AN)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Type de texte législatif Sénat. Reprend la nomenclature `typloi.typloicod`
+ *  du dump dosleg pour rester proche de la source. */
+export type TexteSenatType =
+	| 'pjl' // projet de loi (ordinaire)
+	| 'pjlo' // projet de loi organique
+	| 'pjlc' // projet de loi constitutionnelle
+	| 'pjlf' // projet de loi de finances
+	| 'pjlr' // projet de loi de finances rectificative
+	| 'pjlg' // projet de loi de règlement
+	| 'pjfs' // projet de loi de financement sécurité sociale
+	| 'pfsr' // projet de loi de financement sécurité sociale rectificative
+	| 'prog' // projet de loi de programmation
+	| 'ppl' // proposition de loi
+	| 'pplo' // proposition de loi organique
+	| 'pplc' // proposition de loi constitutionnelle
+	| 'ppro' // proposition de loi de programmation
+	| 'refe' // proposition de loi en application de l'art 11
+	| 'pac' // résolution européenne (proposition d'acte communautaire)
+	| 'ppre' // modification du règlement Sénat
+	| 'ppra' // proposition de résolution autre
+	| 'pprp' // résolution art 34-1
+	| 'enq' // commission d'enquête
+	| 'cvn' // convention
+	| 'mref' // motion référendaire
+	| 'dape' // déclaration politique générale (rare)
+	| 'autre';
+
+/** État final d'un dossier législatif Sénat (étalonné via `etaloi`). */
+export type TexteSenatEtat =
+	| 'en-cours'
+	| 'promulgue'
+	| 'rejete'
+	| 'retire'
+	| 'caduc'
+	| 'fusionne'
+	| 'inconnu';
+
+/** Agrégation d'un ensemble de scrutins Sénat portant sur le même texte
+ *  législatif, symétrique du type `Texte` côté AN (ADR 0035).
+ *
+ *  Stratégie de groupement (cf scripts/lib/textes-senat.ts) :
+ *   - Niveau 1 : matching par signature titre (`scr.scrint` ↔ `loi.loitit`)
+ *     contre les dossiers `loi` du dump dosleg → id = `loicod` (12 chars trimmés)
+ *   - Niveau 2 : fallback signature (`sig-…`) pour les scrutins sans dossier
+ *
+ *  Aucune FK structurée n'existe entre `scr` et `loi` dans dosleg.sql, c'est
+ *  la principale différence avec le pipeline AN. */
+export interface TexteSenat {
+	/** Soit un `loicod` brut (ex. `74884`) trimmé, soit `sig-<sesann>|<type>|<nom>`. */
+	id: string;
+	/** Triennat de rattachement (cf ADR 0028 + 0029). Le triennat est celui du
+	 *  premier scrutin du texte. */
+	triennat: string;
+	titre: string;
+	/** Type Sénat brut (`typloicod` du dump quand connu, sinon classé via parser titre). */
+	type: TexteSenatType;
+	/** Libellé long du type ("Projet de loi de finances", etc.). */
+	typeLibelle: string;
+	/** État final du dossier (cf `etaloi`). */
+	etat: TexteSenatEtat;
+	/** Numéro officiel de loi promulguée (ex. `2024-201`), null si non promulgué. */
+	numeroLoi: string | null;
+	/** Liste des `uid` de scrutins Sénat, ordre chronologique. */
+	scrutins: string[];
+	dateDebut: string; // date du 1er scrutin lié
+	dateFin: string; // date du dernier scrutin lié
+	/** Date de promulgation au JO si connue (`loi.loidatjo`). */
+	datePromulgation: string | null;
+	/** URL de publication au JO si connue (`loi.url_jo`). */
+	urlJO: string | null;
+	/** Sort final = sort du dernier scrutin (ou état du dossier si promulgué). */
+	sortFinal: string;
+	nbScrutins: number;
+	/** Indique si le texte est enrichi par le dump dosleg (id = `loicod`).
+	 *  false = identifiant fallback signature. */
+	enrichiDosleg: boolean;
 }
