@@ -160,6 +160,18 @@
 					>
 						En cours
 					</div>
+				{:else if /adopté/i.test(t.sortFinal)}
+					<div
+						class="title-display text-base px-3 py-1.5 rounded-md whitespace-nowrap bg-vote-pour/20 text-vote-pour"
+					>
+						{t.sortFinal}
+					</div>
+				{:else if /rejeté/i.test(t.sortFinal)}
+					<div
+						class="title-display text-base px-3 py-1.5 rounded-md whitespace-nowrap bg-vote-contre/20 text-vote-contre"
+					>
+						{t.sortFinal}
+					</div>
 				{:else}
 					<div
 						class="title-display text-base px-3 py-1.5 rounded-md whitespace-nowrap bg-assembly-border text-assembly-muted"
