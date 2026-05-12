@@ -161,6 +161,18 @@
 								>
 									En cours
 								</span>
+							{:else if /adopté/i.test(t.sortFinal)}
+								<span
+									class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-vote-pour/10 text-vote-pour"
+								>
+									Adopté
+								</span>
+							{:else if /rejeté/i.test(t.sortFinal)}
+								<span
+									class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-vote-contre/10 text-vote-contre"
+								>
+									Rejeté
+								</span>
 							{/if}
 						</div>
 						<div class="text-sm leading-snug font-medium line-clamp-2">
