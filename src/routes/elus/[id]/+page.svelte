@@ -216,6 +216,11 @@
 	let filter = $state<Filter>('tous');
 	let visibleCount = $state(PAGE_SIZE);
 	let scrollEl = $state<HTMLDivElement | null>(null);
+	/** Mode d'affichage de l'historique AN : liste plate (chronologique) ou
+	 *  groupé par texte législatif (cf ADR 0035). Le Sénat reste en liste plate
+	 *  car l'agrégation par texte n'est pas implémentée côté Sénat. */
+	let groupByTexte = $state(false);
+	let expandedTexte = $state<string | null>(null);
 
 	const scopedHistory = $derived.by((): HistoryItem[] => {
 		if (selected.kind === 'carriere') return historyMerged;
@@ -243,6 +248,74 @@
 		abstention: scopedHistory.filter((h) => h.position === 'abstention').length,
 		frondes: scopedHistory.filter((h) => h.isFronde).length
 	});
+
+	// ──────────────────────────────────────────────────────────────────
+	// Vue "Par texte" (AN uniquement, cf ADR 0035)
+	// ──────────────────────────────────────────────────────────────────
+
+	const texteById = $derived.by(() => {
+		const m = new Map<string, (typeof data.textesAN)[number]>();
+		for (const t of data.textesAN) m.set(t.id, t);
+		return m;
+	});
+
+	/** Groupe les items AN de filteredHistory par texteId.
+	 *  Le Sénat (pas de texte) et les scrutins AN sans texteId sont placés
+	 *  dans un bucket spécial "_sans_texte". */
+	const groupedByTexte = $derived.by(() => {
+		interface GroupeTexte {
+			texteId: string | null;
+			titre: string;
+			legislature: number;
+			items: HistoryItem[];
+			pour: number;
+			contre: number;
+			abstention: number;
+			frondes: number;
+			dateMin: string;
+			dateMax: string;
+		}
+		const map = new Map<string, GroupeTexte>();
+		for (const h of filteredHistory) {
+			const texteId = h.chambre === 'AN' ? h.scrutin.texteId ?? null : null;
+			const key = texteId ?? `_sans_${h.chambre}`;
+			let g = map.get(key);
+			if (!g) {
+				const texte = texteId ? texteById.get(texteId) : null;
+				const titre = texte
+					? texte.titre
+					: h.chambre === 'SENAT'
+						? 'Scrutins Sénat'
+						: 'Hors texte législatif (motions, procédure…)';
+				g = {
+					texteId,
+					titre,
+					legislature: h.chambre === 'AN' ? h.legislature : 0,
+					items: [],
+					pour: 0,
+					contre: 0,
+					abstention: 0,
+					frondes: 0,
+					dateMin: h.date,
+					dateMax: h.date
+				};
+				map.set(key, g);
+			}
+			g.items.push(h);
+			if (h.position === 'pour') g.pour++;
+			else if (h.position === 'contre') g.contre++;
+			else if (h.position === 'abstention') g.abstention++;
+			if (h.isFronde) g.frondes++;
+			if (h.date < g.dateMin) g.dateMin = h.date;
+			if (h.date > g.dateMax) g.dateMax = h.date;
+		}
+		// Tri : par date de fin descendante (textes les plus récents en haut)
+		return [...map.values()].sort((a, b) => b.dateMax.localeCompare(a.dateMax));
+	});
+
+	function toggleExpandedTexte(key: string) {
+		expandedTexte = expandedTexte === key ? null : key;
+	}
 
 	function setFilter(f: Filter) {
 		filter = f;
@@ -350,7 +423,7 @@
 					</div>
 				</div>
 
-				<div class="flex flex-wrap gap-1 mb-4">
+				<div class="flex flex-wrap gap-1 mb-3">
 					{#each [['tous', 'Tous'], ['pour', 'Pour'], ['contre', 'Contre'], ['abstention', 'Abst.'], ['frondes', '🔥 Frondes']] as [key, label] (key)}
 						<button
 							class="btn px-3 py-1 text-xs {filter === key
@@ -364,9 +437,105 @@
 					{/each}
 				</div>
 
-				{#if visibleHistory.length === 0}
+				<div class="flex items-center gap-2 mb-4 text-xs">
+					<span class="text-assembly-muted">Affichage :</span>
+					<button
+						class="px-2 py-0.5 rounded {!groupByTexte
+							? 'bg-assembly-accent/20 text-assembly-accent'
+							: 'text-assembly-muted hover:text-assembly-text'}"
+						onclick={() => (groupByTexte = false)}
+					>
+						Liste chronologique
+					</button>
+					<button
+						class="px-2 py-0.5 rounded {groupByTexte
+							? 'bg-assembly-accent/20 text-assembly-accent'
+							: 'text-assembly-muted hover:text-assembly-text'}"
+						onclick={() => (groupByTexte = true)}
+						title="Regroupe les scrutins par texte législatif (cf ADR 0035)"
+					>
+						Par texte
+					</button>
+				</div>
+
+				{#if filteredHistory.length === 0}
 					<div class="text-sm text-assembly-muted italic py-8 text-center">
 						Aucun vote dans cette catégorie.
+					</div>
+				{:else if groupByTexte}
+					<div
+						bind:this={scrollEl}
+						class="vote-scroll overflow-y-auto pr-1 -mr-1 border-y border-assembly-border/40"
+					>
+						<div class="space-y-2 py-1.5">
+							{#each groupedByTexte as g (g.texteId ?? g.titre)}
+								{@const expandKey = g.texteId ?? `_${g.titre}`}
+								{@const isExpanded = expandedTexte === expandKey}
+								{@const hasTextePage = g.texteId !== null}
+								<div class="border border-assembly-border/60 rounded-md overflow-hidden relative">
+									<button
+										class="w-full px-3 py-2 text-left hover:bg-assembly-border/20 flex items-center gap-3 text-sm {hasTextePage
+											? 'pr-24'
+											: ''}"
+										onclick={() => toggleExpandedTexte(expandKey)}
+									>
+										<span class="text-assembly-muted text-xs w-4 text-center">
+											{isExpanded ? '▼' : '▶'}
+										</span>
+										<div class="min-w-0 flex-1">
+											<div class="font-medium leading-snug">{g.titre}</div>
+											<div class="text-[11px] text-assembly-muted mt-0.5">
+												{g.items.length} vote{g.items.length > 1 ? 's' : ''} ·
+												<span class="text-vote-pour">{g.pour} pour</span> ·
+												<span class="text-vote-contre">{g.contre} contre</span>
+												{#if g.abstention > 0}
+													· <span>{g.abstention} abst.</span>
+												{/if}
+												{#if g.frondes > 0}
+													· <span class="text-amber-400"
+														>🔥 {g.frondes} fronde{g.frondes > 1 ? 's' : ''}</span
+													>
+												{/if}
+											</div>
+										</div>
+									</button>
+									{#if hasTextePage}
+										<a
+											href="/assemblee/textes/{encodeURIComponent(g.texteId!)}"
+											class="absolute top-2 right-3 text-[10px] uppercase tracking-wider text-assembly-muted hover:text-assembly-accent"
+										>
+											Voir texte →
+										</a>
+									{/if}
+									{#if isExpanded}
+										<div class="px-3 pb-2 space-y-1.5 border-t border-assembly-border/40 bg-assembly-border/5">
+											{#each g.items as h (h.chambre + ':' + h.scrutin.uid)}
+												<div class="pt-1.5">
+													{#if h.chambre === 'AN'}
+														<VoteHistoryItem
+															scrutin={h.scrutin}
+															position={h.position}
+															isFronde={h.isFronde}
+														/>
+													{:else}
+														<VoteHistoryItemSenat
+															scrutin={h.scrutin}
+															position={h.position}
+															isFronde={h.isFronde}
+														/>
+													{/if}
+												</div>
+											{/each}
+										</div>
+									{/if}
+								</div>
+							{/each}
+						</div>
+					</div>
+
+					<div class="mt-2 text-[10px] text-assembly-muted text-right tabular-nums">
+						{groupedByTexte.length} texte{groupedByTexte.length > 1 ? 's' : ''} · {filteredHistory.length}
+						vote{filteredHistory.length > 1 ? 's' : ''}
 					</div>
 				{:else}
 					<div

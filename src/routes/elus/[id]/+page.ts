@@ -9,7 +9,8 @@ import {
 	loadGroupesSenat,
 	loadTriennats,
 	loadHistoriqueSenat,
-	loadScrutinsSenatIndex
+	loadScrutinsSenatIndex,
+	loadTextes
 } from '$lib/data';
 import { loadElusManifest } from '$lib/elus';
 import type { TriennatId } from '$lib/triennats';
@@ -30,19 +31,21 @@ export const load: PageLoad = async ({ fetch, params }) => {
 		loadTriennats(fetch)
 	]);
 
-	// Côté AN : Personne + groupes + historique + scrutins-index si l'élu y a un mandat.
+	// Côté AN : Personne + groupes + historique + scrutins-index + textes si l'élu y a un mandat.
 	let personne = null;
 	let groupesAN: Awaited<ReturnType<typeof loadGroupes>> = [];
 	let historiqueAN: Awaited<ReturnType<typeof loadHistorique>> = [];
 	let scrutinsIndexAN: Awaited<ReturnType<typeof loadScrutinsIndex>> = [];
+	let textesAN: Awaited<ReturnType<typeof loadTextes>> = [];
 	if (elu.paId) {
 		personne = await loadPersonne(fetch, elu.paId);
 		if (personne) {
 			const groupesByLeg = await Promise.all(legislatures.map((l) => loadGroupes(fetch, l.num)));
 			groupesAN = groupesByLeg.flat();
-			[historiqueAN, scrutinsIndexAN] = await Promise.all([
+			[historiqueAN, scrutinsIndexAN, textesAN] = await Promise.all([
 				loadHistorique(fetch, elu.paId).catch(() => []),
-				loadScrutinsIndex(fetch)
+				loadScrutinsIndex(fetch),
+				loadTextes(fetch).catch(() => [])
 			]);
 		}
 	}
@@ -75,6 +78,7 @@ export const load: PageLoad = async ({ fetch, params }) => {
 		groupesAN,
 		historiqueAN,
 		scrutinsIndexAN,
+		textesAN,
 		senateur,
 		groupesSenat,
 		historiqueSenat,
