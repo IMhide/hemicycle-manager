@@ -4,9 +4,9 @@
 
 Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque décision est un fichier dédié au format [ADR](https://adr.github.io). Pour ajouter une décision : créer `decisions/NNNN-slug.md` avec la trame de `TEMPLATE.md`, puis lancer `npm run decisions:index`.
 
-**35 décisions** consignées.
+**36 décisions** consignées.
 
-**Tags** : `data`(17) · `senat`(10) · `sémantique`(7) · `métriques`(6) · `ux`(6) · `scope`(6) · `pipeline`(5) · `déploiement`(4) · `identité`(4) · `multi-chambre`(4) · `sourcing`(3) · `build`(3) · `roadmap`(3) · `modèle`(3) · `badges`(3) · `sources`(3) · `pipeline-data`(2) · `hémicycle`(2) · `layout`(2) · `gouvernance`(2) · `routes`(2) · `groupes`(2) · `etalab`(2) · `overall`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `phase-1`(1) · `ches`(1) · `multi-legislature`(1) · `performance`(1) · `métrique`(1) · `exemplarité`(1) · `v1`(1) · `à-revisiter`(1) · `granularite-temporelle`(1) · `classements`(1) · `parite-an`(1) · `ere-macron`(1) · `robustesse`(1) · `an`(1) · `agrégation`(1) · `AN`(1) · `scrutins`(1) · `textes`(1)
+**Tags** : `data`(18) · `senat`(10) · `sémantique`(8) · `métriques`(6) · `ux`(6) · `scope`(6) · `pipeline`(5) · `déploiement`(4) · `identité`(4) · `multi-chambre`(4) · `sourcing`(3) · `build`(3) · `roadmap`(3) · `modèle`(3) · `routes`(3) · `badges`(3) · `sources`(3) · `pipeline-data`(2) · `hémicycle`(2) · `layout`(2) · `gouvernance`(2) · `groupes`(2) · `etalab`(2) · `overall`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `phase-1`(1) · `ches`(1) · `multi-legislature`(1) · `performance`(1) · `métrique`(1) · `exemplarité`(1) · `v1`(1) · `à-revisiter`(1) · `granularite-temporelle`(1) · `classements`(1) · `parite-an`(1) · `ere-macron`(1) · `robustesse`(1) · `an`(1) · `agrégation`(1) · `AN`(1) · `scrutins`(1) · `textes`(1) · `cross-chambre`(1) · `navette`(1)
 
 ## Index chronologique
 
@@ -47,6 +47,7 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 | 0033 | [`api-senat/senateurs.json` est une source optionnelle (fallback ODSEN+dosleg)](0033-fallback-api-senat-optionnelle.md) | ✅ accepté | `data` `pipeline` `sources` `senat` `robustesse` `build` | 2026-05-08 |
 | 0034 | [Familles politiques : table d'équivalences pour le badge Recomposition](0034-familles-politiques-recomposition.md) | ✅ accepté | `data` `badges` `sémantique` `groupes` `an` `senat` | 2026-05-08 |
 | 0035 | [Agrégation des scrutins en « textes législatifs »](0035-agregation-scrutins-en-textes-legislatifs.md) | ✅ accepté | `data` `agrégation` `AN` `scrutins` `textes` | 2026-05-12 |
+| 0036 | [Objet `TexteUnifie` cross-chambre + fiche `/textes/[id]`](0036-texte-unifie-cross-chambre.md) | ✅ accepté | `data` `cross-chambre` `navette` `routes` `sémantique` | 2026-05-13 |
 
 ## Résumés
 
@@ -259,3 +260,9 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 > On définit un nouvel objet de données `Texte` (cf `src/lib/types.ts`) qui
 
 📄 [Lire la décision complète](0035-agregation-scrutins-en-textes-legislatifs.md)
+
+### 0036 — Objet `TexteUnifie` cross-chambre + fiche `/textes/[id]`
+
+> On introduit un objet `TexteUnifie` (cf `src/lib/types.ts`) et une route
+
+📄 [Lire la décision complète](0036-texte-unifie-cross-chambre.md)

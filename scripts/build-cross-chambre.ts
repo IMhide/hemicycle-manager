@@ -17,13 +17,14 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 
-import type { Texte, TexteSenat } from '../src/lib/types.ts';
+import type { Texte, TexteSenat, TexteUnifie } from '../src/lib/types.ts';
 import { streamCopyBlocks } from './lib/dosleg-parser.ts';
 import {
 	matchTextesAnSenat,
 	type TexteAnPourMatch,
 	type TexteSenatPourMatch
 } from './lib/textes-cross-chambre.ts';
+import { fusionneTextesUnifies } from './lib/textes-unifies.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR_AN = join(ROOT, 'static', 'data');
@@ -104,6 +105,55 @@ async function main() {
 	await writeFile(join(OUT_DIR_SENAT, 'textes.json'), JSON.stringify(textesSenat));
 	console.log(`  ✓ textes.json (AN) muté avec ${anToSenat.size} versionAutreChambre`);
 	console.log(`  ✓ senat/textes.json muté avec ${senatToAn.size} versionAutreChambre`);
+
+	// ── Manifest unifié TexteUnifie[] (N3.d, cf ADR 0036) ─────────────────────
+	console.log('\n  Construction du manifest unifié /textes/…');
+	const textesUnifies: TexteUnifie[] = fusionneTextesUnifies(
+		textesAN.map((t) => ({
+			id: t.id,
+			legislature: t.legislature,
+			titre: t.titre,
+			type: t.type,
+			procedureLibelle: t.procedureLibelle,
+			initiateurs: t.initiateurs,
+			dateDebut: t.dateDebut,
+			dateFin: t.dateFin,
+			datePromulgation: t.datePromulgation,
+			sortFinal: t.sortFinal,
+			nbScrutins: t.nbScrutins,
+			nbVotesSolennels: t.nbVotesSolennels,
+			enrichiDossiersAN: t.enrichiDossiersAN,
+			senatUrl: t.senatUrl,
+			versionAutreChambre: t.versionAutreChambre
+		})),
+		textesSenat.map((t) => ({
+			id: t.id,
+			triennat: t.triennat,
+			titre: t.titre,
+			type: t.type,
+			typeLibelle: t.typeLibelle,
+			etat: t.etat,
+			numeroLoi: t.numeroLoi,
+			datePromulgation: t.datePromulgation,
+			urlJO: t.urlJO,
+			dateDebut: t.dateDebut,
+			dateFin: t.dateFin,
+			sortFinal: t.sortFinal,
+			nbScrutins: t.nbScrutins,
+			enrichiDosleg: t.enrichiDosleg,
+			versionAutreChambre: t.versionAutreChambre
+		}))
+	);
+	await writeFile(
+		join(OUT_DIR_AN, 'textes-unifies.json'),
+		JSON.stringify(textesUnifies)
+	);
+	const bicameraux = textesUnifies.filter((t) => t.bicameral).length;
+	const anSeul = textesUnifies.filter((t) => t.an && !t.senat).length;
+	const senSeul = textesUnifies.filter((t) => !t.an && t.senat).length;
+	console.log(
+		`  ✓ textes-unifies.json (${textesUnifies.length} textes : ${bicameraux} bicam, ${anSeul} AN-seul, ${senSeul} Sénat-seul)`
+	);
 
 	// ── Stats finales ─────────────────────────────────────────────────────────
 	const couvAN = ((anToSenat.size / textesAN.length) * 100).toFixed(1);

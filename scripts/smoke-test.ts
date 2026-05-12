@@ -21,7 +21,8 @@ import type {
 	ScrutinIndex,
 	BuildMeta,
 	Texte,
-	ActeurNom
+	ActeurNom,
+	TexteUnifie
 } from '../src/lib/types.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -404,6 +405,80 @@ async function main() {
 		'Tous les initiateurs de textes sont dans le manifest acteurs-noms',
 		initiateursOrphelins.length === 0,
 		`${initiateursOrphelins.length} orphelins (échantillon: ${initiateursOrphelins.slice(0, 3).join(', ')})`
+	);
+
+	// ─── Manifest unifié cross-chambre (N3.d, cf ADR 0036)
+	console.log('\n11. Textes unifiés cross-chambre (TexteUnifie)');
+	const textesUnifies = await loadJson<TexteUnifie[]>('textes-unifies.json');
+	check('textes-unifies.json non vide', textesUnifies.length > 0, `got ${textesUnifies.length}`);
+	check(
+		'≈ 1000-2000 textes unifiés (961 AN + 571 Sénat − 86 doublons ≈ 1446)',
+		textesUnifies.length >= 1000 && textesUnifies.length <= 2000,
+		`got ${textesUnifies.length}`
+	);
+
+	const bicameraux = textesUnifies.filter((t) => t.bicameral);
+	check(
+		'≥ 50 textes bicaméraux (cible 86 sur ère Macron)',
+		bicameraux.length >= 50,
+		`got ${bicameraux.length}`
+	);
+	check(
+		'Tous les bicaméraux ont an ET senat remplis',
+		bicameraux.every((t) => !!t.an && !!t.senat),
+		'au moins un bicaméral est mal formé'
+	);
+	check(
+		'Tous les bicaméraux ont an.texteId === t.id (id canonique = AN)',
+		bicameraux.every((t) => t.an?.texteId === t.id),
+		'id canonique violé'
+	);
+
+	const anSeulCount = textesUnifies.filter((t) => t.an && !t.senat).length;
+	const senSeulCount = textesUnifies.filter((t) => !t.an && t.senat).length;
+	check(
+		'Distribution : ~70% AN-seul, ~30% Sénat-seul + bicaméraux',
+		anSeulCount + senSeulCount + bicameraux.length === textesUnifies.length,
+		`somme ${anSeulCount + senSeulCount + bicameraux.length} ≠ total ${textesUnifies.length}`
+	);
+
+	// Cas canonique : PPL Nouvelle-Calédonie doit être bicamérale avec id AN
+	const ncTexte = textesUnifies.find(
+		(t) =>
+			t.bicameral &&
+			t.an?.texteId === 'DLR5L17N50450' &&
+			t.senat?.texteId === '74884'
+	);
+	check(
+		'PPL Nouvelle-Calédonie (DLR5L17N50450 ↔ 74884) présente en bicaméral',
+		!!ncTexte,
+		ncTexte ? '' : 'introuvable'
+	);
+	if (ncTexte) {
+		check(
+			'PPL Nouvelle-Calédonie : numéroLoi côté Sénat propagé',
+			!!ncTexte.numeroLoi,
+			`got ${ncTexte.numeroLoi}`
+		);
+		check(
+			'PPL Nouvelle-Calédonie : état promulgue',
+			ncTexte.etat === 'promulgue',
+			`got ${ncTexte.etat}`
+		);
+	}
+
+	// Invariants généraux
+	check(
+		'Tous les textes ont dateDebut ≤ dateFin',
+		textesUnifies.every((t) => t.dateDebut <= t.dateFin),
+		'au moins un texte a une chronologie invalide'
+	);
+	check(
+		'Tous les états sont valides (promulgue/rejete/retire/caduc/fusionne/en-cours/inconnu)',
+		textesUnifies.every((t) =>
+			['promulgue', 'rejete', 'retire', 'caduc', 'fusionne', 'en-cours', 'inconnu'].includes(t.etat)
+		),
+		'au moins un état invalide'
 	);
 
 	console.log(`\n──────────────────`);

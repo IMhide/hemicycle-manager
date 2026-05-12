@@ -24,7 +24,8 @@ import type {
 	ScrutinSenatDetail,
 	BuildMetaSenat,
 	VoteHistoryItemSenat,
-	TexteSenat
+	TexteSenat,
+	TexteUnifie
 } from './types';
 import type { TriennatId } from './triennats';
 
@@ -81,6 +82,20 @@ export function loadTextes(fetchFn: typeof fetch) {
 
 export async function loadTexte(fetchFn: typeof fetch, id: string): Promise<Texte | null> {
 	const all = await loadTextes(fetchFn);
+	return all.find((t) => t.id === id) ?? null;
+}
+
+// ─────────────────── Textes unifiés cross-chambre (N3.d, ADR 0036) ───────────
+
+export function loadTextesUnifies(fetchFn: typeof fetch) {
+	return fetchJson<TexteUnifie[]>(fetchFn, '/textes-unifies.json');
+}
+
+export async function loadTexteUnifie(
+	fetchFn: typeof fetch,
+	id: string
+): Promise<TexteUnifie | null> {
+	const all = await loadTextesUnifies(fetchFn);
 	return all.find((t) => t.id === id) ?? null;
 }
 
