@@ -238,3 +238,77 @@ describe('extractTexteSignature — résolutions', () => {
 		assert.equal(sig.typeTexte, 'proposition-resolution-europeenne');
 	});
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// Bruits "navette" Sénat verbeux (cf scr.scrint dosleg, bug duplication N3.b).
+// Les titres de scrutins Sénat insèrent souvent des locutions entre le type
+// de texte et le "visant à X" / "relatif à Y". Sans extension du
+// NAVETTE_PREFIX_PATTERN, ces variantes créent des signatures dupliquées qui
+// se retrouvent en 2 TexteSenat distincts (ex: même PPL en 1re lecture vs
+// nouvelle lecture). Toutes ces formulations doivent converger.
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('extractTexteSignature — bruits navette Sénat verbeux (convergence)', () => {
+	test('PPL "après engagement de la procédure accélérée" converge avec PPL nue', () => {
+		const sigVerbeux = extractTexteSignature(
+			"sur l'ensemble de la proposition de loi, adoptée par l'Assemblée nationale après engagement de la procédure accélérée, visant à démocratiser le sport en France"
+		);
+		const sigNue = extractTexteSignature(
+			"sur l'ensemble de la proposition de loi visant à démocratiser le sport en France"
+		);
+		assert.ok(sigVerbeux);
+		assert.ok(sigNue);
+		assert.equal(sigVerbeux.nomNormalise, sigNue.nomNormalise);
+		assert.equal(sigVerbeux.nomNormalise, 'visant a democratiser le sport en france');
+	});
+
+	test('PPL "en nouvelle lecture" converge avec PPL nue', () => {
+		const sigNL = extractTexteSignature(
+			"sur l'ensemble de la proposition de loi, adoptée par l'Assemblée nationale en nouvelle lecture, visant à démocratiser le sport en France"
+		);
+		const sigNue = extractTexteSignature(
+			"sur l'ensemble de la proposition de loi visant à démocratiser le sport en France"
+		);
+		assert.ok(sigNL && sigNue);
+		assert.equal(sigNL.nomNormalise, sigNue.nomNormalise);
+	});
+
+	test('PPL "modifiée par le Sénat" converge', () => {
+		const sig = extractTexteSignature(
+			"sur l'amendement à la proposition de loi, modifiée par le Sénat, relative à la cyber-sécurité"
+		);
+		const sigNue = extractTexteSignature(
+			"sur l'amendement à la proposition de loi relative à la cyber-sécurité"
+		);
+		assert.ok(sig && sigNue);
+		assert.equal(sig.nomNormalise, sigNue.nomNormalise);
+	});
+
+	test('PJL "adopté avec modifications par le Sénat" converge', () => {
+		const sig = extractTexteSignature(
+			"sur l'ensemble du projet de loi, adopté avec modifications par le Sénat, relatif à la transition écologique"
+		);
+		const sigNue = extractTexteSignature(
+			"sur l'ensemble du projet de loi relatif à la transition écologique"
+		);
+		assert.ok(sig && sigNue);
+		assert.equal(sig.nomNormalise, sigNue.nomNormalise);
+	});
+
+	test('PJL "adopté définitivement par l\'Assemblée nationale" converge', () => {
+		const sig = extractTexteSignature(
+			"sur l'ensemble du projet de loi, adopté définitivement par l'Assemblée nationale, relatif aux JO 2024"
+		);
+		const sigNue = extractTexteSignature("sur l'ensemble du projet de loi relatif aux JO 2024");
+		assert.ok(sig && sigNue);
+		assert.equal(sig.nomNormalise, sigNue.nomNormalise);
+	});
+
+	test('La forme "nue" sans bruit navette reste inchangée', () => {
+		const sig = extractTexteSignature(
+			"l'ensemble de la proposition de loi visant à démocratiser le sport en France."
+		);
+		assert.ok(sig);
+		assert.equal(sig.nomNormalise, 'visant a democratiser le sport en france');
+	});
+});
