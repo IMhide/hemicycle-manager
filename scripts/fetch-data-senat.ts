@@ -800,7 +800,12 @@ function buildScrutins(
 			scrnum,
 			date,
 			titre: r.scrint ?? '(sans titre)',
-			sort: r.soslib ?? 'non précisé',
+			// Le champ dosleg `scr.soslib` est presque toujours null (2051/2056 sur
+			// l'ère Macron) : c'est en fait le libellé de la **demande** de scrutin
+			// public ("à la demande du groupe X"), pas le sort. On calcule donc le
+			// sort depuis le décompte de votes : majorité absolue des suffrages
+			// exprimés = règle de droit commun au Sénat.
+			sort: computeSortSenat(decompte),
 			pour: decompte.pour,
 			contre: decompte.contre,
 			abstention: decompte.abstention,
@@ -819,6 +824,24 @@ function buildScrutins(
 
 	scrutinsIndex.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.scrnum - a.scrnum));
 	return { scrutinsIndex, scrutinsDetails };
+}
+
+/** Calcule le sort éditorial d'un scrutin Sénat depuis son décompte de votes.
+ *  Règle : majorité absolue des suffrages exprimés (pour > contre) →
+ *  "adopté", pour ≤ contre avec au moins un vote exprimé → "rejeté",
+ *  scrutin sans expression → "non exprimé".
+ *  Les abstentions et non-votants n'entrent pas dans les suffrages exprimés
+ *  (article 60bis du règlement du Sénat). */
+function computeSortSenat(d: {
+	pour: number;
+	contre: number;
+	abstention: number;
+	nonVotant: number;
+}): string {
+	const exprimes = d.pour + d.contre;
+	if (exprimes === 0) return 'non exprimé';
+	if (d.pour > d.contre) return 'adopté';
+	return 'rejeté';
 }
 
 function pickPositionMajoritaire(d: {
