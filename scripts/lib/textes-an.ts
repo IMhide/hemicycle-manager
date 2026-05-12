@@ -344,6 +344,7 @@ export function aggregeTextesAN(
 		const procedureLibelle = dossier?.procedure.libelle ?? null;
 		const initiateurs = dossier?.initiateurs ?? [];
 		const datePromulgation = dossier?.timeline.datePromulgation ?? null;
+		const senatUrl = dossier?.senatUrl ?? null;
 
 		textes.push({
 			id: b.id,
@@ -359,7 +360,8 @@ export function aggregeTextesAN(
 			sortFinal,
 			nbScrutins: scrutinsTri.length,
 			nbVotesSolennels,
-			enrichiDossiersAN: !!dossier
+			enrichiDossiersAN: !!dossier,
+			senatUrl
 		});
 	}
 

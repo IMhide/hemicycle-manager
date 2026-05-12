@@ -136,6 +136,19 @@
 						(dont {t.nbVotesSolennels} solennel{t.nbVotesSolennels > 1 ? 's' : ''})
 					{/if}
 				</div>
+				{#if t.senatUrl}
+					<div class="mt-2">
+						<a
+							href={t.senatUrl}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="text-xs inline-flex items-center gap-1 text-assembly-accent hover:underline"
+							title="Voir le dossier équivalent sur le site du Sénat (navette parlementaire)"
+						>
+							Dossier Sénat <span aria-hidden="true">↗</span>
+						</a>
+					</div>
+				{/if}
 			</div>
 			<div class="flex flex-col items-end gap-1">
 				{#if t.datePromulgation}
