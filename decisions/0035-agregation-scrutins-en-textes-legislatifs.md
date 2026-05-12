@@ -30,44 +30,55 @@ Etalab fournit deux flux qui auraient pu nous aider :
 
 On définit un nouvel objet de données `Texte` (cf `src/lib/types.ts`) qui
 agrège tous les scrutins relatifs à un même texte législatif. Le rattachement
-des scrutins suit deux niveaux :
+des scrutins suit une **cascade à trois niveaux** :
 
-1. **Clé primaire** = `dossierRef` Etalab côté scrutin quand connu
-   (couverture ~11 %)
-2. **Clé secondaire** = signature stable extraite du **titre du scrutin** par
-   regex sur la séquence `<type de texte> <nom du texte>` (cf
-   `scripts/lib/texte-parser.ts`) — couvre 99,5 % des scrutins.
+1. **Source d'autorité — `seanceRef` ↔ `reunionRef`** (méthode inspirée de
+   [Poligraph](https://github.com/ironlam/poligraph)) : on indexe tous les
+   `reunionRef` trouvés dans l'arbre `actesLegislatifs` de chaque dossier
+   législatif, puis pour chaque scrutin on lit son `seanceRef` (toujours
+   présent) et on regarde quel(s) dossier(s) référencent cette séance.
+   - Si 1 seul dossier candidat : match direct → id DLR officiel.
+   - Si plusieurs dossiers candidats (séance traitant plusieurs textes) :
+     désambiguïsation par comparaison du titre du scrutin avec le titre des
+     dossiers candidats (mots significatifs en commun, ≥ 2 mots > 4 caractères,
+     gagnant unique).
+2. **Fallback 1 — `dossierRef` côté scrutin** : utilisé si la cascade `seanceRef`
+   ne tranche pas (rare).
+3. **Fallback 2 — signature parser titre** : extraction par regex sur la
+   séquence `<type de texte> <nom du texte>` du titre du scrutin (cf
+   `scripts/lib/texte-parser.ts`). Couvre les motions, séances orphelines.
 
-Quand un scrutin avec `dossierRef` partage la même signature qu'un scrutin
-sans `dossierRef`, ils sont regroupés sous l'id `dossierRef` (le scrutin avec
-ref prime). L'id final d'un `Texte` est :
-
-- soit un `dossierRef` Etalab (ex. `DLR5L17N53284`)
-- soit une signature synthétique préfixée `sig-<legislature>|<type>|<nom>`
+L'id final d'un `Texte` est :
+- soit un `dossierRef` Etalab (ex. `DLR5L17N53284`) — pour les textes rattachés
+  via niveau 1 ou 2 ;
+- soit une signature synthétique préfixée `sig-<legislature>|<type>|<nom>` —
+  pour les textes du niveau 3.
 
 Les motions de censure, suspensions de séance et déclarations gouvernementales
 ne sont **pas** des textes législatifs au sens strict et ont `texteId: null`
 côté scrutin. Sur 15 052 scrutins (15ᵉ+16ᵉ+17ᵉ) : 99,3 % rattachés à un
 texte, 99 scrutins légitimement orphelins.
 
-Le dump `Dossiers_Legislatifs.json.zip` reste téléchargé pour **enrichir** les
-textes dont l'id correspond à un `dossierRef` (titre officiel propre, code
-procédure, PA-ids initiateurs, date de promulgation). Les textes dont l'id
-est une signature gardent le titre extrait du parser.
+Le dump `Dossiers_Legislatifs.json.zip` est utilisé à deux fins :
+1. fournir l'index `reunionRef → dossierUid` (niveau 1 de la cascade) ;
+2. enrichir les textes (titre officiel propre, code procédure, PA-ids
+   initiateurs, dates de timeline) pour les textes dont l'id est un DLR.
 
 ## Pourquoi
 
-- **Le parser titre suffit comme clé d'agrégation.** Mesuré sur 6 530
-  scrutins 17ᵉ : 99,5 % de couverture, 0 collision quand on croise avec les
-  32 `dossierRef` officiels disponibles. C'est la stratégie la moins chère
-  et la plus complète.
-- **Le `dossierRef` reste prioritaire** quand il existe parce qu'il garantit
-  un identifiant stable cross-build et permet l'enrichissement par le dump
-  dossiers.
-- **Pas d'heuristique de matching titre↔dossier en v1.** Sur les 449 dossiers
-  17ᵉ dont le titre est juste l'objet ("Renforcer la sécurité"), une seconde
-  passe de matching pourrait élargir l'enrichissement, mais introduit du bruit
-  et des faux positifs. On reporte cette feature à une PR ultérieure.
+- **`seanceRef↔reunionRef` est la source la plus fiable.** Mesuré sur 6 530
+  scrutins 17ᵉ : 59,3 % match unique, 24,3 % désambiguïsés par titre = **83,7 %
+  des scrutins rattachés à un DLR officiel**, contre 11 % avec le seul
+  `dossierRef` côté scrutin. Étant donné que le champ `seanceRef` est rempli
+  sur 100 % des scrutins Etalab, c'est une vraie clé structurée.
+- **La désambiguïsation par titre est nécessaire** car la même séance peut
+  traiter plusieurs textes (PLF + loi organique de report, par exemple). On
+  combine type+titre du scrutin et titre du dossier, comptage des mots
+  significatifs (≥ 4 caractères) communs. Seuil ≥ 2 mots, gagnant unique.
+- **Le `dossierRef` côté scrutin reste un fallback utile** quand `seanceRef`
+  ne suffit pas et que `dossierRef` est rempli (rare, mais possible).
+- **Le parser titre signature** sert de dernier filet pour les motions, séances
+  orphelines, scrutins de procédure. Sans lui, on perdrait 16 % des scrutins.
 - **La signature inclut la législature** dans la clé pour éviter de fusionner
   un texte 16ᵉ et un texte 17ᵉ portant un nom similaire.
 - **Une `Loi` n'est pas un `Texte`** : un texte peut être adopté, rejeté,
@@ -76,15 +87,21 @@ est une signature gardent le titre extrait du parser.
 
 ## Conséquences
 
-- **Pipeline** : nouvelle étape de download/parse du dump dossiers (+9 MB,
-  cache HTTP conditionnel, ~2 s ajoutés en cold start, 0 en warm)
+- **Pipeline** : étape supplémentaire de download/parse du dump dossiers (+9 MB,
+  cache HTTP conditionnel, ~2 s ajoutés en cold start, 0 en warm). Construction
+  de l'index `reunionRef → Set<dossierUid>` lors du parse (1 511 réunions 17ᵉ).
 - **Stockage** : nouveau fichier `static/data/textes.json` (~ 1 MB), un champ
-  `texteId: string | null` ajouté à chaque `ScrutinIndex` et `ScrutinDetail`
-- **Couverture** : 99,3 % des scrutins ont un texteId ; 3 % des textes sont
-  enrichis par le dump dossiers (les ~30 dossiers ayant été correctement
-  référencés côté scrutin par Etalab). À élargir si nécessaire pour l'UI.
+  `texteId: string | null` ajouté à chaque `ScrutinIndex` et `ScrutinDetail`.
+- **Couverture mesurée** :
+  - 99,3 % des scrutins ont un `texteId`
+  - **48,6 % des scrutins** rattachés à un DLR officiel (vs ~11 % avec
+    `dossierRef` seul = × 4,4)
+  - **23,4 % des textes (225/961)** enrichis par le dump dossiers (titre
+    officiel, procédure, initiateurs, date de promulgation) — vs 3 % avant le
+    matching `seanceRef`
+  - **92 textes promulgués** identifiés sur 15+16+17
 - **UI à venir** : permettre le regroupement de l'historique de vote d'un
-  député par texte, et créer une route `/assemblee/textes/[id]/` plus tard.
+  député par texte, et créer une route `/assemblee/textes/[id]/`.
 - **Pas de symétrie Sénat dans cette ADR** — le pipeline Sénat utilise une
   source différente (`dosleg.zip`) et la sémantique des scrutins diffère
   (titres en "sur l'amendement n°X…"). Une ADR séparée traitera le Sénat.
@@ -92,11 +109,14 @@ est une signature gardent le titre extrait du parser.
 ## Liens
 
 - Code : `scripts/lib/texte-parser.ts`, `scripts/lib/dossiers-an.ts`,
-  `scripts/lib/textes-an.ts`, `scripts/fetch-data.ts`
+  `scripts/lib/dossiers-reunions.ts`, `scripts/lib/textes-an.ts`,
+  `scripts/fetch-data.ts`
 - Type : `Texte` dans `src/lib/types.ts`
 - Tests : `scripts/lib/texte-parser.test.ts` (22), `dossiers-an.test.ts`
-  (25), `textes-an.test.ts` (13), `scripts/smoke-test.ts` (17 cas canoniques
-  sur les textes)
+  (25), `dossiers-reunions.test.ts` (8), `textes-an.test.ts` (18),
+  `scripts/smoke-test.ts` (17 cas canoniques sur les textes)
+- Inspiration : [Poligraph](https://github.com/ironlam/poligraph) pour la
+  méthode `seanceRef↔reunionRef`
 - ADR liées : #0015 (modèle Personne unique), #0017 (stats cumul), #0021
   (cache HTTP conditionnel)
 - Source : https://data.assemblee-nationale.fr/static/openData/repository/17/loi/dossiers_legislatifs/Dossiers_Legislatifs.json.zip

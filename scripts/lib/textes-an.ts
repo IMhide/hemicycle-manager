@@ -21,6 +21,7 @@
 
 import {
 	extractTexteSignature,
+	normaliseNomTexte,
 	type TypeTexte as ParserTypeTexte
 } from './texte-parser.ts';
 import type { DossierAN, CodeProcedure } from './dossiers-an.ts';
@@ -36,8 +37,13 @@ export interface ScrutinPourAgreg {
 	legislature: number;
 	date: string;
 	titre: string;
-	/** dossierRef Etalab si présent dans `objet.dossierLegislatif.dossierRef`. */
+	/** dossierRef Etalab si présent dans `objet.dossierLegislatif.dossierRef`.
+	 *  Couvre ~11% des scrutins 17ᵉ, utilisé en clé secondaire. */
 	dossierRef: string | null;
+	/** seanceRef Etalab du scrutin. Croisé avec les `reunionRef` extraits de
+	 *  l'arbre `actesLegislatifs` des dossiers (méthode Poligraph), permet de
+	 *  rattacher 83,7% des scrutins à un dossier officiel DLR…. */
+	seanceRef: string | null;
 	typeVote: string;
 	sort: string;
 }
@@ -150,57 +156,143 @@ function reconstructTitreFallback(titre: string): string {
 }
 
 /**
- * Agrège la liste de scrutins en `Texte`s en s'appuyant sur :
- *  - le `dossierRef` côté scrutin pour la clé principale (quand présent)
- *  - le parser de titres pour la clé fallback (signature)
- *  - le dump dossiers pour les métadonnées d'enrichissement
+ * Désambiguïse plusieurs dossiers candidats en utilisant la signature titre
+ * du scrutin. Stratégie : on combine le **type de texte** (libellé brut, ex.
+ * "projet de loi de finances") et le **nom** de la signature, on en extrait
+ * les mots significatifs (≥4 caractères), et on cherche le dossier dont le
+ * titre partage le plus de mots avec cet ensemble.
+ *
+ * Le scrutin gagne si :
+ *  - il a au moins 2 mots en commun avec le titre du dossier (seuil bas pour
+ *    accommoder les signatures courtes comme "pour 2026" type "projet de loi
+ *    de finances" → mots {pour, 2026, projet, finances})
+ *  - aucun autre candidat n'a le même score
+ *
+ * Retourne `null` si aucun candidat ne franchit le seuil OU si égalité au
+ * sommet (préfère le fallback signature plutôt que de trancher au hasard).
+ */
+function desambigueParTitre(
+	candidatsIds: Iterable<string>,
+	signatureType: string,
+	signatureNom: string,
+	dossiersById: Map<string, DossierAN>
+): string | null {
+	const sigBlob = `${signatureType} ${signatureNom}`;
+	const sigWords = new Set(
+		normaliseNomTexte(sigBlob)
+			.split(' ')
+			.filter((w) => w.length > 3)
+	);
+	if (sigWords.size === 0) return null;
+	let best: { id: string; score: number } | null = null;
+	let runnerUpScore = -1;
+	for (const id of candidatsIds) {
+		const dossier = dossiersById.get(id);
+		if (!dossier) continue;
+		const dossierWords = new Set(
+			normaliseNomTexte(dossier.titre)
+				.split(' ')
+				.filter((w) => w.length > 3)
+		);
+		let common = 0;
+		for (const w of sigWords) if (dossierWords.has(w)) common++;
+		if (common < 2) continue;
+		if (best === null || common > best.score) {
+			runnerUpScore = best?.score ?? -1;
+			best = { id, score: common };
+		} else if (common > runnerUpScore) {
+			runnerUpScore = common;
+		}
+	}
+	if (best === null) return null;
+	if (best.score === runnerUpScore) return null;
+	return best.id;
+}
+
+/**
+ * Agrège la liste de scrutins en `Texte`s en s'appuyant sur trois sources :
+ *  - **seanceRef↔reunionRef** (méthode Poligraph, source d'autorité) : 83,7% des
+ *    scrutins ont un dossierRef officiel via cette méthode
+ *  - **dossierRef côté scrutin** (Etalab) : fallback quand seanceRef ne suffit pas
+ *  - **signature parser de titres** : dernier filet (motions, séances orphelines)
+ *
+ * @param scrutins liste enrichie de seanceRef/dossierRef
+ * @param dossiers liste des DossierAN extraite du dump
+ * @param reunionToDossierIds index `reunionRef → Set<dossierUid>` extrait du dump
  */
 export function aggregeTextesAN(
 	scrutins: ScrutinPourAgreg[],
-	dossiers: DossierAN[]
+	dossiers: DossierAN[],
+	reunionToDossierIds: Map<string, Set<string>> = new Map()
 ): AggregationResult {
 	const buckets = new Map<string, BucketEnCours>();
 	const scrutinToTexte = new Map<string, string | null>();
-	// Lookup signature → bucketId (pour la 2e passe : rattacher les scrutins sans
-	// dossierRef qui partagent une signature avec un bucket déjà créé via dossierRef).
 	const signatureToBucketId = new Map<string, string>();
+	const dossiersById = new Map(dossiers.map((d) => [d.id, d]));
 
-	// ── Passe 1 : créer/peupler les buckets dossierRef en premier, puis les signatures
-	// On trie d'abord pour traiter les scrutins avec dossierRef en premier — ainsi
-	// les buckets prennent leur id dossierRef avant qu'une signature concurrente
-	// ne crée son propre bucket "sig-…".
+	// On trie pour traiter en priorité les scrutins susceptibles d'établir un id
+	// officiel DLR (via seanceRef ou dossierRef), avant les scrutins qui ne
+	// peuvent que créer une signature. Ainsi les buckets prennent leur id DLR
+	// avant qu'un sig-… concurrent ne soit créé pour la même signature.
 	const ordered = [...scrutins].sort((a, b) => {
-		if (a.dossierRef && !b.dossierRef) return -1;
-		if (!a.dossierRef && b.dossierRef) return 1;
+		const aHasOfficial = !!(a.seanceRef || a.dossierRef);
+		const bHasOfficial = !!(b.seanceRef || b.dossierRef);
+		if (aHasOfficial && !bHasOfficial) return -1;
+		if (!aHasOfficial && bHasOfficial) return 1;
 		return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
 	});
 
 	for (const s of ordered) {
 		const sig = extractTexteSignature(s.titre);
 		if (sig === null) {
-			// Pas un texte législatif (motion de censure, suspension, …)
 			scrutinToTexte.set(s.uid, null);
 			continue;
 		}
-		// Clé signature stable (incluant la législature pour cloisonner)
 		const signatureKey = `${s.legislature}|${sig.typeTexte}|${sig.nomNormalise}`;
 
-		// Choix de l'id du bucket : dossierRef > signature
-		let bucketId: string;
-		let hasDossierRef: boolean;
-		if (s.dossierRef) {
+		// Cascade pour déterminer l'id du bucket :
+		// 1. seanceRef → 1 dossier candidat (match unique) → DLR
+		// 2. seanceRef → plusieurs candidats → désambiguïsation par signature titre → DLR
+		// 3. dossierRef côté scrutin → DLR
+		// 4. signature déjà connue → on récupère le bucket existant
+		// 5. sinon → nouveau bucket sig-…
+		let bucketId: string | null = null;
+		let hasDossierRef = false;
+
+		// (1) + (2) : matching par seanceRef
+		if (s.seanceRef) {
+			const candidats = reunionToDossierIds.get(s.seanceRef);
+			if (candidats && candidats.size === 1) {
+				bucketId = [...candidats][0];
+				hasDossierRef = true;
+			} else if (candidats && candidats.size > 1) {
+				// On utilise le titre du scrutin (riche en mots) pour la désambiguïsation
+				// plutôt que la seule signature normalisée (qui peut être courte type "pour 2026").
+				const disamb = desambigueParTitre(candidats, s.titre, sig.nomNormalise, dossiersById);
+				if (disamb !== null) {
+					bucketId = disamb;
+					hasDossierRef = true;
+				}
+			}
+		}
+		// (3) : dossierRef côté scrutin
+		if (bucketId === null && s.dossierRef) {
 			bucketId = s.dossierRef;
 			hasDossierRef = true;
-		} else if (signatureToBucketId.has(signatureKey)) {
+		}
+		// (4) : signature déjà mappée
+		if (bucketId === null && signatureToBucketId.has(signatureKey)) {
 			bucketId = signatureToBucketId.get(signatureKey)!;
-			hasDossierRef = bucketId.startsWith('sig-') ? false : true;
-		} else {
+			hasDossierRef = !bucketId.startsWith('sig-');
+		}
+		// (5) : nouveau bucket sig-…
+		if (bucketId === null) {
 			bucketId = `sig-${signatureKey}`;
 			hasDossierRef = false;
 		}
 
-		// On enregistre l'association signature → bucketId pour les scrutins ultérieurs
-		// (un scrutin sans dossierRef pourra retrouver le bucket créé par un autre avec dossierRef)
+		// Enregistre la signature → bucket pour les futurs scrutins qui n'auraient
+		// ni seanceRef matché, ni dossierRef, mais partageraient la signature.
 		if (!signatureToBucketId.has(signatureKey)) {
 			signatureToBucketId.set(signatureKey, bucketId);
 		}
@@ -228,10 +320,7 @@ export function aggregeTextesAN(
 		scrutinToTexte.set(s.uid, bucketId);
 	}
 
-	// ── Passe 2 : enrichissement par le dump dossiers
-	const dossiersById = new Map(dossiers.map((d) => [d.id, d]));
-
-	// ── Passe 3 : finalisation des Texte
+	// ── Passe 2 : finalisation des Texte (dossiersById déjà construit en haut)
 	const textes: Texte[] = [];
 	for (const b of buckets.values()) {
 		const dossier = b.hasDossierRef ? dossiersById.get(b.id) : undefined;

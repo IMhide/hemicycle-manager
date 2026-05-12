@@ -22,6 +22,7 @@
 import { readFile, writeFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { asArray } from './cache.ts';
+import { extractReunionRefs } from './dossiers-reunions.ts';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types publics
@@ -226,15 +227,30 @@ interface DossierRaw {
 }
 
 /**
+ * Sortie du parser : la liste des dossiers + l'index `reunionRef → dossierIds`
+ * extrait de l'arbre `actesLegislatifs` (utilisé pour matcher les scrutins
+ * via leur `seanceRef`, cf textes-an.ts).
+ */
+export interface DossiersParseResult {
+	dossiers: DossierAN[];
+	/** Map `reunionRef` → ensemble des uids de dossiers qui référencent cette réunion.
+	 *  Plusieurs dossiers peuvent partager une même réunion (séance traitant plusieurs textes). */
+	reunionToDossierIds: Map<string, Set<string>>;
+}
+
+/**
  * Parse tous les fichiers `*.json` du dossier d'extraction `dump/json/dossierParlementaire/`,
- * filtre par législatures et retourne la liste des dossiers conservés.
+ * filtre par législatures et retourne la liste des dossiers conservés + l'index inverse
+ * `reunionRef → dossierIds`.
  */
 export async function parseDossiersDir(
 	dossiersDir: string,
 	allowedLegislatures: Set<number>
-): Promise<DossierAN[]> {
+): Promise<DossiersParseResult> {
 	const files = await readdir(dossiersDir);
-	const out: DossierAN[] = [];
+	const dossiers: DossierAN[] = [];
+	const reunionToDossierIds = new Map<string, Set<string>>();
+
 	for (const f of files) {
 		if (!f.endsWith('.json')) continue;
 		const raw = JSON.parse(await readFile(join(dossiersDir, f), 'utf8'));
@@ -244,7 +260,7 @@ export async function parseDossiersDir(
 		const leg = parseInt(d.legislature ?? '', 10);
 		const titreDossier = d.titreDossier ?? {};
 		const proc = d.procedureParlementaire ?? {};
-		out.push({
+		dossiers.push({
 			id: uid,
 			legislature: leg,
 			titre: titreDossier.titre ?? '(sans titre)',
@@ -258,8 +274,18 @@ export async function parseDossiersDir(
 			timeline: extractTimeline(d.actesLegislatifs),
 			type: d['@xsi:type'] ?? 'autre'
 		});
+
+		// Index inverse : pour chaque reunionRef trouvé dans l'arbre, on enregistre le dossier
+		for (const ref of extractReunionRefs(d.actesLegislatifs)) {
+			let set = reunionToDossierIds.get(ref);
+			if (!set) {
+				set = new Set();
+				reunionToDossierIds.set(ref, set);
+			}
+			set.add(uid);
+		}
 	}
-	return out;
+	return { dossiers, reunionToDossierIds };
 }
 
 /** Écrit le résultat dans `static/data/dossiers-an.json`. */

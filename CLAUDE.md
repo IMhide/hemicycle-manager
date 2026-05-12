@@ -15,7 +15,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 2. ✅ **Phase 2** (mergée 2026-05-05) — 15ᵉ législature AN ajoutée (toute l'ère Macron à l'AN couverte)
 3. ✅ **Phase 3 — Sénat** (mergée 2026-05-07, PR #8) — pipeline + UI + scope ère Macron, à parité avec les 3 législatures AN. Ministres et président à venir (Phase 3 suite).
 
-**État actuel** : côté AN, 1196 personnes uniques, 1925 mandats, 15 052 scrutins agrégés en 1 039 textes législatifs (cf ADR 0035), 50+ vétérans 15+16+17. Smoke-test AN 57/57 ✅. Score **Overall** v2 + **Le Championnat / Les Coupes** + **FAQ** mergés 2026-05-06 (PR #6, ADR 0022). Polish UX mergé 2026-05-06 (PR #7).
+**État actuel** : côté AN, 1196 personnes uniques, 1925 mandats, 15 052 scrutins agrégés en 961 textes législatifs (cf ADR 0035, dont 225 enrichis par le dump dossiers via matching seanceRef↔reunionRef méthode Poligraph), 50+ vétérans 15+16+17. Smoke-test AN 57/57 ✅. Score **Overall** v2 + **Le Championnat / Les Coupes** + **FAQ** mergés 2026-05-06 (PR #6, ADR 0022). Polish UX mergé 2026-05-06 (PR #7).
 
 **Sénat (mergé 2026-05-07, PR #8)** : 672 sénateurs (cohorte cumulée 3 triennats), 2 029 scrutins, 705k votes nominatifs, 9 sessions, 3 triennats ère Macron (`2017-2020`, `2020-2023`, `2023-2026`), 348 places hémicycle. Smoke-test Sénat 67/67 ✅. Tests unitaires 131/131 ✅. ADR 0023-0029 figées. Hémicycle "vivant" pour les triennats anciens (sénateurs sans `place` réelle placés selon le gradient gauche-droite).
 
@@ -83,7 +83,7 @@ npm run dev                # serveur de dev sur localhost:5173
 npm run build              # build statique dans build/
 npm run preview            # vérifier le build en local
 npm run check              # type-check Svelte/TS
-npm run test:unit          # tests unitaires Node:test (251 tests : parser dosleg, layout, triennats, manifest élus, sources Sénat, familles politiques, parser textes AN…)
+npm run test:unit          # tests unitaires Node:test (264 tests : parser dosleg, layout, triennats, manifest élus, sources Sénat, familles politiques, parser textes AN + matching seanceRef…)
 npm run data:fetch         # télécharge + transforme AN, Sénat, puis build manifest élus
 npm run data:fetch:an      #   AN seul (~30s warm cache)
 npm run data:fetch:senat   #   Sénat seul (~3s warm, ~2 min cold)
@@ -179,12 +179,16 @@ scripts/
     texte-parser.ts            # ── parser titres scrutin AN → signature texte (ADR 0035) ──
                                # extractTexteSignature, 99,5% couverture (22 tests TDD)
     dossiers-an.ts             # parser dump Dossiers_Legislatifs.json.zip Etalab AN
+                               # + index reunionRef → Set<dossierUid> pour matching seanceRef
                                # (titre officiel, procédure, initiateurs, timeline)
                                # 25 tests TDD
+    dossiers-reunions.ts       # extractReunionRefs : walk récursif actesLegislatifs
+                               # pour collecter les reunionRef (méthode Poligraph)
+                               # 8 tests TDD
     textes-an.ts               # agrégation scrutins → Texte[] (ADR 0035)
-                               # dossierRef prioritaire > signature, enrichissement
-                               # par dump dossiers, 13 tests TDD
-    *.test.ts                  # 251 tests unitaires (npm run test:unit)
+                               # cascade : seanceRef↔reunionRef > dossierRef > signature
+                               # 18 tests TDD, 99,3% couverture, 48,6% DLR officiels
+    *.test.ts                  # 264 tests unitaires (npm run test:unit)
 static/data/
   elus-overrides.json          # COMMITÉ (exception au gitignore static/data/)
                                # forceFusion / forceSeparation pour cas exotiques (ADR 0031)
