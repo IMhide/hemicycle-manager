@@ -193,6 +193,10 @@ export interface ScrutinIndex {
 	contre: number;
 	abstention: number;
 	demandeur: string | null;
+	/** Identifiant du texte législatif auquel ce scrutin se rattache (cf type `Texte`).
+	 *  null pour les motions de censure, suspensions de séance, déclarations
+	 *  gouvernementales — légitimement hors champ "texte législatif". */
+	texteId: string | null;
 }
 
 export interface ScrutinDetail extends ScrutinIndex {
@@ -219,6 +223,64 @@ export interface ScrutinDetail extends ScrutinIndex {
 export type VoteHistoryItem = [string, VotePosition, 0 | 1, number];
 
 // ────────────────────────────────────────────────────────────────────────────
+// Textes législatifs (cf ADR à venir)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Type éditorial du texte, dérivé soit du parser titre, soit du dump dossiers
+ *  Etalab. Le parser titre est la source d'autorité quand les deux divergent. */
+export type TexteType =
+	| 'projet-loi'
+	| 'projet-loi-finances'
+	| 'projet-loi-finances-rectificative'
+	| 'projet-loi-financement-ss'
+	| 'projet-loi-organique'
+	| 'projet-loi-constitutionnelle'
+	| 'proposition-loi'
+	| 'proposition-loi-organique'
+	| 'proposition-loi-constitutionnelle'
+	| 'proposition-resolution'
+	| 'proposition-resolution-europeenne'
+	| 'autre';
+
+/** Un "texte" agrège tous les scrutins relatifs à un même dossier législatif :
+ *  amendements, sous-amendements, articles, votes solennels (1ʳᵉ lecture,
+ *  navette, lecture définitive, CMP).
+ *
+ *  L'identifiant `id` est :
+ *   - le `dossierRef` officiel Etalab (`DLR…`) quand connu (~11% des scrutins) ;
+ *   - sinon une signature synthétique stable dérivée du titre normalisé
+ *     (préfixe `sig-`), garantie cohérente entre runs grâce à la normalisation
+ *     du parser de titres (cf `scripts/lib/texte-parser.ts`).
+ *
+ *  Les motions de censure, suspensions de séance et déclarations gouvernementales
+ *  ne sont PAS représentées comme des textes (le scrutin a `texteId: null`). */
+export interface Texte {
+	id: string;
+	legislature: number;
+	titre: string;
+	type: TexteType;
+	/** Code procédure Etalab quand connu via le dump dossiers (libellé brut). */
+	procedureLibelle: string | null;
+	/** PA-ids des députés à l'origine du dépôt (vide pour projets gouvernementaux). */
+	initiateurs: string[];
+	/** Liste des uids de scrutins, ordre chronologique (plus ancien → plus récent). */
+	scrutins: string[];
+	dateDebut: string; // date du 1er scrutin lié
+	dateFin: string; // date du dernier scrutin lié
+	/** Date de promulgation au JO si connue (extraite du dump dossiers). */
+	datePromulgation: string | null;
+	/** Sort final = celui du dernier scrutin (vote solennel ou ultime). */
+	sortFinal: string;
+	nbScrutins: number;
+	/** Nombre de scrutins dont le typeVote est "scrutin public solennel"
+	 *  (votes finaux par lecture, plus signifiants pour la position globale). */
+	nbVotesSolennels: number;
+	/** Indique si le texte est enrichi par le dump dossiers (titre officiel,
+	 *  procédure, initiateurs, timeline). false = identifiant fallback signature. */
+	enrichiDossiersAN: boolean;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // Build metadata
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -230,6 +292,7 @@ export interface BuildMeta {
 		mandats: number;
 		groupes: number;
 		scrutins: number;
+		textes: number;
 	};
 	sources: Record<string, string>;
 }
