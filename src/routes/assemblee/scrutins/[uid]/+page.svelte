@@ -8,6 +8,9 @@
 	import GroupVoteBar from '$lib/components/GroupVoteBar.svelte';
 	import FrondeurCard from '$lib/components/FrondeurCard.svelte';
 	import InfoTip from '$lib/components/InfoTip.svelte';
+	import VoteSearchBox from '$lib/components/VoteSearchBox.svelte';
+	import type { VoteEntry } from '$lib/components/VoteSearchBox.types';
+	import { lookupEluUrlForPaIdLeg } from '$lib/elus';
 	import type { Personne, Groupe, AppartenanceGroupe } from '$lib/types';
 
 	let { data } = $props();
@@ -82,6 +85,24 @@
 		data.personnes.filter((p) => p.mandats.some((m) => m.legislature === detail.legislature))
 	);
 
+	const voteEntries = $derived.by(() => {
+		const out: VoteEntry[] = [];
+		for (const p of personnesPourHemicycle) {
+			const position = detail.votes[p.id] ?? 'absent';
+			const groupe = groupeAuVote(p);
+			out.push({
+				id: p.id,
+				prenom: p.identite.prenom,
+				nom: p.identite.nom,
+				groupeLibelle: groupe?.libelleAbrege ?? '',
+				groupeCouleur: groupe?.couleur ?? null,
+				position,
+				href: lookupEluUrlForPaIdLeg(p.id, detail.legislature)
+			});
+		}
+		return out;
+	});
+
 	const hoveredPersonne = $derived(hovered ? personneById.get(hovered) ?? null : null);
 	const hoveredGroupe = $derived(hoveredPersonne ? groupeAuVote(hoveredPersonne) : null);
 	const hoveredVote = $derived(hovered ? detail.votes[hovered] ?? 'absent' : null);
@@ -148,6 +169,8 @@
 			<div class="text-xs text-assembly-muted">Demandé par : {detail.demandeur}</div>
 		{/if}
 	</div>
+
+	<VoteSearchBox entries={voteEntries} label="député" />
 
 	<div class="card p-4 sm:p-6">
 		<Hemicycle
