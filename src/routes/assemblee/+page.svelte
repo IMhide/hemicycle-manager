@@ -189,9 +189,14 @@
 	<div>
 		<div class="flex items-baseline justify-between gap-3 mb-3">
 			<h2 class="title-display text-xl">Scrutins récents</h2>
-			<a href="/assemblee/scrutins/" class="text-xs text-assembly-muted hover:text-assembly-accent">
-				Voir tous les scrutins →
-			</a>
+			<div class="flex gap-3 text-xs text-assembly-muted">
+				<a href="/assemblee/textes/" class="hover:text-assembly-accent">
+					Textes ({data.textes.length}) →
+				</a>
+				<a href="/assemblee/scrutins/" class="hover:text-assembly-accent">
+					Voir tous les scrutins →
+				</a>
+			</div>
 		</div>
 		{#if recentScrutins.length === 0}
 			<div class="card p-6 text-sm text-assembly-muted text-center italic">
