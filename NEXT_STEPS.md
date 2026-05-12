@@ -205,6 +205,25 @@ Symétrise l'arborescence AN/Sénat et introduit le hub bicaméral `/elus/[eluId
 - [ ] Recherche globale unifiée sur les 4 types d'élus
 - [ ] Comparateur cross-chambre (un député peut être comparé à un sénateur sur des indicateurs communs)
 
+## 📜 Textes législatifs (ADR 0035, pipeline data mergeable 2026-05-12)
+
+### ✅ Pipeline data
+- ADR 0035 — Agrégation scrutins → `Texte`s législatifs
+- Parser titre scrutin (99,5% couverture, 0 collision) — `scripts/lib/texte-parser.ts`
+- Fetcher dump Dossiers_Legislatifs.json.zip Etalab — `scripts/lib/dossiers-an.ts`
+- Module d'agrégation `scripts/lib/textes-an.ts` (60 tests TDD au total)
+- Sortie `static/data/textes.json` (1 039 textes sur 15+16+17, 99,3% des scrutins rattachés)
+- Champ `texteId?: string` injecté dans chaque `ScrutinIndex`/`ScrutinDetail`
+
+### À venir (UI + raffinements)
+- [ ] Route `/assemblee/textes/[id]/` — fiche d'un texte : timeline scrutins, vote solennel mis en avant, frondes par groupe
+- [ ] Sur la fiche député : regrouper l'historique de vote par texte (collapsible)
+- [ ] Sur la fiche scrutin : lien vers le texte parent
+- [ ] Liste `/assemblee/textes/` — tous les textes filtrables par procédure / sort / législature
+- [ ] Enrichissement par matching titre↔titreDossier (~3% des textes actuellement enrichis, à élargir si l'UI le demande)
+- [ ] Symétrie Sénat : agrégation scrutins Sénat en `TexteSenat` (parser regex différent, source `dosleg.zip`)
+- [ ] Navette cross-chambre : matcher un texte AN à son équivalent Sénat (champ `senatUrl` du dossier dump comme piste)
+
 ## 🎯 Polish & features ludiques (en parallèle des phases)
 
 ### Animations (impact visuel fort, effort modéré)

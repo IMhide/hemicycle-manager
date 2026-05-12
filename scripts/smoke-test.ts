@@ -14,7 +14,7 @@
 import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Personne, Groupe, LegislatureMeta, ScrutinIndex, BuildMeta } from '../src/lib/types.ts';
+import type { Personne, Groupe, LegislatureMeta, ScrutinIndex, BuildMeta, Texte } from '../src/lib/types.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = join(ROOT, 'static', 'data');
@@ -223,6 +223,99 @@ async function main() {
 			`${veterans.filter((v) => !v.carriere.badgesCarriere.includes('veteran')).length} sans badge`
 		);
 	}
+
+	// ─── Textes législatifs (cf ADR à venir, scripts/lib/textes-an.ts)
+	console.log('\n9. Textes législatifs');
+	const textes = await loadJson<Texte[]>('textes.json');
+	check(`textes.json non vide`, textes.length > 0, `got ${textes.length}`);
+	check(`≈ 800-1500 textes sur 15+16+17`, textes.length >= 800 && textes.length <= 1500, `got ${textes.length}`);
+
+	// Cas canonique 1 : PLF 2026 a >900 scrutins liés (gros texte)
+	const plf26 = textes.find(
+		(t) =>
+			t.legislature === 17 &&
+			t.type === 'projet-loi-finances' &&
+			/pour\s*2026/i.test(t.titre)
+	);
+	check('PLF 2026 (17ᵉ) trouvé dans textes.json', !!plf26);
+	check(
+		'PLF 2026 ≥ 800 scrutins liés (le plus gros texte 17ᵉ)',
+		!!plf26 && plf26.nbScrutins >= 800,
+		`got ${plf26?.nbScrutins}`
+	);
+	check(
+		'PLF 2026 dateDebut < dateFin (chronologie)',
+		!!plf26 && plf26.dateDebut < plf26.dateFin
+	);
+
+	// Cas canonique 2 : la loi sécurité a un dossierRef Etalab → id = DLR…, enrichie
+	const secu = textes.find((t) => t.id === 'DLR5L17N53284');
+	check('Loi sécurité-rétention (DLR5L17N53284) trouvée', !!secu);
+	check(
+		'Loi sécurité a titre officiel (enrichi par dump dossiers)',
+		!!secu && /Renforcer la s[ée]curit[ée]/.test(secu.titre)
+	);
+	check('Loi sécurité enrichie = true', !!secu && secu.enrichiDossiersAN);
+	check(
+		'Loi sécurité a un initiateur (proposition de loi)',
+		!!secu && secu.initiateurs.length >= 1
+	);
+	check(
+		'Loi sécurité ≥ 80 scrutins liés',
+		!!secu && secu.nbScrutins >= 80,
+		`got ${secu?.nbScrutins}`
+	);
+
+	// Cas canonique 3 : scrutins-index a un champ texteId
+	check(
+		'scrutins-index.json a un champ texteId sur chaque entrée',
+		scrutinsIdx.every((s) => 'texteId' in s)
+	);
+	const scAvec = scrutinsIdx.filter((s) => s.texteId);
+	check(
+		'≥ 95% des scrutins ont un texteId (cible 99,3%)',
+		scAvec.length / scrutinsIdx.length >= 0.95,
+		`got ${((scAvec.length / scrutinsIdx.length) * 100).toFixed(1)}%`
+	);
+
+	// Cas canonique 4 : motions de censure → texteId null
+	const motions = scrutinsIdx.filter((s) =>
+		/motion de censure/i.test(s.titre)
+	);
+	check(
+		`Aucune motion de censure n'a de texteId (got ${motions.filter((s) => s.texteId).length}/${motions.length})`,
+		motions.every((s) => s.texteId === null)
+	);
+
+	// Cas canonique 5 : cohérence dateDebut/dateFin sur tous les textes
+	const datesIncoherentes = textes.filter((t) => t.dateDebut > t.dateFin);
+	check(
+		'Tous les textes ont dateDebut ≤ dateFin',
+		datesIncoherentes.length === 0,
+		`${datesIncoherentes.length} textes incohérents`
+	);
+
+	// Cas canonique 6 : nbScrutins = scrutins.length
+	const tailleIncoherente = textes.filter((t) => t.nbScrutins !== t.scrutins.length);
+	check(
+		'Tous les textes ont nbScrutins == scrutins.length',
+		tailleIncoherente.length === 0,
+		`${tailleIncoherente.length} textes incohérents`
+	);
+
+	// Cas canonique 7 : ids commençant par "DLR" sont enrichis, ids "sig-" sont non enrichis
+	const dlrNonEnrichi = textes.filter((t) => t.id.startsWith('DLR') && !t.enrichiDossiersAN);
+	check(
+		'Tous les textes id=DLR* sont enrichis',
+		dlrNonEnrichi.length === 0,
+		`${dlrNonEnrichi.length} avec id DLR mais non enrichi`
+	);
+	const sigEnrichi = textes.filter((t) => t.id.startsWith('sig-') && t.enrichiDossiersAN);
+	check(
+		'Aucun texte id=sig-* n\'est marqué enrichi',
+		sigEnrichi.length === 0,
+		`${sigEnrichi.length} avec id sig- mais enrichi`
+	);
 
 	console.log(`\n──────────────────`);
 	console.log(`✅ ${pass} passed   ❌ ${fail} failed`);

@@ -15,7 +15,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 2. ✅ **Phase 2** (mergée 2026-05-05) — 15ᵉ législature AN ajoutée (toute l'ère Macron à l'AN couverte)
 3. ✅ **Phase 3 — Sénat** (mergée 2026-05-07, PR #8) — pipeline + UI + scope ère Macron, à parité avec les 3 législatures AN. Ministres et président à venir (Phase 3 suite).
 
-**État actuel** : côté AN, 1196 personnes uniques, 1925 mandats, 14 840 scrutins, 50+ vétérans 15+16+17. Smoke-test AN 40/40 ✅. Score **Overall** v2 + **Le Championnat / Les Coupes** + **FAQ** mergés 2026-05-06 (PR #6, ADR 0022). Polish UX mergé 2026-05-06 (PR #7).
+**État actuel** : côté AN, 1196 personnes uniques, 1925 mandats, 15 052 scrutins agrégés en 1 039 textes législatifs (cf ADR 0035), 50+ vétérans 15+16+17. Smoke-test AN 57/57 ✅. Score **Overall** v2 + **Le Championnat / Les Coupes** + **FAQ** mergés 2026-05-06 (PR #6, ADR 0022). Polish UX mergé 2026-05-06 (PR #7).
 
 **Sénat (mergé 2026-05-07, PR #8)** : 672 sénateurs (cohorte cumulée 3 triennats), 2 029 scrutins, 705k votes nominatifs, 9 sessions, 3 triennats ère Macron (`2017-2020`, `2020-2023`, `2023-2026`), 348 places hémicycle. Smoke-test Sénat 67/67 ✅. Tests unitaires 131/131 ✅. ADR 0023-0029 figées. Hémicycle "vivant" pour les triennats anciens (sénateurs sans `place` réelle placés selon le gradient gauche-droite).
 
@@ -61,6 +61,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 - l'**architecture des routes** (`/assemblee/*`, `/senat/*`, `/elus/*`, `/classement` cross-chambre, racine neutre) → vérifie ADR 0030
 - le **manifest bicaméral** `elus.json` (eluId hash sha256-8, matching `prénom + nom + dateNaissance`, overrides) → vérifie ADR 0031
 - la **sémantique de la carrière cross-chambre** (moyenne simple, sélecteur de mandat unique, badge `Bicameral`) → vérifie ADR 0032
+- l'**agrégation des scrutins en `Texte`s législatifs** (dossierRef Etalab prioritaire, signature titre fallback, dump Dossiers_Legislatifs.json.zip pour enrichissement métadonnées, motions de censure exclues) → vérifie ADR 0035
 
 Si la décision te semble obsolète ou si tu veux la changer : **propose explicitement à l'utilisateur** de la marquer "déprécié" ou "remplacée par #NNNN", ne la contourne pas en silence.
 
@@ -82,12 +83,12 @@ npm run dev                # serveur de dev sur localhost:5173
 npm run build              # build statique dans build/
 npm run preview            # vérifier le build en local
 npm run check              # type-check Svelte/TS
-npm run test:unit          # tests unitaires Node:test (191 tests : parser dosleg, layout, triennats, manifest élus, sources Sénat, familles politiques…)
+npm run test:unit          # tests unitaires Node:test (251 tests : parser dosleg, layout, triennats, manifest élus, sources Sénat, familles politiques, parser textes AN…)
 npm run data:fetch         # télécharge + transforme AN, Sénat, puis build manifest élus
 npm run data:fetch:an      #   AN seul (~30s warm cache)
 npm run data:fetch:senat   #   Sénat seul (~3s warm, ~2 min cold)
 npm run data:build:elus    #   manifest bicaméral elus.json (croise AN + Sénat, ADR 0031)
-npm run data:smoke         # smoke-test AN + Sénat + Élus (40+67+20=127 assertions)
+npm run data:smoke         # smoke-test AN + Sénat + Élus (57+67+20=144 assertions)
 npm run data:smoke:an      #   AN seul
 npm run data:smoke:senat   #   Sénat seul
 npm run data:smoke:elus    #   Élus seul
@@ -158,7 +159,7 @@ scripts/
   build-elus-manifest.ts       # ── PIPELINE CROSS-CHAMBRE (ADR 0031) ──
                                # Croise personnes.json + senateurs.json → elus.json
                                # Lit static/data/elus-overrides.json (commité)
-  smoke-test.ts                # AN 40/40
+  smoke-test.ts                # AN 57/57 (dont 17 cas canoniques Texte)
   smoke-test-senat.ts          # Sénat 67/67
   smoke-test-elus.ts           # Élus 20/20 (manifest, eluId, Pilato/Larcher, bicaméraux)
   decisions-index.ts           # regen decisions/README.md
@@ -175,7 +176,15 @@ scripts/
     elus-manifest.ts           # ── builder manifest cross-chambre (ADR 0031) ──
                                # normaliseKey, eluId hash, buildElusManifest, overrides
                                # TDD strict (35 tests dans elus-manifest.test.ts)
-    *.test.ts                  # 191 tests unitaires (npm run test:unit)
+    texte-parser.ts            # ── parser titres scrutin AN → signature texte (ADR 0035) ──
+                               # extractTexteSignature, 99,5% couverture (22 tests TDD)
+    dossiers-an.ts             # parser dump Dossiers_Legislatifs.json.zip Etalab AN
+                               # (titre officiel, procédure, initiateurs, timeline)
+                               # 25 tests TDD
+    textes-an.ts               # agrégation scrutins → Texte[] (ADR 0035)
+                               # dossierRef prioritaire > signature, enrichissement
+                               # par dump dossiers, 13 tests TDD
+    *.test.ts                  # 251 tests unitaires (npm run test:unit)
 static/data/
   elus-overrides.json          # COMMITÉ (exception au gitignore static/data/)
                                # forceFusion / forceSeparation pour cas exotiques (ADR 0031)
