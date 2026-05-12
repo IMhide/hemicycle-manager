@@ -30,7 +30,8 @@ import type {
 	TriennatMeta,
 	ScrutinSenatIndex,
 	BuildMetaSenat,
-	Personne
+	Personne,
+	TexteSenat
 } from '../src/lib/types.ts';
 import { TRIENNATS, triennatOfDate } from '../src/lib/triennats.ts';
 
@@ -470,7 +471,99 @@ async function main() {
 		console.log('  ⊘ personnes.json AN absent — assertion fusion skippée');
 	}
 
-	// ─── L. Bilan
+	// ─── L. Textes législatifs Sénat (N3.b navette)
+	console.log('\nL. Textes législatifs Sénat');
+	const textes = await loadJson<TexteSenat[]>('textes.json');
+	check(
+		'textes.json non vide',
+		textes.length > 0,
+		`got ${textes.length}`
+	);
+	check(
+		'≈ 400-800 textes Sénat ère Macron (3 triennats)',
+		textes.length >= 400 && textes.length <= 800,
+		`got ${textes.length}`
+	);
+
+	// Cas canonique : couverture matching dosleg
+	const enrichis = textes.filter((t) => t.enrichiDosleg);
+	const enrichiePct = enrichis.length / textes.length;
+	check(
+		'≥ 40% des textes Sénat enrichis via dosleg (matching titre)',
+		enrichiePct >= 0.4,
+		`got ${(enrichiePct * 100).toFixed(1)}% (${enrichis.length}/${textes.length})`
+	);
+
+	// Cas canonique : id discipline
+	const dlrNonEnrichi = textes.filter((t) => !t.id.startsWith('sig-') && !t.enrichiDosleg);
+	check(
+		'Tous les textes id=loicod sont enrichis',
+		dlrNonEnrichi.length === 0,
+		`${dlrNonEnrichi.length} avec id loicod mais non enrichi`
+	);
+	const sigEnrichi = textes.filter((t) => t.id.startsWith('sig-') && t.enrichiDosleg);
+	check(
+		"Aucun texte id=sig-* n'est marqué enrichi",
+		sigEnrichi.length === 0,
+		`${sigEnrichi.length} avec id sig- mais enrichi`
+	);
+
+	// Cas canonique : chronologie
+	const datesIncoherentes = textes.filter((t) => t.dateDebut > t.dateFin);
+	check(
+		'Tous les textes ont dateDebut ≤ dateFin',
+		datesIncoherentes.length === 0,
+		`${datesIncoherentes.length} incohérents`
+	);
+
+	// Cas canonique : nbScrutins == scrutins.length
+	const tailleIncoherente = textes.filter((t) => t.nbScrutins !== t.scrutins.length);
+	check(
+		'Tous les textes ont nbScrutins == scrutins.length',
+		tailleIncoherente.length === 0,
+		`${tailleIncoherente.length} incohérents`
+	);
+
+	// Cas canonique : triennat valide (parmi 3 connus)
+	const triennatsValides = new Set(['2017-2020', '2020-2023', '2023-2026']);
+	const triennatIncoherent = textes.filter((t) => !triennatsValides.has(t.triennat));
+	check(
+		'Tous les textes ont un triennat valide (ère Macron)',
+		triennatIncoherent.length === 0,
+		`${triennatIncoherent.length} hors triennat`
+	);
+
+	// Cas canonique : promulgués avec date JO
+	const promulgues = textes.filter((t) => t.etat === 'promulgue');
+	check(
+		'≥ 100 textes Sénat promulgués sur 3 triennats',
+		promulgues.length >= 100,
+		`got ${promulgues.length}`
+	);
+	// Certains dossiers `loi.etaloicod=04` n'ont pas de `loi.loidatjo` (saisie
+	// incomplète côté Sénat) — on tolère jusqu'à 15% d'absence.
+	const promulguesSansDate = promulgues.filter((t) => !t.datePromulgation);
+	const pctSansDate = promulgues.length === 0 ? 0 : promulguesSansDate.length / promulgues.length;
+	check(
+		'≥ 85% des textes promulgués ont une datePromulgation',
+		pctSansDate <= 0.15,
+		`${promulguesSansDate.length}/${promulgues.length} sans date (${(pctSansDate * 100).toFixed(1)}%)`
+	);
+
+	// Cas canonique : scrutins-index a un texteId sur chaque entrée
+	const scrutinsIdx = await loadJson<ScrutinSenatIndex[]>('scrutins-index.json');
+	check(
+		'scrutins-index.json a un champ texteId sur chaque entrée',
+		scrutinsIdx.every((s) => 'texteId' in s)
+	);
+	const scAvec = scrutinsIdx.filter((s) => s.texteId);
+	check(
+		'≥ 95% des scrutins Sénat ont un texteId (cible ~100%)',
+		scAvec.length / scrutinsIdx.length >= 0.95,
+		`got ${((scAvec.length / scrutinsIdx.length) * 100).toFixed(1)}%`
+	);
+
+	// ─── M. Bilan
 	console.log('\n' + '═'.repeat(60));
 	console.log(`  ${pass} pass / ${fail} fail (total ${pass + fail})`);
 	if (fail > 0) {

@@ -64,6 +64,9 @@ import {
 	type FamillesIndex,
 	type FamillesManifest
 } from './lib/groupes-familles.ts';
+import { buildDossierSenatFromRow, type DossierSenat } from './lib/dosleg-textes.ts';
+import { aggregeTextesSenat, type ScrutinSenatPourAgreg } from './lib/textes-senat.ts';
+import type { TexteSenat } from '../src/lib/types.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'static', 'data', 'senat');
@@ -189,10 +192,15 @@ async function main() {
 	const scrRows: Record<string, string | null>[] = [];
 	const votsenByScrutin = new Map<string, Array<{ senmat: string; posvotcod: string }>>();
 	const sesLib = new Map<number, string>();
+	// N3.b navette : on collecte aussi les dossiers `loi` (sans filtre) pour
+	// pouvoir matcher les scrutins ère Macron par signature titre. Le filtrage
+	// "ère Macron" est sans intérêt côté dossier puisqu'un dossier ancien peut
+	// avoir des scrutins récents (réintroduction, reprise).
+	const loiRows: Record<string, string | null>[] = [];
 
 	await streamCopyBlocks(
 		doslegSql,
-		new Set(['scr', 'votsen', 'auteur', 'ses']),
+		new Set(['scr', 'votsen', 'auteur', 'ses', 'loi']),
 		(table, cols, values) => {
 			const row = makeRow(cols, values);
 			switch (table) {
@@ -212,6 +220,9 @@ async function main() {
 				}
 				case 'ses':
 					sesLib.set(Number(row.sesann), (row.seslib ?? '').trim());
+					break;
+				case 'loi':
+					loiRows.push(row);
 					break;
 			}
 		}
@@ -269,6 +280,29 @@ async function main() {
 	console.log('  • Scrutins…');
 	const { scrutinsIndex, scrutinsDetails } = buildScrutins(scrRows, votsenByScrutin, senateurs);
 	console.log(`    → ${scrutinsIndex.length} scrutins (vue index + ${scrutinsDetails.size} détails)`);
+
+	// 4.2 bis Textes législatifs Sénat (N3.b navette, cf textes-senat.ts)
+	console.log('  • Textes législatifs (matching scrutin↔loi par signature titre)…');
+	const dossiersSenat: DossierSenat[] = loiRows.map(buildDossierSenatFromRow);
+	const scrutinsPourAgreg: ScrutinSenatPourAgreg[] = scrutinsIndex.map((s) => ({
+		uid: s.uid,
+		sesann: s.sesann,
+		scrnum: s.scrnum,
+		date: s.date,
+		titre: s.titre,
+		sort: s.sort
+	}));
+	const { textes: textesSenat, scrutinToTexte: scrutinToTexteSenat } = aggregeTextesSenat(
+		scrutinsPourAgreg,
+		dossiersSenat
+	);
+	// Mutation des index + détails pour propager le texteId
+	for (const s of scrutinsIndex) s.texteId = scrutinToTexteSenat.get(s.uid) ?? null;
+	for (const [, d] of scrutinsDetails) d.texteId = scrutinToTexteSenat.get(d.uid) ?? null;
+	const enrichisCount = textesSenat.filter((t) => t.enrichiDosleg).length;
+	console.log(
+		`    → ${textesSenat.length} textes Sénat (${enrichisCount} enrichis via dosleg, ${textesSenat.length - enrichisCount} signature)`
+	);
 
 	// 4.3 Stats par session
 	console.log('  • Stats Présence/Participation/Loyauté/Frondes par session…');
@@ -329,6 +363,9 @@ async function main() {
 
 	await writeFile(join(OUT_DIR, 'scrutins-index.json'), JSON.stringify(scrutinsIndex));
 	console.log(`  ✓ scrutins-index.json (${scrutinsIndex.length} scrutins)`);
+
+	await writeFile(join(OUT_DIR, 'textes.json'), JSON.stringify(textesSenat));
+	console.log(`  ✓ textes.json (${textesSenat.length} textes Sénat, ${enrichisCount} enrichis)`);
 
 	for (const [triennatId, groupes] of groupesByTriennat) {
 		await writeFile(join(OUT_DIR, 'groupes', `${triennatId}.json`), JSON.stringify(groupes));
@@ -767,7 +804,8 @@ function buildScrutins(
 			pour: decompte.pour,
 			contre: decompte.contre,
 			abstention: decompte.abstention,
-			nonVotant: decompte.nonVotant
+			nonVotant: decompte.nonVotant,
+			texteId: null // sera muté plus tard par aggregeTextesSenat (N3.b navette)
 		};
 		scrutinsIndex.push(idx);
 
