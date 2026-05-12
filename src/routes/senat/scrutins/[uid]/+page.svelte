@@ -9,6 +9,9 @@
 	import GroupVoteBarSenat from '$lib/components/GroupVoteBarSenat.svelte';
 	import FrondeurSenatCard from '$lib/components/FrondeurSenatCard.svelte';
 	import InfoTip from '$lib/components/InfoTip.svelte';
+	import VoteSearchBox from '$lib/components/VoteSearchBox.svelte';
+	import type { VoteEntry } from '$lib/components/VoteSearchBox.types';
+	import { lookupEluUrlForMatriculeTriennat } from '$lib/elus';
 	import { triennatOfDate } from '$lib/triennats';
 	import type {
 		Senateur,
@@ -104,6 +107,24 @@
 		)
 	);
 
+	const voteEntries = $derived.by(() => {
+		const out: VoteEntry[] = [];
+		for (const s of senateursPourHemicycle) {
+			const position = detail.votes[s.id] ?? 'absent';
+			const groupe = groupeAuVote(s);
+			out.push({
+				id: s.id,
+				prenom: s.identite.prenom,
+				nom: s.identite.nom,
+				groupeLibelle: groupe?.libelleAbrege ?? '',
+				groupeCouleur: groupe?.couleur ?? null,
+				position,
+				href: triennatId ? lookupEluUrlForMatriculeTriennat(s.id, triennatId) : null
+			});
+		}
+		return out;
+	});
+
 	const hoveredSenateur = $derived(hovered ? senateurById.get(hovered) ?? null : null);
 	const hoveredGroupe = $derived(hoveredSenateur ? groupeAuVote(hoveredSenateur) : null);
 	const hoveredVote = $derived(hovered ? detail.votes[hovered] ?? 'absent' : null);
@@ -167,6 +188,8 @@
 			</div>
 		</div>
 	</div>
+
+	<VoteSearchBox entries={voteEntries} label="sénateur" />
 
 	<div class="card p-4 sm:p-6 relative">
 		<HemicycleSenat
