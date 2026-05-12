@@ -24,12 +24,14 @@
 	} from '$lib/hemicycle-senat';
 	import { gradientColorFor, POLITICAL_ORDER } from '$lib/political-order';
 
+	// `absent` en gris clair franc (slate-400) pour que les sénateurs absents
+	// soient visibles, et non fantômes (cf alignement avec hemicycle.ts AN).
 	const VOTE_COLORS = {
 		pour: '#22c55e',
 		contre: '#ef4444',
 		abstention: '#eab308',
 		nonVotant: '#64748b',
-		absent: '#1e293b'
+		absent: '#94a3b8'
 	} as const;
 
 	type Mode =
@@ -111,7 +113,8 @@
 	}
 
 	function opacityForSenateur(s: Senateur, m: MandatSenat): number {
-		if (mode.kind === 'vote' && !mode.votes[s.id]) return 0.25;
+		// En mode vote, les absents ont déjà la couleur grise (VOTE_COLORS.absent),
+		// on les rend pleinement visibles. Pour les autres modes, l'estompage est conservé.
 		if (mode.kind === 'highlight-groupe') {
 			const app = appartenanceContextuelle(m);
 			if (app?.groupeCode !== mode.groupeCode) return 0.2;
