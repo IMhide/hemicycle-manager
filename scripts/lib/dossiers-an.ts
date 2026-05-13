@@ -46,6 +46,11 @@ export type CodeProcedure =
 	| 'loi-organique' // 5
 	| 'ratification-traite-convention' // 6
 	| 'loi-constitutionnelle' // 7
+	| 'resolution' // 8 — Résolution (Géorgie, climat, etc.)
+	| 'resolution-art-34-1' // 22 — Résolution Article 34-1
+	| 'commission-enquete' // 9
+	| 'mission-information' // 10
+	| 'engagement-responsabilite' // 13 — 49.3
 	| 'petition' // 16
 	| 'proposition-loi-article-11' // 23 — référendum d'initiative partagée
 	| 'autre';
@@ -100,8 +105,13 @@ const PROCEDURE_CODE_MAP = new Map<string, CodeProcedure>([
 	['5', 'loi-organique'],
 	['6', 'ratification-traite-convention'],
 	['7', 'loi-constitutionnelle'],
+	['8', 'resolution'],
+	['9', 'commission-enquete'],
+	['10', 'mission-information'],
+	['13', 'engagement-responsabilite'],
 	['16', 'petition'],
 	['21', 'projet-loi-finances-rectificative'],
+	['22', 'resolution-art-34-1'],
 	['23', 'proposition-loi-article-11']
 ]);
 

@@ -107,6 +107,12 @@ function projectTypeFromDossier(code: CodeProcedure): TexteType {
 			return 'projet-loi-constitutionnelle';
 		case 'ratification-traite-convention':
 			return 'projet-loi';
+		case 'resolution':
+		case 'resolution-art-34-1':
+			return 'proposition-resolution';
+		case 'commission-enquete':
+		case 'mission-information':
+		case 'engagement-responsabilite':
 		case 'petition':
 		case 'autre':
 			return 'autre';

@@ -48,7 +48,7 @@
 		if (typ === 'proposition-loi') return 'PPL';
 		if (typ === 'proposition-resolution-europeenne') return 'PPR-EU';
 		if (typ === 'proposition-resolution') return 'PPR';
-		return '?';
+		return 'AUTRE';
 	}
 
 	function typeLong(typ: string): string {

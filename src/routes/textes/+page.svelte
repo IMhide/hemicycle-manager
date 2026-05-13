@@ -59,7 +59,7 @@
 		if (t === 'proposition-loi') return 'PPL';
 		if (t === 'proposition-resolution-europeenne') return 'PPR-EU';
 		if (t === 'proposition-resolution') return 'PPR';
-		return '?';
+		return 'AUTRE';
 	}
 
 	function clearFilters() {
