@@ -41,6 +41,12 @@ jobs:
           echo '[]' > static/data/groupes/16.json
           echo '[]' > static/data/groupes/17.json
           echo '{"generatedAt":"1970-01-01T00:00:00Z","legislatures":[15,16,17],"counts":{"personnes":0,"mandats":0,"groupes":0,"scrutins":0},"sources":{}}' > static/data/meta.json
+          # Textes législatifs AN (ADR 0035) : placeholder vide pour permettre
+          # le build de /assemblee/ qui lit textes.json pour la stat header.
+          echo '[]' > static/data/textes.json
+          # Manifest acteurs-noms (ADR 0035) : tolérant via .catch côté loader,
+          # mais on le crée quand même pour éviter les 404 dans les logs.
+          echo '[]' > static/data/acteurs-noms.json
           # Sénat (Phase 3) : placeholders symétriques pour les 3 triennats ère Macron (ADR 0029).
           mkdir -p static/data/senat/scrutins static/data/senat/historique static/data/senat/groupes
           echo '[]' > static/data/senat/senateurs.json
@@ -51,10 +57,16 @@ jobs:
           echo '[]' > static/data/senat/groupes/2020-2023.json
           echo '[]' > static/data/senat/groupes/2023-2026.json
           echo '{"generatedAt":"1970-01-01T00:00:00Z","sessions":[2024],"triennats":["2017-2020","2020-2023","2023-2026"],"counts":{"senateurs":0,"mandats":0,"groupesUniques":0,"sessions":1,"triennats":3,"scrutins":0,"votesNominatifs":0},"sources":{}}' > static/data/senat/meta.json
+          # Textes Sénat (PR #22, N3.b) : placeholder vide pour permettre le build.
+          echo '[]' > static/data/senat/textes.json
           # Manifest bicaméral (ADR 0031) : placeholder vide pour permettre le build
           # avec /elus/* et /classement (PR #D, #E). Le pipeline réel le remplit via
           # `npm run data:build:elus` après data:fetch:an + data:fetch:senat.
           echo '{"generatedAt":"1970-01-01T00:00:00Z","count":0,"countBicameral":0,"elus":[],"warnings":[]}' > static/data/elus.json
+          # Manifest textes unifiés cross-chambre (PR #22, ADR 0036) : placeholder
+          # vide pour permettre le build de /textes/ et /textes/[id]. Rempli par
+          # `npm run data:build:cross` en pipeline réel.
+          echo '[]' > static/data/textes-unifies.json
 
       - name: Sync SvelteKit
         run: npx svelte-kit sync
