@@ -419,27 +419,39 @@ async function main() {
 
 	const bicameraux = textesUnifies.filter((t) => t.bicameral);
 	check(
-		'≥ 50 textes bicaméraux (cible 86 sur ère Macron)',
-		bicameraux.length >= 50,
+		'≥ 100 textes bicaméraux (cible ~177 ère Macron, ADR 0037)',
+		bicameraux.length >= 100,
 		`got ${bicameraux.length}`
 	);
+	// Bicaméraux "stricts" (deux côtés présents dans nos datasets) — sous-ensemble
+	const bicamStricts = bicameraux.filter((t) => !!t.an && !!t.senat);
 	check(
-		'Tous les bicaméraux ont an ET senat remplis',
-		bicameraux.every((t) => !!t.an && !!t.senat),
-		'au moins un bicaméral est mal formé'
+		'≥ 50 bicaméraux "stricts" (AN + Sénat tous deux dans nos données)',
+		bicamStricts.length >= 50,
+		`got ${bicamStricts.length}`
 	);
+	// Bicaméraux "via timeline" : SN1-* connu mais pas de TexteSenat dans pipeline
+	const bicamViaTimeline = bicameraux.filter((t) => !!t.an && !t.senat);
 	check(
-		'Tous les bicaméraux ont an.texteId === t.id (id canonique = AN)',
-		bicameraux.every((t) => t.an?.texteId === t.id),
+		'Bicaméraux via timeline uniquement (ADR 0037) — au moins quelques cas attendus',
+		bicamViaTimeline.length >= 10,
+		`got ${bicamViaTimeline.length} (textes AN avec acte SEN dans timeline mais pas de TexteSenat)`
+	);
+	// id canonique : si an présent, id = an.id ; sinon id = senat.id
+	check(
+		"id canonique cohérent (an.texteId === t.id quand an présent)",
+		bicameraux.filter((t) => t.an).every((t) => t.an?.texteId === t.id),
 		'id canonique violé'
 	);
 
-	const anSeulCount = textesUnifies.filter((t) => t.an && !t.senat).length;
-	const senSeulCount = textesUnifies.filter((t) => !t.an && t.senat).length;
+	// Compteurs : total = (an+sen) + (an seul) + (sen seul) — sans overlap car ce sont les 3 cas exclusifs présence
+	const aN = textesUnifies.filter((t) => t.an && t.senat).length;
+	const aS = textesUnifies.filter((t) => t.an && !t.senat).length;
+	const sS = textesUnifies.filter((t) => !t.an && t.senat).length;
 	check(
-		'Distribution : ~70% AN-seul, ~30% Sénat-seul + bicaméraux',
-		anSeulCount + senSeulCount + bicameraux.length === textesUnifies.length,
-		`somme ${anSeulCount + senSeulCount + bicameraux.length} ≠ total ${textesUnifies.length}`
+		'Distribution couvre 100% des textes',
+		aN + aS + sS === textesUnifies.length,
+		`somme ${aN + aS + sS} ≠ total ${textesUnifies.length}`
 	);
 
 	// Cas canonique : PPL Nouvelle-Calédonie doit être bicamérale avec id AN
@@ -479,6 +491,71 @@ async function main() {
 			['promulgue', 'rejete', 'retire', 'caduc', 'fusionne', 'en-cours', 'inconnu'].includes(t.etat)
 		),
 		'au moins un état invalide'
+	);
+
+	// ─── Timeline navette (ADR 0037)
+	console.log('\n12. Timeline navette (ADR 0037)');
+	const avecTimeline = textesUnifies.filter((t) => t.timelineNavette.length > 0);
+	check(
+		'≥ 200 textes ont une timeline navette non vide (= textes enrichis)',
+		avecTimeline.length >= 200,
+		`got ${avecTimeline.length}`
+	);
+	const actesTotal = textesUnifies.reduce((acc, t) => acc + t.timelineNavette.length, 0);
+	const actesAvecScrutin = textesUnifies.reduce(
+		(acc, t) => acc + t.timelineNavette.filter((a) => a.scrutinUid !== null).length,
+		0
+	);
+	check(
+		'≥ 1000 actes navette extraits au total',
+		actesTotal >= 1000,
+		`got ${actesTotal}`
+	);
+	check(
+		'≥ 20% des actes navette reliés à un scrutin nominal',
+		actesAvecScrutin / Math.max(1, actesTotal) >= 0.2,
+		`got ${actesAvecScrutin}/${actesTotal} = ${((actesAvecScrutin / actesTotal) * 100).toFixed(1)}%`
+	);
+	check(
+		'Toutes les timelines sont triées chronologiquement',
+		textesUnifies.every((t) => {
+			for (let i = 1; i < t.timelineNavette.length; i++) {
+				if (t.timelineNavette[i].date < t.timelineNavette[i - 1].date) return false;
+			}
+			return true;
+		}),
+		'au moins une timeline est mal triée'
+	);
+	// Cas canonique PJL Mayotte (DLR5L17N51222) : doit avoir CMP-DEC + PROM-PUB
+	const mayotte = textesUnifies.find((t) => t.id === 'DLR5L17N51222');
+	if (mayotte) {
+		const codes = mayotte.timelineNavette.map((a) => a.code);
+		check(
+			'PJL Mayotte timeline contient CMP-DEC',
+			codes.includes('CMP-DEC'),
+			`codes: ${codes.join(', ')}`
+		);
+		check(
+			'PJL Mayotte timeline contient PROM-PUB',
+			codes.includes('PROM-PUB'),
+			`codes: ${codes.join(', ')}`
+		);
+		check(
+			'PJL Mayotte bicaméral (SN1-DEBATS-DEC dans timeline)',
+			mayotte.bicameral === true
+		);
+	}
+	// Cas canonique : PROM-PUB toujours le dernier acte d'un texte promulgué
+	const promulgues = textesUnifies.filter((t) => t.etat === 'promulgue' && t.timelineNavette.length > 0);
+	const promFinaux = promulgues.filter((t) => {
+		const last = t.timelineNavette[t.timelineNavette.length - 1];
+		return last.code === 'PROM-PUB';
+	});
+	const ratioPromFinal = promFinaux.length / Math.max(1, promulgues.length);
+	check(
+		'≥ 80% des textes promulgués ont PROM-PUB en dernier acte',
+		ratioPromFinal >= 0.8,
+		`got ${promFinaux.length}/${promulgues.length} = ${(ratioPromFinal * 100).toFixed(1)}%`
 	);
 
 	console.log(`\n──────────────────`);

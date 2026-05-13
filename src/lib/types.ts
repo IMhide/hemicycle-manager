@@ -288,6 +288,47 @@ export interface Texte {
 	 *  contient l'id du TexteSenat correspondant — utilisable pour
 	 *  `/senat/textes/[id]`. */
 	versionAutreChambre: { texteSenatId: string; matchedVia: 'slug' | 'titre' } | null;
+	/** Timeline navette : suite ordonnée des actes "remarquables" extraite
+	 *  de l'arbre `actesLegislatifs` du dump dossiers AN (cf ADR 0037).
+	 *  Vide pour les textes signature (non enrichis). */
+	timelineNavette: TimelineActe[];
+}
+
+/** Phase navette retenue pour l'UI, dérivée du `codeActe` Etalab. */
+export type TimelinePhase =
+	| 'depot'
+	| 'premiere-lecture'
+	| 'deuxieme-lecture'
+	| 'nouvelle-lecture'
+	| 'lecture-definitive'
+	| 'lecture-unique'
+	| 'cmp'
+	| 'conseil-constitutionnel'
+	| 'promulgation'
+	| 'engagement-responsabilite' // 49.3
+	| 'motion-censure'
+	| 'retrait'
+	| 'autre';
+
+/** Chambre/instance responsable d'un acte. */
+export type TimelineChambre = 'AN' | 'SEN' | 'CMP' | 'CC' | 'GVT' | 'JO';
+
+/** Un événement chronologique du parcours navette d'un texte (cf ADR 0037).
+ *  Cf `scripts/lib/timeline-navette.ts` pour la construction. */
+export interface TimelineActe {
+	date: string; // YYYY-MM-DD
+	code: string; // Code brut Etalab (ex. "AN1-DEBATS-DEC", "CMP-DEC")
+	chambre: TimelineChambre;
+	phase: TimelinePhase;
+	/** Libellé court lisible pour l'UI (ex. "Vote en séance Sénat"). */
+	label: string;
+	/** Si l'acte correspond à un scrutin nominal connu côté AN ou Sénat,
+	 *  uid du scrutin permettant un lien direct. null = vote à main levée
+	 *  ou pas de scrutin nominal détecté à cette date. */
+	scrutinUid: string | null;
+	/** Chambre où le scrutin nominal a été identifié (utile pour construire
+	 *  l'URL `/assemblee/scrutins/...` vs `/senat/scrutins/...`). */
+	scrutinChambre: 'AN' | 'SEN' | null;
 }
 
 /** Entrée minimale pour afficher le nom d'un acteur Etalab. Utilisé pour
@@ -653,10 +694,16 @@ export interface TexteUnifie {
 	dateFin: string;
 	/** Total scrutins toutes chambres confondues. */
 	nbScrutins: number;
-	/** Indique si bicaméral (les deux chambres ont eu des scrutins sur ce texte). */
+	/** Indique si bicaméral. Critère (ADR 0037) : la timelineNavette contient
+	 *  au moins un acte de chambre `SEN` (preuve de passage Sénat même sans
+	 *  scrutin nominal côté pipeline Sénat). Plus large que l'ancien critère
+	 *  basé uniquement sur la présence de scrutins nominaux des deux côtés. */
 	bicameral: boolean;
 	/** Côté AN si présent. */
 	an: TexteUnifieChambreRef | null;
 	/** Côté Sénat si présent. */
 	senat: TexteUnifieChambreRef | null;
+	/** Timeline navette propagée depuis le Texte AN sous-jacent (cf ADR 0037).
+	 *  Vide pour les textes Sénat-seul ou non enrichis. */
+	timelineNavette: TimelineActe[];
 }

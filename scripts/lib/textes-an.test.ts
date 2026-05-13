@@ -61,6 +61,7 @@ function dossierFixture(id: string, titre: string, opts: Partial<DossierAN> = {}
 		initiateurs: [],
 		timeline: { dateDepotAN: null, dateProcedureAccelere: null, datePromulgation: null },
 		type: 'DossierLegislatif_Type',
+		timelineNavette: [],
 		...opts
 	};
 }
@@ -164,7 +165,8 @@ describe('aggregeTextesAN — enrichissement via dump dossiers', () => {
 				procedure: { code: 'proposition-loi-ordinaire', libelle: 'Proposition de loi ordinaire' },
 				initiateurs: ['PA795528'],
 				timeline: { dateDepotAN: '2025-12-02', dateProcedureAccelere: '2026-03-23', datePromulgation: null },
-				type: 'DossierLegislatif_Type'
+				type: 'DossierLegislatif_Type',
+				timelineNavette: []
 			}
 		];
 		const { textes } = aggregeTextesAN(scrutins, dossiers);

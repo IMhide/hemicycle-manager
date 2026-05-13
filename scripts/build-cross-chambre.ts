@@ -17,7 +17,13 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 
-import type { Texte, TexteSenat, TexteUnifie } from '../src/lib/types.ts';
+import type {
+	Texte,
+	TexteSenat,
+	TexteUnifie,
+	ScrutinIndex,
+	ScrutinSenatIndex
+} from '../src/lib/types.ts';
 import { streamCopyBlocks } from './lib/dosleg-parser.ts';
 import {
 	matchTextesAnSenat,
@@ -25,6 +31,7 @@ import {
 	type TexteSenatPourMatch
 } from './lib/textes-cross-chambre.ts';
 import { fusionneTextesUnifies } from './lib/textes-unifies.ts';
+import { resolveScrutinUid, type ScrutinSolennelIndex } from './lib/timeline-navette.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR_AN = join(ROOT, 'static', 'data');
@@ -100,6 +107,54 @@ async function main() {
 		sen.versionAutreChambre = { texteAnId: anId, matchedVia: via };
 	}
 
+	// ── Croisement timeline navette ↔ scrutins nominaux (ADR 0037) ─────────────
+	console.log('\n  Croisement timeline navette ↔ scrutins solennels…');
+	const scrutinsAN = JSON.parse(
+		await readFile(join(OUT_DIR_AN, 'scrutins-index.json'), 'utf8')
+	) as ScrutinIndex[];
+	const scrutinsSEN = JSON.parse(
+		await readFile(join(OUT_DIR_SENAT, 'scrutins-index.json'), 'utf8')
+	) as ScrutinSenatIndex[];
+	// Adapter aux types ScrutinSolennelIndex (typeVote présent côté AN, manquant côté Sénat)
+	const scrutinsANSolennels: ScrutinSolennelIndex[] = scrutinsAN.map((s) => ({
+		uid: s.uid,
+		date: s.date,
+		typeVote: 'scrutin public ordinaire',
+		titre: s.titre
+	}));
+	const scrutinsSENSolennels: ScrutinSolennelIndex[] = scrutinsSEN.map((s) => ({
+		uid: s.uid,
+		date: s.date,
+		typeVote: 'scrutin public',
+		titre: s.titre
+	}));
+
+	let nbActesResolus = 0;
+	let nbActesTotal = 0;
+	const textesSenatById = new Map(textesSenat.map((t) => [t.id, t]));
+	for (const an of textesAN) {
+		if (an.timelineNavette.length === 0) continue;
+		const scrutinsDuTexte = new Set(an.scrutins);
+		// Inclure aussi les scrutins du TexteSenat correspondant (si bicaméral)
+		const senId = an.versionAutreChambre?.texteSenatId;
+		if (senId) {
+			const sen = textesSenatById.get(senId);
+			if (sen) for (const uid of sen.scrutins) scrutinsDuTexte.add(uid);
+		}
+		for (const acte of an.timelineNavette) {
+			nbActesTotal++;
+			const uid = resolveScrutinUid(acte, scrutinsANSolennels, scrutinsSENSolennels, scrutinsDuTexte);
+			if (uid) {
+				acte.scrutinUid = uid;
+				acte.scrutinChambre = acte.chambre === 'SEN' ? 'SEN' : 'AN';
+				nbActesResolus++;
+			}
+		}
+	}
+	console.log(
+		`  ✓ ${nbActesResolus}/${nbActesTotal} actes timeline reliés à un scrutin nominal (${((nbActesResolus / Math.max(1, nbActesTotal)) * 100).toFixed(1)}%)`
+	);
+
 	// ── Réécriture ────────────────────────────────────────────────────────────
 	await writeFile(join(OUT_DIR_AN, 'textes.json'), JSON.stringify(textesAN));
 	await writeFile(join(OUT_DIR_SENAT, 'textes.json'), JSON.stringify(textesSenat));
@@ -124,7 +179,8 @@ async function main() {
 			nbVotesSolennels: t.nbVotesSolennels,
 			enrichiDossiersAN: t.enrichiDossiersAN,
 			senatUrl: t.senatUrl,
-			versionAutreChambre: t.versionAutreChambre
+			versionAutreChambre: t.versionAutreChambre,
+			timelineNavette: t.timelineNavette
 		})),
 		textesSenat.map((t) => ({
 			id: t.id,
