@@ -189,7 +189,7 @@
 		<div class="flex items-baseline justify-between gap-3 mb-3">
 			<h2 class="title-display text-xl">Scrutins récents</h2>
 			<div class="flex gap-3 text-xs text-assembly-muted">
-				<a href="/senat/textes/" class="hover:text-assembly-accent">
+				<a href="/textes/" class="hover:text-assembly-accent">
 					Textes →
 				</a>
 				<a href="/senat/scrutins/" class="hover:text-assembly-accent">

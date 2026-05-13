@@ -285,8 +285,8 @@ export interface Texte {
 	/** Référence vers la version Sénat du même texte (N3.c navette).
 	 *  null = pas de version Sénat trouvée dans le dataset (texte non transmis
 	 *  ou Sénat n'a pas eu de scrutin nominal sur ce texte). Quand non-null,
-	 *  contient l'id du TexteSenat correspondant — utilisable pour
-	 *  `/senat/textes/[id]`. */
+	 *  contient l'id du TexteSenat correspondant — utile pour le matching
+	 *  cross-chambre et l'affichage des deux colonnes sur `/textes/[id]`. */
 	versionAutreChambre: { texteSenatId: string; matchedVia: 'slug' | 'titre' } | null;
 	/** Timeline navette : suite ordonnée des actes "remarquables" extraite
 	 *  de l'arbre `actesLegislatifs` du dump dossiers AN (cf ADR 0037).
@@ -625,7 +625,7 @@ export interface TexteSenat {
 	enrichiDosleg: boolean;
 	/** Référence vers la version AN du même texte (N3.c navette).
 	 *  null = pas de version AN trouvée. Quand non-null, contient l'id du
-	 *  Texte AN correspondant — utilisable pour `/assemblee/textes/[id]`. */
+	 *  Texte AN correspondant — utile pour le matching cross-chambre. */
 	versionAutreChambre: { texteAnId: string; matchedVia: 'slug' | 'titre' } | null;
 }
 
@@ -645,8 +645,8 @@ export type TexteUnifieEtat =
 	| 'inconnu';
 
 /** Référence légère vers un texte spécifique d'une chambre (sous-objet
- *  de `TexteUnifie`). Sert à conserver les liens vers les fiches
- *  chambre-spécifiques `/assemblee/textes/[id]` et `/senat/textes/[id]`. */
+ *  de `TexteUnifie`). Conserve l'id natif côté chambre et les compteurs
+ *  utilisés par les colonnes de la fiche unifiée `/textes/[id]`. */
 export interface TexteUnifieChambreRef {
 	/** id natif côté chambre (DLR…/sig-… côté AN, loicod côté Sénat). */
 	texteId: string;
@@ -660,11 +660,13 @@ export interface TexteUnifieChambreRef {
 /** Objet `TexteUnifie` — un texte législatif vu cross-chambre.
  *  Cf ADR 0036 pour la résolution des sources d'autorité.
  *
- *  Le `TexteUnifie` est l'entité canonique côté UI : une URL `/textes/[id]`
- *  par texte, peu importe combien de chambres l'ont examiné.
+ *  Le `TexteUnifie` est l'entité canonique côté UI : une seule URL
+ *  `/textes/[id]` par texte, peu importe combien de chambres l'ont examiné.
+ *  Les routes chambre /assemblee/textes et /senat/textes ont été supprimées
+ *  (cf commit suppression routes chambre).
  *
- *  Pour ~90% des textes, un seul des deux côtés `an`/`senat` est non-null
- *  (textes mono-chambre). Les ~10% bicaméraux ont les deux côtés et la
+ *  Pour ~70-80% des textes, un seul des deux côtés `an`/`senat` est non-null
+ *  (textes mono-chambre). Les ~20-30% bicaméraux ont les deux côtés et la
  *  fiche affiche les deux colonnes côte à côte. */
 export interface TexteUnifie {
 	/** Id canonique stable : id AN si présent, sinon id Sénat. Cf ADR 0036. */

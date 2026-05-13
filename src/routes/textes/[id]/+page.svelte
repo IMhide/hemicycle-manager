@@ -220,20 +220,10 @@
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 		<!-- Colonne AN -->
 		<div class="card p-5 space-y-3">
-			<div class="flex items-center justify-between gap-2">
-				<h2 class="text-lg font-semibold flex items-center gap-2">
-					<span class="inline-block w-3 h-3 rounded-full bg-blue-500"></span>
-					Assemblée nationale
-				</h2>
-				{#if t.an}
-					<a
-						href="/assemblee/textes/{encodeURIComponent(t.an.texteId)}"
-						class="text-xs text-assembly-muted hover:text-assembly-accent"
-					>
-						Fiche détail AN →
-					</a>
-				{/if}
-			</div>
+			<h2 class="text-lg font-semibold flex items-center gap-2">
+				<span class="inline-block w-3 h-3 rounded-full bg-blue-500"></span>
+				Assemblée nationale
+			</h2>
 
 			{#if t.an && anTexte}
 				<div class="grid grid-cols-3 gap-2">
@@ -335,20 +325,10 @@
 
 		<!-- Colonne Sénat -->
 		<div class="card p-5 space-y-3">
-			<div class="flex items-center justify-between gap-2">
-				<h2 class="text-lg font-semibold flex items-center gap-2">
-					<span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
-					Sénat
-				</h2>
-				{#if t.senat}
-					<a
-						href="/senat/textes/{encodeURIComponent(t.senat.texteId)}"
-						class="text-xs text-assembly-muted hover:text-assembly-accent"
-					>
-						Fiche détail Sénat →
-					</a>
-				{/if}
-			</div>
+			<h2 class="text-lg font-semibold flex items-center gap-2">
+				<span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+				Sénat
+			</h2>
 
 			{#if t.senat && senatTexte}
 				<div class="grid grid-cols-3 gap-2">
