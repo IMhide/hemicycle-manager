@@ -243,11 +243,11 @@ Symétrise l'arborescence AN/Sénat et introduit le hub bicaméral `/elus/[eluId
 - 10 codes procédure Etalab manquants (8 Résolution, 9 Commission d'enquête, 10 Mission info, 13 49.3, 22 Résolution art 34-1) → 31 textes "?" fixés.
 
 ### 🔮 Suite (au-delà de la PR #22)
-- [ ] Refonte de la barre de recherche globale (topbar) :
-  - **Retirer** les scrutins (15 000 entrées AN + 2 000 Sénat, bruit en résultats)
-  - **Ajouter** les textes législatifs (`textes-unifies.json`, 1 446 entrées)
-  - Périmètre cible : **élus + textes législatifs** (au lieu de **élus + scrutins**)
-  - Fichiers : `src/lib/search-index.ts`, `src/lib/components/GlobalSearch.svelte`
+- [x] **Refonte de la barre de recherche globale (topbar)** — mergée PR #23 (2026-05-13) :
+  - Retiré les scrutins (~17k entrées, bruit)
+  - Ajouté les textes (`textes-unifies.json`, 1 446 entrées, chip type + état coloré + badges chambre)
+  - Périmètre final : **élus + textes**
+  - Fichiers touchés : `src/lib/search-index.ts`, `src/lib/components/GlobalSearch.svelte`
 - [ ] Détection des votes "main levée" dans la timeline : afficher "Adopté/Rejeté à main levée" plutôt que juste la date quand `scrutinUid === null` sur un acte de vote
 - [ ] Symétrie : reconstruire la timeline navette **depuis le côté Sénat** pour les ~485 textes Sénat-seul (textes purement sénatoriaux non transmis à l'AN, rare mais existe)
 - [ ] Fusion des doublons résiduels Sénat (texte en plusieurs lectures crée plusieurs `sig-*`) — le fix `6f9f051` en a déjà résolu 43 mais il en reste
