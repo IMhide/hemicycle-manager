@@ -99,12 +99,21 @@
 </svelte:head>
 
 <section class="max-w-7xl mx-auto px-6 py-8 space-y-6">
-	<a
-		href="/assemblee/textes/"
-		class="text-sm text-assembly-muted hover:text-assembly-accent inline-flex items-center gap-1"
-	>
-		← Tous les textes
-	</a>
+	<div class="flex items-center justify-between gap-4 flex-wrap text-sm">
+		<a
+			href="/assemblee/textes/"
+			class="text-assembly-muted hover:text-assembly-accent inline-flex items-center gap-1"
+		>
+			← Tous les textes AN
+		</a>
+		<a
+			href="/textes/{encodeURIComponent(t.id)}"
+			class="text-assembly-accent hover:underline inline-flex items-center gap-1"
+			title="Fiche unifiée cross-chambre — vue AN + Sénat agrégée"
+		>
+			📜 Voir la fiche unifiée →
+		</a>
+	</div>
 
 	<!-- En-tête -->
 	<div class="card p-6 space-y-3">
