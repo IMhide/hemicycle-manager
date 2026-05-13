@@ -194,7 +194,7 @@
 
 	<VoteSearchBox entries={voteEntries} label="député" />
 
-	<div class="card p-4 sm:p-6">
+	<div class="card p-4 sm:p-6 relative">
 		<Hemicycle
 			personnes={personnesPourHemicycle}
 			legislature={detail.legislature}
