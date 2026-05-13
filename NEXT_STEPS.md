@@ -205,7 +205,7 @@ Symétrise l'arborescence AN/Sénat et introduit le hub bicaméral `/elus/[eluId
 - [ ] Recherche globale unifiée sur les 4 types d'élus
 - [ ] Comparateur cross-chambre (un député peut être comparé à un sénateur sur des indicateurs communs)
 
-## ✅ Textes législatifs + navette parlementaire (PR #22, mergeable 2026-05-13)
+## ✅ Textes législatifs + navette parlementaire (PR #22, mergée 2026-05-13)
 
 ### ✅ Pipeline AN (ADR 0035)
 - Parser titre scrutin (99,5 % couverture, 0 collision) — `scripts/lib/texte-parser.ts`

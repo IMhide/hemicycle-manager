@@ -15,7 +15,9 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 2. ✅ **Phase 2** (mergée 2026-05-05) — 15ᵉ législature AN ajoutée (toute l'ère Macron à l'AN couverte)
 3. ✅ **Phase 3 — Sénat** (mergée 2026-05-07, PR #8) — pipeline + UI + scope ère Macron, à parité avec les 3 législatures AN. Ministres et président à venir (Phase 3 suite).
 
-**État actuel** : côté AN, 1196 personnes uniques, 1925 mandats, 15 052 scrutins agrégés en 961 textes législatifs (cf ADR 0035, dont 225 enrichis par le dump dossiers via matching seanceRef↔reunionRef méthode Poligraph), 50+ vétérans 15+16+17. Smoke-test AN 57/57 ✅. Score **Overall** v2 + **Le Championnat / Les Coupes** + **FAQ** mergés 2026-05-06 (PR #6, ADR 0022). Polish UX mergé 2026-05-06 (PR #7).
+**État actuel (2026-05-13, après PR #22 mergée)** : côté AN, 1196 personnes uniques, 1925 mandats, 15 052 scrutins agrégés en 961 textes législatifs (cf ADR 0035, dont 225 enrichis par le dump dossiers via matching seanceRef↔reunionRef méthode Poligraph), 50+ vétérans 15+16+17. Smoke-test AN **88/88** ✅. Score **Overall** v2 + **Le Championnat / Les Coupes** + **FAQ** mergés 2026-05-06 (PR #6, ADR 0022). Polish UX mergé 2026-05-06 (PR #7).
+
+**Navette parlementaire (PR #22, mergée 2026-05-13)** : pipeline AN+Sénat des `Texte`/`TexteSenat` (ADR 0035+N3.b), matching cross-chambre (ADR 0036, 86 paires bicamérales), fiche unifiée **`/textes/[id]`** wireframe deux colonnes AN | Sénat, timeline navette complète depuis `actesLegislatifs` (ADR 0037, 1 191 actes, 30 codes retenus dont 49.3, motions, CMP, CC). 1 446 `TexteUnifie` au total dont **177 bicaméraux** (détection refondue via la timeline). Smoke AN 88/88 ✅, Sénat 82/82 ✅ (premier 100% vert), Élus 20/20 ✅. Routes chambre `/assemblee/textes` et `/senat/textes` **supprimées** (redondantes après unification).
 
 **Sénat (mergé 2026-05-07, PR #8)** : 672 sénateurs (cohorte cumulée 3 triennats), 2 029 scrutins, 705k votes nominatifs, 9 sessions, 3 triennats ère Macron (`2017-2020`, `2020-2023`, `2023-2026`), 348 places hémicycle. Smoke-test Sénat 67/67 ✅. Tests unitaires 131/131 ✅. ADR 0023-0029 figées. Hémicycle "vivant" pour les triennats anciens (sénateurs sans `place` réelle placés selon le gradient gauche-droite).
 
@@ -91,7 +93,7 @@ npm run data:fetch         # télécharge + transforme AN, Sénat, puis build ma
 npm run data:fetch:an      #   AN seul (~30s warm cache)
 npm run data:fetch:senat   #   Sénat seul (~3s warm, ~2 min cold)
 npm run data:build:elus    #   manifest bicaméral elus.json (croise AN + Sénat, ADR 0031)
-npm run data:smoke         # smoke-test AN + Sénat + Élus (57+67+20=144 assertions)
+npm run data:smoke         # smoke-test AN + Sénat + Élus (88+82+20=190 assertions)
 npm run data:smoke:an      #   AN seul
 npm run data:smoke:senat   #   Sénat seul
 npm run data:smoke:elus    #   Élus seul
@@ -151,9 +153,12 @@ src/
       legislatures/[num]/      #   (SPA) home par législature
     senat/                     # ── SÉNAT ── (PAS de [matricule], ADR 0030)
       +page.svelte, triennats/, senateurs/, scrutins/, groupes/, classements/
-    elus/                      # ── HUB CROSS-CHAMBRE (ADR 0030-0032) ──
+    elus/                      # ── HUB CROSS-CHAMBRE ÉLUS (ADR 0030-0032) ──
       +page.svelte             #   liste cross-chambre dédupliquée
       [id]/+page.svelte        #   FICHE UNIQUE (sélecteur Carrière/AN/Sénat, bouton retour)
+    textes/                    # ── HUB CROSS-CHAMBRE TEXTES (PR #22, ADR 0036) ──
+      +page.svelte             #   liste cross-chambre (1446 entrées, filtres chambre/état)
+      [id]/+page.svelte        #   FICHE UNIFIÉE 2 colonnes AN | Sénat + TimelineNavette
     classement/                #   /classement (singulier) — Top élus par overallCarriere
     faq/                       # /faq/ — FAQ ludique avec ancres (#elu-carriere ajouté)
 scripts/
@@ -162,8 +167,8 @@ scripts/
   build-elus-manifest.ts       # ── PIPELINE CROSS-CHAMBRE (ADR 0031) ──
                                # Croise personnes.json + senateurs.json → elus.json
                                # Lit static/data/elus-overrides.json (commité)
-  smoke-test.ts                # AN 57/57 (dont 17 cas canoniques Texte)
-  smoke-test-senat.ts          # Sénat 67/67
+  smoke-test.ts                # AN 88/88 (textes, timeline navette, cross-chambre, acteurs)
+  smoke-test-senat.ts          # Sénat 82/82 (textes Sénat, scrutins, hémicycle complet)
   smoke-test-elus.ts           # Élus 20/20 (manifest, eluId, Pilato/Larcher, bicaméraux)
   decisions-index.ts           # regen decisions/README.md
   lib/
