@@ -52,6 +52,11 @@
 					title="Tous les élus">Élus</a
 				>
 				<a
+					href="/textes"
+					class={navClass(pathname.startsWith('/textes'))}
+					title="Textes législatifs (cross-chambre)">Textes</a
+				>
+				<a
 					href="/assemblee"
 					class={navClass(isAN)}
 					title="Assemblée nationale">🏛️ AN</a
