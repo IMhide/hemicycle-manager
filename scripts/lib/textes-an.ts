@@ -351,6 +351,7 @@ export function aggregeTextesAN(
 		const initiateurs = dossier?.initiateurs ?? [];
 		const datePromulgation = dossier?.timeline.datePromulgation ?? null;
 		const senatUrl = dossier?.senatUrl ?? null;
+		const timelineNavette = dossier?.timelineNavette ?? [];
 
 		textes.push({
 			id: b.id,
@@ -368,7 +369,8 @@ export function aggregeTextesAN(
 			nbVotesSolennels,
 			enrichiDossiersAN: !!dossier,
 			senatUrl,
-			versionAutreChambre: null // sera muté par build-cross-chambre.ts (N3.c)
+			versionAutreChambre: null, // sera muté par build-cross-chambre.ts (N3.c)
+			timelineNavette
 		});
 	}
 

@@ -23,6 +23,8 @@ import { readFile, writeFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { asArray } from './cache.ts';
 import { extractReunionRefs } from './dossiers-reunions.ts';
+import { extractTimelineNavette } from './timeline-navette.ts';
+import type { TimelineActe } from '../../src/lib/types.ts';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types publics
@@ -75,6 +77,9 @@ export interface DossierAN {
 	timeline: DossierTimeline;
 	/** Type XSI brut Etalab — utile pour filtrer ou afficher différemment. */
 	type: string;
+	/** Timeline navette : liste ordonnée des actes "remarquables"
+	 *  (ADR 0037). Vide quand l'arbre actesLegislatifs ne contient rien. */
+	timelineNavette: TimelineActe[];
 }
 
 export interface DossierTimeline {
@@ -282,7 +287,8 @@ export async function parseDossiersDir(
 			},
 			initiateurs: extractInitiateurs(d.initiateur),
 			timeline: extractTimeline(d.actesLegislatifs),
-			type: d['@xsi:type'] ?? 'autre'
+			type: d['@xsi:type'] ?? 'autre',
+			timelineNavette: extractTimelineNavette(d.actesLegislatifs as Parameters<typeof extractTimelineNavette>[0])
 		});
 
 		// Index inverse : pour chaque reunionRef trouvé dans l'arbre, on enregistre le dossier

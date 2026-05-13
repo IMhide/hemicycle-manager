@@ -44,6 +44,7 @@ function textAN(
 		enrichiDossiersAN: true,
 		senatUrl: null,
 		versionAutreChambre: null,
+		timelineNavette: [],
 		...overrides
 	};
 }
@@ -319,5 +320,80 @@ describe('fusionneTextesUnifies — invariants', () => {
 		assert.equal(result[0].id, 'new');
 		assert.equal(result[1].id, 'mid');
 		assert.equal(result[2].id, 'old');
+	});
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Cas 6 — Bicaméralité refondue via timeline (ADR 0037)
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('fusionneTextesUnifies — bicaméralité refondue (ADR 0037)', () => {
+	test('AN mono-chambre AVEC SN1-DEPOT dans la timeline → bicameral=true', () => {
+		// Cas typique : PJL transmis Sénat, voté à main levée Sénat (pas dans nos
+		// scrutins nominaux), mais la timeline AN référence l'acte SN1-DEPOT
+		const an = textAN('DLR-T', {
+			timelineNavette: [
+				{
+					date: '2025-01-01',
+					code: 'AN1-DEPOT',
+					chambre: 'AN',
+					phase: 'depot',
+					label: 'Dépôt AN',
+					scrutinUid: null,
+					scrutinChambre: null
+				},
+				{
+					date: '2025-02-01',
+					code: 'SN1-DEPOT',
+					chambre: 'SEN',
+					phase: 'depot',
+					label: 'Dépôt Sénat',
+					scrutinUid: null,
+					scrutinChambre: null
+				}
+			]
+		});
+		const result = fusionneTextesUnifies([an], []);
+		assert.equal(result.length, 1);
+		assert.equal(result[0].bicameral, true, 'la présence d\'un acte SEN suffit');
+		assert.equal(result[0].an?.texteId, 'DLR-T');
+		assert.equal(result[0].senat, null, 'pas de TexteSenat correspondant côté pipeline');
+	});
+
+	test('AN mono-chambre sans acte SEN dans timeline → bicameral=false', () => {
+		const an = textAN('DLR-U', {
+			timelineNavette: [
+				{
+					date: '2025-01-01',
+					code: 'AN1-DEPOT',
+					chambre: 'AN',
+					phase: 'depot',
+					label: 'Dépôt AN',
+					scrutinUid: null,
+					scrutinChambre: null
+				}
+			]
+		});
+		const result = fusionneTextesUnifies([an], []);
+		assert.equal(result[0].bicameral, false);
+	});
+
+	test('TimelineNavette propagée dans TexteUnifie', () => {
+		const an = textAN('DLR-V', {
+			timelineNavette: [
+				{
+					date: '2025-01-01',
+					code: 'AN1-DEPOT',
+					chambre: 'AN',
+					phase: 'depot',
+					label: 'Dépôt AN',
+					scrutinUid: null,
+					scrutinChambre: null
+				}
+			]
+		});
+		const result = fusionneTextesUnifies([an], []);
+		assert.equal(result[0].timelineNavette.length, 1);
+		assert.equal(result[0].timelineNavette[0].code, 'AN1-DEPOT');
 	});
 });

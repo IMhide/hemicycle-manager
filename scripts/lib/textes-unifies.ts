@@ -19,8 +19,10 @@ import type {
 	TexteUnifieEtat,
 	TexteUnifieChambreRef,
 	TexteType,
-	TexteSenatType
+	TexteSenatType,
+	TimelineActe
 } from '../../src/lib/types.ts';
+import { hasSenatActe } from './timeline-navette.ts';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types d'entrée
@@ -43,6 +45,8 @@ export interface TexteAnInput {
 	enrichiDossiersAN: boolean;
 	senatUrl: string | null;
 	versionAutreChambre: { texteSenatId: string; matchedVia: 'slug' | 'titre' } | null;
+	/** Timeline navette extraite du dump AN (cf ADR 0037). Vide si non enrichi. */
+	timelineNavette: TimelineActe[];
 }
 
 /** Sous-ensemble d'un TexteSenat nécessaire à la fusion. */
@@ -183,7 +187,12 @@ function buildSenatRef(sen: TexteSenatInput): TexteUnifieChambreRef {
 function buildUnifie(an: TexteAnInput | null, sen: TexteSenatInput | null): TexteUnifie {
 	if (!an && !sen) throw new Error('buildUnifie: au moins une chambre doit être présente');
 
-	const bicameral = an !== null && sen !== null;
+	// Bicaméralité refondue (ADR 0037) : on regarde aussi la timeline navette
+	// extraite du dump AN. Un texte peut être bicaméral même sans scrutin nominal
+	// côté Sénat si le dump AN référence un acte SN1-* (preuve de passage Sénat
+	// avec vote à main levée par exemple).
+	const timelineNavette = an?.timelineNavette ?? [];
+	const bicameral = (an !== null && sen !== null) || hasSenatActe(timelineNavette);
 	// Id canonique : AN si présent, sinon Sénat
 	const id = an ? an.id : sen!.id;
 
@@ -208,17 +217,21 @@ function buildUnifie(an: TexteAnInput | null, sen: TexteSenatInput | null): Text
 	// Procédure : AN seulement
 	const procedureLibelle = an?.procedureLibelle ?? null;
 
-	// Dates : min(débuts) / max(fins) si bicaméral
-	const dateDebut = bicameral
-		? an!.dateDebut < sen!.dateDebut
-			? an!.dateDebut
-			: sen!.dateDebut
-		: (an?.dateDebut ?? sen!.dateDebut);
-	const dateFin = bicameral
-		? an!.dateFin > sen!.dateFin
-			? an!.dateFin
-			: sen!.dateFin
-		: (an?.dateFin ?? sen!.dateFin);
+	// Dates : min(débuts) / max(fins) si AN ET Sénat présents, sinon côté présent.
+	// (On utilise la présence des deux côtés, pas `bicameral` qui peut être true
+	// avec un seul TexteSenat absent du dataset mais référencé via la timeline.)
+	const dateDebut =
+		an && sen
+			? an.dateDebut < sen.dateDebut
+				? an.dateDebut
+				: sen.dateDebut
+			: (an?.dateDebut ?? sen!.dateDebut);
+	const dateFin =
+		an && sen
+			? an.dateFin > sen.dateFin
+				? an.dateFin
+				: sen.dateFin
+			: (an?.dateFin ?? sen!.dateFin);
 
 	// Scrutins : somme
 	const nbScrutins = (an?.nbScrutins ?? 0) + (sen?.nbScrutins ?? 0);
@@ -242,7 +255,8 @@ function buildUnifie(an: TexteAnInput | null, sen: TexteSenatInput | null): Text
 		nbScrutins,
 		bicameral,
 		an: an ? buildAnRef(an) : null,
-		senat: sen ? buildSenatRef(sen) : null
+		senat: sen ? buildSenatRef(sen) : null,
+		timelineNavette
 	};
 }
 
