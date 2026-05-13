@@ -62,6 +62,9 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 - le **manifest bicaméral** `elus.json` (eluId hash sha256-8, matching `prénom + nom + dateNaissance`, overrides) → vérifie ADR 0031
 - la **sémantique de la carrière cross-chambre** (moyenne simple, sélecteur de mandat unique, badge `Bicameral`) → vérifie ADR 0032
 - l'**agrégation des scrutins en `Texte`s législatifs** (dossierRef Etalab prioritaire, signature titre fallback, dump Dossiers_Legislatifs.json.zip pour enrichissement métadonnées, motions de censure exclues) → vérifie ADR 0035
+- l'**agrégation des scrutins Sénat en `TexteSenat`** (matching titre `scr.scrint` ↔ `loi.loitit` du dump dosleg, première dans l'écosystème open source FR — Poligraph avait abandonné la liaison) → vérifie `scripts/lib/textes-senat.ts`
+- le **matching cross-chambre AN↔Sénat** et la **fiche unifiée `/textes/[id]`** (slug `senatUrl` AN → `loicod` Sénat via texte/lecass/lecture, fallback titre fuzzy, source d'autorité par champ : titre = AN, promul/JO = Sénat) → vérifie ADR 0036
+- la **timeline navette** (parsing récursif `actesLegislatifs`, 30 codes retenus sur 167, croisement avec scrutins nominaux pour `scrutinUid`, détection bicaméralité refondue via présence d'un acte SEN dans la timeline) → vérifie ADR 0037
 
 Si la décision te semble obsolète ou si tu veux la changer : **propose explicitement à l'utilisateur** de la marquer "déprécié" ou "remplacée par #NNNN", ne la contourne pas en silence.
 
@@ -188,15 +191,41 @@ scripts/
     textes-an.ts               # agrégation scrutins → Texte[] (ADR 0035)
                                # cascade : seanceRef↔reunionRef > dossierRef > signature
                                # 18 tests TDD, 99,3% couverture, 48,6% DLR officiels
-    *.test.ts                  # 264 tests unitaires (npm run test:unit)
+    dosleg-textes.ts           # extraction dossiers loi du dump dosleg Sénat
+                               # mapping typloicod/etaloicod, signature pour matching
+                               # 13 tests TDD
+    textes-senat.ts            # agrégation scrutins Sénat → TexteSenat[] (PR #22, N3.b)
+                               # matching titre scr.scrint ↔ loi.loitit (Poligraph N/A)
+                               # 12 tests TDD, 571 textes (378 enrichis)
+    textes-cross-chambre.ts    # matching AN↔Sénat (PR #22, ADR 0036)
+                               # slug senatUrl → loicod via texte/lecass/lecture
+                               # + fallback titre fuzzy avec strip bruit navette
+                               # 19 tests TDD, 86 paires bicamérales
+    textes-unifies.ts          # fusion AN+Sénat → TexteUnifie[] (PR #22, ADR 0036)
+                               # source d'autorité par champ : titre=AN, promul=Sénat,
+                               # dates = min/max, bicaméral via timeline (ADR 0037)
+                               # 23 tests TDD, 1446 textes unifiés (177 bicaméraux)
+    timeline-navette.ts        # parsing récursif actesLegislatifs (PR #22, ADR 0037)
+                               # 30 codes "remarquables" retenus sur 167
+                               # croisement avec scrutins nominaux pour scrutinUid
+                               # 42 tests TDD, 1191 actes (29,9% cliquables)
+    *.test.ts                  # 353+ tests unitaires (npm run test:unit)
+scripts/
+  fetch-data.ts                # pipeline AN (textes + timelineNavette intégrées)
+  fetch-data-senat.ts          # pipeline Sénat (textes-senat intégré)
+  build-elus-manifest.ts       # manifest cross-chambre élus (ADR 0031)
+  build-cross-chambre.ts       # PR #22 — matching + manifest unifié + croisement timeline↔scrutins
 static/data/
   elus-overrides.json          # COMMITÉ (exception au gitignore static/data/)
                                # forceFusion / forceSeparation pour cas exotiques (ADR 0031)
   groupes-familles.json        # COMMITÉ (exception au gitignore static/data/)
                                # Table familles politiques pour badge Recomposition (ADR 0034)
+  textes.json                  # 961 textes AN (gitignore, généré au build)
+  textes-unifies.json          # 1446 textes cross-chambre (gitignore, généré par build:cross)
+  senat/textes.json            # 571 textes Sénat (gitignore, généré au build)
 decisions/
-  README.md                    # index auto-généré (34 ADR)
-  NNNN-slug.md                 # ADR 0001-0034
+  README.md                    # index auto-généré (37 ADR)
+  NNNN-slug.md                 # ADR 0001-0037
 deploy/
   nginx.conf                   # config Nginx du container
 Dockerfile                     # multi-stage node:22-alpine + nginx:1.27-alpine

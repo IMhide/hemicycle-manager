@@ -205,24 +205,57 @@ Symétrise l'arborescence AN/Sénat et introduit le hub bicaméral `/elus/[eluId
 - [ ] Recherche globale unifiée sur les 4 types d'élus
 - [ ] Comparateur cross-chambre (un député peut être comparé à un sénateur sur des indicateurs communs)
 
-## 📜 Textes législatifs (ADR 0035, pipeline data mergeable 2026-05-12)
+## ✅ Textes législatifs + navette parlementaire (PR #22, mergeable 2026-05-13)
 
-### ✅ Pipeline data
-- ADR 0035 — Agrégation scrutins → `Texte`s législatifs
-- Parser titre scrutin (99,5% couverture, 0 collision) — `scripts/lib/texte-parser.ts`
-- Fetcher dump Dossiers_Legislatifs.json.zip Etalab — `scripts/lib/dossiers-an.ts`
-- Module d'agrégation `scripts/lib/textes-an.ts` (60 tests TDD au total)
-- Sortie `static/data/textes.json` (1 039 textes sur 15+16+17, 99,3% des scrutins rattachés)
-- Champ `texteId?: string` injecté dans chaque `ScrutinIndex`/`ScrutinDetail`
+### ✅ Pipeline AN (ADR 0035)
+- Parser titre scrutin (99,5 % couverture, 0 collision) — `scripts/lib/texte-parser.ts`
+- Fetcher + parser dump `Dossiers_Legislatifs.json.zip` Etalab — `scripts/lib/dossiers-an.ts`
+- Module d'agrégation `scripts/lib/textes-an.ts` (18 tests TDD)
+- Matching `seanceRef ↔ reunionRef` (méthode Poligraph) en source d'autorité : **83,7 %** des scrutins → DLR officiel
+- 15 052 scrutins → **961 textes** (225 enrichis, 92 promulgués, 99,3 % rattachés)
 
-### À venir (UI + raffinements)
-- [ ] Route `/assemblee/textes/[id]/` — fiche d'un texte : timeline scrutins, vote solennel mis en avant, frondes par groupe
-- [ ] Sur la fiche député : regrouper l'historique de vote par texte (collapsible)
-- [ ] Sur la fiche scrutin : lien vers le texte parent
-- [ ] Liste `/assemblee/textes/` — tous les textes filtrables par procédure / sort / législature
-- [ ] Enrichissement par matching titre↔titreDossier (~3% des textes actuellement enrichis, à élargir si l'UI le demande)
-- [ ] Symétrie Sénat : agrégation scrutins Sénat en `TexteSenat` (parser regex différent, source `dosleg.zip`)
-- [ ] Navette cross-chambre : matcher un texte AN à son équivalent Sénat (champ `senatUrl` du dossier dump comme piste)
+### ✅ Pipeline Sénat (N3.b, première dans l'écosystème open source FR)
+- Parser dosleg.sql étendu : tables `loi`, `lecture`, `lecass`, `texte`
+- Module `scripts/lib/textes-senat.ts` (12 tests TDD)
+- 2 056 scrutins → **571 TexteSenat** (378 enrichis via dosleg matching titre)
+- Poligraph avait abandonné la liaison scrutin Sénat ↔ dossier ; nous l'avons défrichée
+
+### ✅ Cross-chambre + fiche unifiée (ADR 0036)
+- Module `scripts/lib/textes-cross-chambre.ts` (19 tests TDD) : matching slug `senatUrl` + fallback titre fuzzy
+- 86 paires bicamérales identifiées
+- Manifest `static/data/textes-unifies.json` (1 446 textes : 177 bicaméraux, 875 AN-only, 485 Sénat-only)
+- Routes `/textes/` (liste cross-chambre filtrable) + `/textes/[id]` (fiche unifiée deux colonnes AN | Sénat)
+- Lien "Textes" dans la nav bar, carte sur la home racine
+- Routes chambre `/assemblee/textes` et `/senat/textes` **supprimées** (redondantes après unification)
+
+### ✅ Timeline navette complète (ADR 0037)
+- Parser récursif de `actesLegislatifs` AN → **30 codes "remarquables"** filtrés sur 167
+- Module `scripts/lib/timeline-navette.ts` (42 tests TDD)
+- **1 191 actes timeline** extraits, 356 (29,9 %) reliés à un scrutin nominal
+- Détection 49.3 (`*-DGVT`), motions de censure, CMP, Conseil Constitutionnel
+- Refonte critère bicaméralité : **86 → 177 bicaméraux** (+106 %)
+- Composant `TimelineNavette.svelte` refondu avec pictos (🗳️/✋/📥/📜/🤝/⚖️/⚡/🚫/↩️) et liens vers scrutins
+
+### Fixes connexes découverts pendant le chantier
+- Hémicycle Sénat à moitié vide sur scrutins post-2023 (348 → 169 actifs) : caractère `` invalidant le JSON `api-senat/senateurs.json`, fallback ODSEN obsolète. Fix sanitization défensive.
+- `scr.soslib` n'est pas le sort mais le libellé de la **demande** de scrutin public. Sort recalculé depuis pour/contre selon art. 60bis du règlement.
+- Bug `\b` JS avec caractères accentués (`é` n'est pas un `\w`) — découvert dans `NAVETTE_PREFIX_PATTERN`, contourné par `(?=\s)`.
+- 10 codes procédure Etalab manquants (8 Résolution, 9 Commission d'enquête, 10 Mission info, 13 49.3, 22 Résolution art 34-1) → 31 textes "?" fixés.
+
+### 🔮 Suite (au-delà de la PR #22)
+- [ ] Refonte de la barre de recherche globale (topbar) :
+  - **Retirer** les scrutins (15 000 entrées AN + 2 000 Sénat, bruit en résultats)
+  - **Ajouter** les textes législatifs (`textes-unifies.json`, 1 446 entrées)
+  - Périmètre cible : **élus + textes législatifs** (au lieu de **élus + scrutins**)
+  - Fichiers : `src/lib/search-index.ts`, `src/lib/components/GlobalSearch.svelte`
+- [ ] Détection des votes "main levée" dans la timeline : afficher "Adopté/Rejeté à main levée" plutôt que juste la date quand `scrutinUid === null` sur un acte de vote
+- [ ] Symétrie : reconstruire la timeline navette **depuis le côté Sénat** pour les ~485 textes Sénat-seul (textes purement sénatoriaux non transmis à l'AN, rare mais existe)
+- [ ] Fusion des doublons résiduels Sénat (texte en plusieurs lectures crée plusieurs `sig-*`) — le fix `6f9f051` en a déjà résolu 43 mais il en reste
+
+### Bonus mesurable
+- **149 textes Sénat + 92 textes AN promulgués** identifiés sur l'ère Macron
+- **Cas canonique PJL Mayotte** (`DLR5L17N51222`) : 9 jalons timeline (AN-DEPOT → AN-DEBATS-DEC → SN-DEPOT → SN-DEBATS-DEC → CMP-DEPOT → CMP-DEC → CMP-AN-DEC → CMP-SN-DEC → PROM-PUB), 3 cliquables vers scrutins nominaux dont 1 Sénat
+- **PR #22** : 21 commits, 100+ tests TDD ajoutés, smoke AN 88/88 + Sénat 82/82 + Élus 20/20
 
 ## 🎯 Polish & features ludiques (en parallèle des phases)
 
