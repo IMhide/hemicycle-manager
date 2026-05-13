@@ -170,7 +170,7 @@
 		{/if}
 		{#if data.texte}
 			<a
-				href="/assemblee/textes/{encodeURIComponent(data.texte.id)}"
+				href="/textes/{encodeURIComponent(data.texte.id)}"
 				class="mt-3 inline-flex items-center gap-2 text-xs text-assembly-muted hover:text-assembly-accent group"
 				title="Voir tous les scrutins de ce texte"
 			>

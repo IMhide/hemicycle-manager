@@ -180,7 +180,7 @@
 				<h1 class="text-xl sm:text-2xl leading-snug font-semibold">{detail.titre}</h1>
 				{#if data.texte}
 					<a
-						href="/senat/textes/{encodeURIComponent(data.texte.id)}"
+						href="/textes/{encodeURIComponent(data.texte.versionAutreChambre?.texteAnId ?? data.texte.id)}"
 						class="mt-3 inline-flex items-center gap-2 text-xs text-assembly-muted hover:text-assembly-accent group"
 						title="Voir tous les scrutins de ce texte"
 					>

@@ -501,7 +501,7 @@
 									</button>
 									{#if hasTextePage}
 										<a
-											href="/assemblee/textes/{encodeURIComponent(g.texteId!)}"
+											href="/textes/{encodeURIComponent(g.texteId!)}"
 											class="absolute top-2 right-3 text-[10px] uppercase tracking-wider text-assembly-muted hover:text-assembly-accent"
 										>
 											Voir texte →
