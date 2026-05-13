@@ -5,7 +5,13 @@
 	 * Affiche les `TexteUnifie` qui agrègent les `Texte` AN et `TexteSenat`
 	 * Sénat sous une seule entité. Symétrique de `/elus/` pour les personnes.
 	 *
-	 * Filtres : recherche titre, chambre (AN / Sénat / Bicaméral), état.
+	 * Filtres : recherche titre, chambre (AN / Sénat), état.
+	 *
+	 * Note : on n'expose pas de filtre/badge "Bicaméral" car notre indicateur
+	 * `t.bicameral` reflète l'état de nos données (scrutins nominaux matchés
+	 * dans les deux chambres) et non le bicaméralisme institutionnel français.
+	 * Le simple fait d'avoir les deux colonnes remplies sur la fiche signale
+	 * déjà cette propriété sans induire en erreur.
 	 */
 
 	import type { TexteUnifie } from '$lib/types';
@@ -13,7 +19,7 @@
 	let { data } = $props();
 
 	let search = $state('');
-	type Scope = 'all' | 'an' | 'senat' | 'bicameral';
+	type Scope = 'all' | 'an' | 'senat';
 	let scope: Scope = $state('all');
 	let scopeEtat: string | null = $state(null);
 	let visibleCount = $state(50);
@@ -24,7 +30,6 @@
 			if (q && !t.titre.toLowerCase().includes(q)) return false;
 			if (scope === 'an' && !t.an) return false;
 			if (scope === 'senat' && !t.senat) return false;
-			if (scope === 'bicameral' && !t.bicameral) return false;
 			if (scopeEtat && t.etat !== scopeEtat) return false;
 			return true;
 		});
@@ -67,9 +72,8 @@
 	// Stats globales
 	const stats = $derived.by(() => {
 		const total = data.textes.length;
-		const bicam = data.textes.filter((t: TexteUnifie) => t.bicameral).length;
 		const promul = data.textes.filter((t: TexteUnifie) => t.etat === 'promulgue').length;
-		return { total, bicam, promul };
+		return { total, promul };
 	});
 </script>
 
@@ -82,8 +86,8 @@
 		<h1 class="text-2xl font-semibold mb-2">Textes législatifs</h1>
 		<p class="text-sm text-assembly-muted">
 			Vue cross-chambre : chaque entrée regroupe les votes AN et Sénat sur un même texte législatif
-			quand les deux chambres l'ont examiné. {stats.total} textes ({stats.bicam} bicaméraux,
-			{stats.promul} promulgués) sur les législatures et triennats couverts.
+			quand les deux chambres l'ont examiné. {stats.total} textes
+			({stats.promul} promulgués) sur les législatures et triennats couverts.
 		</p>
 	</div>
 
@@ -96,7 +100,7 @@
 				class="flex-1 min-w-[200px] px-3 py-2 rounded-md bg-assembly-bg border border-assembly-border text-sm"
 			/>
 			<div class="flex gap-1 flex-wrap">
-				{#each [{ k: 'all', l: 'Tous' }, { k: 'bicameral', l: 'Bicaméraux' }, { k: 'an', l: 'AN' }, { k: 'senat', l: 'Sénat' }] as opt}
+				{#each [{ k: 'all', l: 'Toutes chambres' }, { k: 'an', l: 'AN' }, { k: 'senat', l: 'Sénat' }] as opt}
 					<button
 						class="px-3 py-1 text-xs rounded-md border {scope === opt.k
 							? 'bg-assembly-accent/20 border-assembly-accent text-assembly-accent'
@@ -147,10 +151,10 @@
 							</span>
 							{#if t.bicameral}
 								<span
-									class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-assembly-accent/15 text-assembly-accent"
-									title="Examiné par l'AN ET le Sénat"
+									class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-assembly-border/40 text-assembly-muted"
+									title="Scrutins nominaux dans les deux chambres"
 								>
-									⇄ Bicaméral
+									AN + Sénat
 								</span>
 							{:else if t.an}
 								<span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-assembly-border/40 text-assembly-muted">

@@ -107,16 +107,9 @@
 					>
 						{typeBadge(t.type)}
 					</span>
-					{#if t.bicameral}
-						<span
-							class="text-xs uppercase tracking-wider px-2 py-0.5 rounded bg-assembly-accent/15 text-assembly-accent"
-							title="Examiné par l'Assemblée nationale ET le Sénat"
-						>
-							⇄ Bicaméral
-						</span>
-					{:else if t.an}
+					{#if !t.bicameral && t.an}
 						<span class="text-xs text-assembly-muted">Assemblée nationale uniquement</span>
-					{:else if t.senat}
+					{:else if !t.bicameral && t.senat}
 						<span class="text-xs text-assembly-muted">Sénat uniquement</span>
 					{/if}
 					{#if t.numeroLoi}
