@@ -11,9 +11,9 @@
 	let results: SearchResults = $state({
 		personnes: [],
 		groupes: [],
-		scrutins: [],
 		senateurs: [],
-		groupesSenat: []
+		groupesSenat: [],
+		textes: []
 	});
 	let activeIndex = $state(0);
 	let inputEl: HTMLInputElement | null = $state(null);
@@ -24,7 +24,7 @@
 		| { kind: 'senateur'; href: string; data: SearchResults['senateurs'][number] }
 		| { kind: 'groupe'; href: string; data: SearchResults['groupes'][number] }
 		| { kind: 'groupeSenat'; href: string; data: SearchResults['groupesSenat'][number] }
-		| { kind: 'scrutin'; href: string; data: SearchResults['scrutins'][number] };
+		| { kind: 'texte'; href: string; data: SearchResults['textes'][number] };
 
 	const flatResults = $derived.by(() => {
 		const out: Item[] = [];
@@ -44,8 +44,8 @@
 			out.push({ kind: 'groupe', href: `/assemblee/groupes/${g.legislature}/${g.id}/`, data: g });
 		for (const g of results.groupesSenat)
 			out.push({ kind: 'groupeSenat', href: `/senat/triennats/${g.triennat}/`, data: g });
-		for (const s of results.scrutins)
-			out.push({ kind: 'scrutin', href: `/assemblee/scrutins/${s.uid}/`, data: s });
+		for (const t of results.textes)
+			out.push({ kind: 'texte', href: `/textes/${encodeURIComponent(t.id)}`, data: t });
 		return out;
 	});
 
@@ -54,7 +54,7 @@
 			results.senateurs.length +
 			results.groupes.length +
 			results.groupesSenat.length +
-			results.scrutins.length
+			results.textes.length
 	);
 
 	async function ensureLoaded() {
@@ -120,7 +120,7 @@
 	function close() {
 		isOpen = false;
 		query = '';
-		results = { personnes: [], groupes: [], scrutins: [], senateurs: [], groupesSenat: [] };
+		results = { personnes: [], groupes: [], senateurs: [], groupesSenat: [], textes: [] };
 		inputEl?.blur();
 	}
 
@@ -167,6 +167,33 @@
 	function truncate(s: string, n: number): string {
 		return s.length > n ? s.slice(0, n - 1) + '…' : s;
 	}
+
+	/** Libellé court compact pour les chips, basé sur `TexteType`
+	 *  (aligné sur la liste `/textes/`). */
+	function typeBadge(t: string): string {
+		if (t === 'projet-loi-finances') return 'PLF';
+		if (t === 'projet-loi-finances-rectificative') return 'PLFR';
+		if (t === 'projet-loi-financement-ss') return 'PLFSS';
+		if (t === 'projet-loi-organique') return 'PJL-O';
+		if (t === 'projet-loi-constitutionnelle') return 'PJL-C';
+		if (t === 'projet-loi') return 'PJL';
+		if (t === 'proposition-loi-organique') return 'PPL-O';
+		if (t === 'proposition-loi-constitutionnelle') return 'PPL-C';
+		if (t === 'proposition-loi') return 'PPL';
+		if (t === 'proposition-resolution-europeenne') return 'PPR-EU';
+		if (t === 'proposition-resolution') return 'PPR';
+		return 'AUTRE';
+	}
+
+	function etatLibelle(e: string): string {
+		if (e === 'promulgue') return 'Promulguée';
+		if (e === 'rejete') return 'Rejeté';
+		if (e === 'retire') return 'Retiré';
+		if (e === 'caduc') return 'Caduc';
+		if (e === 'fusionne') return 'Fusionné';
+		if (e === 'en-cours') return 'En cours';
+		return 'Inconnu';
+	}
 </script>
 
 <div bind:this={containerEl} class="relative w-full max-w-md" onfocusout={handleBlur}>
@@ -188,7 +215,7 @@
 			onfocus={handleFocus}
 			onkeydown={handleKeydown}
 			type="search"
-			placeholder="Rechercher un député, un groupe, une loi…"
+			placeholder="Rechercher un élu, un groupe, un texte de loi…"
 			class="w-full bg-assembly-bg border border-assembly-border rounded-full pl-9 pr-12 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-assembly-accent/40 focus:border-assembly-accent/60 transition-all"
 			aria-label="Recherche globale"
 			aria-controls="global-search-results"
@@ -212,7 +239,7 @@
 				</div>
 			{:else if !query.trim()}
 				<div class="p-4 text-xs text-assembly-muted">
-					Tapez le nom d'un député, d'un groupe, ou un mot-clé d'une loi.
+					Tapez le nom d'un élu, d'un groupe, ou un mot-clé d'un texte de loi.
 					<div class="mt-2 text-[10px]">
 						Astuce : ⌘K (Ctrl+K) ouvre la recherche depuis n'importe où.
 					</div>
@@ -413,13 +440,13 @@
 					{/each}
 				{/if}
 
-				{#if results.scrutins.length > 0}
+				{#if results.textes.length > 0}
 					<div
 						class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50"
 					>
-						Scrutins (AN)
+						Textes législatifs
 					</div>
-					{#each results.scrutins as s, i (s.uid)}
+					{#each results.textes as t, i (t.id)}
 						{@const flatIdx =
 							results.personnes.length +
 							results.senateurs.length +
@@ -434,25 +461,40 @@
 								: 'hover:bg-assembly-border/30'}"
 							onmouseenter={() => (activeIndex = flatIdx)}
 							onclick={() =>
-								selectItem({ kind: 'scrutin', href: `/assemblee/scrutins/${s.uid}/`, data: s })}
+								selectItem({
+									kind: 'texte',
+									href: `/textes/${encodeURIComponent(t.id)}`,
+									data: t
+								})}
 						>
-							<div class="text-center flex-shrink-0 w-12">
-								<div class="text-[9px] text-assembly-muted leading-none">n°</div>
-								<div class="title-display text-sm tabular-nums">{s.numero}</div>
+							<div class="flex-shrink-0">
+								<span
+									class="inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-assembly-border/50 text-assembly-muted"
+									title={t.typeLibelle}
+								>
+									{typeBadge(t.type)}
+								</span>
 							</div>
 							<div class="min-w-0 flex-1">
 								<div class="text-xs leading-snug">
-									{@html highlightMatch(truncate(s.titre, 100), query)}
+									{@html highlightMatch(truncate(t.titre, 100), query)}
 								</div>
 								<div class="text-[10px] text-assembly-muted mt-0.5">
-									{formatDate(s.date)} · {s.legislature}<sup>e</sup> ·
+									{formatDate(t.dateFin)} ·
 									<span
-										class={s.sort === 'adopté'
+										class={t.etat === 'promulgue'
 											? 'text-vote-pour'
-											: s.sort === 'rejeté'
+											: t.etat === 'rejete'
 												? 'text-vote-contre'
-												: ''}>{s.sort}</span
+												: ''}>{etatLibelle(t.etat)}</span
 									>
+									{#if t.an && t.senat}
+										· AN + Sénat
+									{:else if t.an}
+										· AN
+									{:else if t.senat}
+										· Sénat
+									{/if}
 								</div>
 							</div>
 						</button>
