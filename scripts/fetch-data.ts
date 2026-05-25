@@ -50,7 +50,7 @@ import {
 	type FamillesIndex,
 	type FamillesManifest
 } from './lib/groupes-familles.ts';
-import { parseDossiersDir } from './lib/dossiers-an.ts';
+import { parseDossiersDir, type DossierAN } from './lib/dossiers-an.ts';
 import { aggregeTextesAN, type ScrutinPourAgreg } from './lib/textes-an.ts';
 import { buildActeursNoms, writeActeursNoms } from './lib/acteurs-noms.ts';
 
@@ -105,11 +105,20 @@ const sourceScrutins = (leg: number) => {
 	return `https://data.assemblee-nationale.fr/static/openData/repository/${leg}/loi/scrutins/${filename}`;
 };
 
-/** Dump des dossiers parlementaires (~9 MB). Contient les métadonnées officielles
- *  des textes : titre propre, code procédure, initiateurs, dates clés. Sert à
- *  enrichir les `Texte` aggrégés (cf scripts/lib/dossiers-an.ts). */
-const SOURCE_DOSSIERS =
-	'https://data.assemblee-nationale.fr/static/openData/repository/17/loi/dossiers_legislatifs/Dossiers_Legislatifs.json.zip';
+/** Dump des dossiers parlementaires (~9 MB par législature). Contient les
+ *  métadonnées officielles des textes : titre propre, code procédure,
+ *  initiateurs, dates clés, lien Sénat. Sert à enrichir les `Texte` aggrégés
+ *  (cf scripts/lib/dossiers-an.ts).
+ *
+ *  Chaque législature publie son propre dump : le dump 17ᵉ ne contient que
+ *  ~150 dossiers d'anciennes législatures (ceux ré-examinés en navette), pas
+ *  les 2 000+ dossiers propres à la 15ᵉ ou à la 16ᵉ. Il faut donc fetcher les
+ *  3 dumps pour avoir une couverture complète. */
+const sourceDossiers = (leg: number) => {
+	// Même convention que sourceScrutins : la 15ᵉ utilise le suffixe romain `_XV`.
+	const filename = leg === 15 ? 'Dossiers_Legislatifs_XV.json.zip' : 'Dossiers_Legislatifs.json.zip';
+	return `https://data.assemblee-nationale.fr/static/openData/repository/${leg}/loi/dossiers_legislatifs/${filename}`;
+};
 
 /** Seuil pour identifier le NI-bridge transitoire (en jours).
  *  En 16ᵉ le délai d'inscription au groupe a été ~6 jours (22→28 juin 2022).
@@ -1059,9 +1068,15 @@ async function main() {
 		enrichZips.set(leg, zp);
 	}
 
-	// Dump dossiers parlementaires (~9 MB) — métadonnées des textes législatifs
-	const dossiersZip = join(CACHE_DIR, 'dossiers-an.json.zip');
-	await downloadZip(SOURCE_DOSSIERS, dossiersZip);
+	// Dump dossiers parlementaires (~9 MB par législature) — un dump par leg
+	// car chaque dump est centré sur sa législature (87 dossiers 16ᵉ dans le
+	// dump 17, vs 2 314 dans le dump 16).
+	const dossiersZips = new Map<number, string>();
+	for (const leg of LEGISLATURES) {
+		const zp = join(CACHE_DIR, `dossiers-an-${leg}.json.zip`);
+		await downloadZip(sourceDossiers(leg), zp);
+		dossiersZips.set(leg, zp);
+	}
 
 	// ── Stage 2 : extract (réutilise les dossiers si le ZIP n'a pas bougé)
 	console.log('\n2/5  Extraction');
@@ -1086,8 +1101,12 @@ async function main() {
 		enrichDirs.set(leg, ed);
 	}
 
-	const dossiersDir = join(CACHE_DIR, 'dossiers-an-extracted');
-	await extractIfNeeded(dossiersZip, dossiersDir, 'json/dossierParlementaire', 50, 'dossiers AN');
+	const dossiersDirs = new Map<number, string>();
+	for (const [leg, zp] of dossiersZips) {
+		const dd = join(CACHE_DIR, `dossiers-an-${leg}-extracted`);
+		await extractIfNeeded(zp, dd, 'json/dossierParlementaire', 50, `dossiers AN ${leg}`);
+		dossiersDirs.set(leg, dd);
+	}
 
 	// ── Stage 3 : transform — groupes + personnes + mandats
 	console.log('\n3/5  Transformation');
@@ -1139,15 +1158,28 @@ async function main() {
 	}
 
 	// Agrégation des textes législatifs (croise scrutins + dump dossiers,
-	// avec matching seanceRef↔reunionRef en source d'autorité, cf ADR 0035)
+	// avec matching seanceRef↔reunionRef en source d'autorité, cf ADR 0035).
+	// Fusion des 3 dumps : dédup par uid, union des reunionToDossierIds.
 	console.log('\n  • Agrégation des textes législatifs…');
-	const dossiersDirJson = join(dossiersDir, 'json', 'dossierParlementaire');
-	const { dossiers, reunionToDossierIds } = await parseDossiersDir(
-		dossiersDirJson,
-		new Set(LEGISLATURES)
-	);
+	const dossiersById = new Map<string, DossierAN>();
+	const reunionToDossierIds = new Map<string, Set<string>>();
+	for (const [leg, dd] of dossiersDirs) {
+		const dossiersDirJson = join(dd, 'json', 'dossierParlementaire');
+		const r = await parseDossiersDir(dossiersDirJson, new Set(LEGISLATURES));
+		for (const d of r.dossiers) dossiersById.set(d.id, d);
+		for (const [ref, ids] of r.reunionToDossierIds) {
+			let set = reunionToDossierIds.get(ref);
+			if (!set) {
+				set = new Set();
+				reunionToDossierIds.set(ref, set);
+			}
+			for (const id of ids) set.add(id);
+		}
+		console.log(`    • dump ${leg}ᵉ : ${r.dossiers.length} dossiers, ${r.reunionToDossierIds.size} réunions`);
+	}
+	const dossiers = [...dossiersById.values()];
 	console.log(
-		`    → ${dossiers.length} dossiers retenus, ${reunionToDossierIds.size} réunions indexées`
+		`    → ${dossiers.length} dossiers fusionnés (dédup), ${reunionToDossierIds.size} réunions indexées`
 	);
 	const { textes, scrutinToTexte } = aggregeTextesAN(
 		allAggregInputs,
@@ -1280,8 +1312,8 @@ async function main() {
 		},
 		sources: {
 			acteurs: SOURCE_ACTEURS,
-			dossiers: SOURCE_DOSSIERS,
-			...Object.fromEntries(LEGISLATURES.map((leg) => [`scrutins_${leg}`, sourceScrutins(leg)]))
+			...Object.fromEntries(LEGISLATURES.map((leg) => [`scrutins_${leg}`, sourceScrutins(leg)])),
+			...Object.fromEntries(LEGISLATURES.map((leg) => [`dossiers_${leg}`, sourceDossiers(leg)]))
 		}
 	};
 	await writeFile(join(OUT_DIR, 'meta.json'), JSON.stringify(meta, null, 2));
