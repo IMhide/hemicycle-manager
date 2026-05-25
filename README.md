@@ -1,15 +1,17 @@
-# Hémicycle Manager
+# PolitiDex
 
-> Visualisez les votes de l'Assemblée nationale française comme dans un jeu de gestion.
+> Le Pokédex ludique des élus nationaux français — données ouvertes, expérience Football Manager.
 
 [![CI](https://github.com/IMhide/hemicycle-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/IMhide/hemicycle-manager/actions/workflows/ci.yml)
 [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Code of Conduct](https://img.shields.io/badge/code%20of%20conduct-Contributor%20Covenant%202.1-purple.svg)](CODE_OF_CONDUCT.md)
 
-Un projet libre qui transforme l'open data parlementaire en expérience visuelle façon **Football Manager** : hémicycle interactif, fiches députés style carte FIFA, classements, comparaisons par groupe, frondeurs, et plus encore.
+Un projet libre qui transforme l'open data parlementaire (Assemblée nationale + Sénat) en expérience visuelle façon **Football Manager** : hémicycle interactif, fiches FIFA par élu, navette parlementaire, classements, comparaisons par groupe, frondeurs, et plus encore.
 
-🌍 **App en ligne** : https://hemicycle.baijobu.net
+🌍 **App en ligne** : https://politidex.fr
+
+> ⚠️ Le repo GitHub s'appelle encore `hemicycle-manager` (rebrand de produit acté en mai 2026, cf [ADR 0014](decisions/0014-pivot-politidex-elus-nationaux.md), renommage du repo différé).
 
 ## ✨ Fonctionnalités
 

@@ -24,7 +24,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 > ⚠️ **Le repo s'appelle encore `hemicycle-manager`** (rebrand pas encore fait, cf ADR 0014). Le **nom de produit** est désormais **PolitiDex**.
 
 - **Stack** : SvelteKit 5 + TypeScript + Tailwind + adapter-static, déployé via Docker + Nginx sur Coolify
-- **URL prod** : https://hemicycle.baijobu.net (domaine inchangé pour l'instant)
+- **URL prod** : https://politidex.fr (canonique depuis 2026-05-25, anciens domaines `www.politidex.fr` et `hemicycle.baijobu.net` redirigent en 308 via Traefik)
 - **Repo** : https://github.com/IMhide/hemicycle-manager (public, [Unlicense](LICENSE))
 - **Données** : Open Data Etalab → fetched au `docker build`, jamais commitées
 

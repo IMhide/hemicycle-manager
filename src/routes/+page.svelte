@@ -12,6 +12,16 @@
 		name="description"
 		content="PolitiDex regroupe les fiches Football Manager des députés et sénateurs français — votes, scrutins, hémicycles, classements. Open data, open source."
 	/>
+	<meta property="og:title" content="PolitiDex — Le Pokédex des élus nationaux français" />
+	<meta
+		property="og:description"
+		content="Fiches Football Manager des députés et sénateurs français : votes, scrutins, hémicycles, classements. Open data, open source."
+	/>
+	<meta name="twitter:title" content="PolitiDex — Le Pokédex des élus nationaux français" />
+	<meta
+		name="twitter:description"
+		content="Fiches Football Manager des députés et sénateurs français. Open data, open source."
+	/>
 </svelte:head>
 
 <section class="max-w-5xl mx-auto px-6 py-10 sm:py-14">

@@ -9,6 +9,9 @@
 	const isAN = $derived(pathname.startsWith('/assemblee'));
 	const isSenat = $derived(pathname.startsWith('/senat'));
 
+	const SITE_URL = 'https://politidex.fr';
+	const canonical = $derived(SITE_URL + pathname);
+
 	/** Active sur le bouton header courant (sticky highlight). */
 	function navClass(active: boolean): string {
 		return active ? 'btn-ghost text-assembly-accent' : 'btn-ghost';
@@ -21,6 +24,17 @@
 			: 'text-assembly-muted hover:text-assembly-text border-b-2 border-transparent -mb-px';
 	}
 </script>
+
+<svelte:head>
+	<link rel="canonical" href={canonical} />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content={canonical} />
+	<meta property="og:site_name" content="PolitiDex" />
+	<meta property="og:locale" content="fr_FR" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:domain" content="politidex.fr" />
+	<meta name="twitter:url" content={canonical} />
+</svelte:head>
 
 <div class="min-h-screen flex flex-col">
 	<header

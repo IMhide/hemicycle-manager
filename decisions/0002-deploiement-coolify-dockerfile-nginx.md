@@ -14,7 +14,7 @@ Choix de l'hébergement et de la stratégie de build pour mettre l'app en produc
 - Stage 1 : `node:22-alpine` qui fait `npm ci`, `npm run data:fetch`, `npm run build`
 - Stage 2 : `nginx:1.27-alpine` qui sert le `build/` statique
 
-URL : https://hemicycle.baijobu.net (UUID app : `<APP_UUID>`)
+URL canonique : https://politidex.fr (depuis 2026-05-25). Anciens domaines `www.politidex.fr` et `hemicycle.baijobu.net` redirigent en 308 via middleware Traefik. UUID app : `<APP_UUID>`.
 
 ## Pourquoi
 
