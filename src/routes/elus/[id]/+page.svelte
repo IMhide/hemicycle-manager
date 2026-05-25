@@ -29,6 +29,7 @@
 	import VoteHistoryItem from '$lib/components/VoteHistoryItem.svelte';
 	import VoteHistoryItemSenat from '$lib/components/VoteHistoryItemSenat.svelte';
 	import TimelineCarriere from '$lib/components/TimelineCarriere.svelte';
+	import { findScrutinFinalUidForTexte } from '$lib/vote-final';
 
 	let { data } = $props();
 
@@ -218,8 +219,10 @@
 	let scrollEl = $state<HTMLDivElement | null>(null);
 	/** Mode d'affichage de l'historique AN : liste plate (chronologique) ou
 	 *  groupé par texte législatif (cf ADR 0035). Le Sénat reste en liste plate
-	 *  car l'agrégation par texte n'est pas implémentée côté Sénat. */
-	let groupByTexte = $state(false);
+	 *  car l'agrégation par texte n'est pas implémentée côté Sénat.
+	 *  Défaut "Par texte" : la posture éditoriale privilégie les textes
+	 *  législatifs (lois) plutôt que la mécanique des scrutins. */
+	let groupByTexte = $state(true);
 	let expandedTexte = $state<string | null>(null);
 
 	const scopedHistory = $derived.by((): HistoryItem[] => {
@@ -259,9 +262,23 @@
 		return m;
 	});
 
+	/** Index des HistoryItem AN par scrutin uid, calculé sur la portée complète
+	 *  (scopedHistory, pas filteredHistory) pour que le vote final reste affichable
+	 *  même quand le filtre exclut sa position (ex: filtre "frondes" et vote final
+	 *  conforme à la majorité). */
+	const anHistoryByUid = $derived.by(() => {
+		const m = new Map<string, HistoryItem>();
+		for (const h of scopedHistory) {
+			if (h.chambre === 'AN') m.set(h.scrutin.uid, h);
+		}
+		return m;
+	});
+
 	/** Groupe les items AN de filteredHistory par texteId.
 	 *  Le Sénat (pas de texte) et les scrutins AN sans texteId sont placés
-	 *  dans un bucket spécial "_sans_texte". */
+	 *  dans un bucket spécial "_sans_texte".
+	 *  Pour chaque texte enrichi, on identifie le "vote final" — celui qui
+	 *  scelle l'adoption ou le rejet du texte (cf $lib/vote-final.ts). */
 	const groupedByTexte = $derived.by(() => {
 		interface GroupeTexte {
 			texteId: string | null;
@@ -274,6 +291,15 @@
 			frondes: number;
 			dateMin: string;
 			dateMax: string;
+			/** Vote AN qui acte le sort du texte (lecture définitive, CMP, etc.).
+			 *  null = pas de timeline navette OU élu n'a pas voté ce scrutin
+			 *  (absent, ou vote à main levée). */
+			voteFinal: HistoryItem | null;
+			/** Sort officiel du texte (adopté / rejeté / etc.) si connu via le
+			 *  scrutin final, sinon null. */
+			sortFinal: string | null;
+			/** ScrutinIndex du vote final (existe même quand l'élu n'a pas voté). */
+			scrutinFinal: (typeof data.scrutinsIndexAN)[number] | null;
 		}
 		const map = new Map<string, GroupeTexte>();
 		for (const h of filteredHistory) {
@@ -287,6 +313,21 @@
 					: h.chambre === 'SENAT'
 						? 'Scrutins Sénat'
 						: 'Hors texte législatif (motions, procédure…)';
+				let voteFinal: HistoryItem | null = null;
+				let sortFinal: string | null = null;
+				let scrutinFinal: (typeof data.scrutinsIndexAN)[number] | null = null;
+				if (texte) {
+					// Résout les ScrutinIndex du texte pour le fallback titre-based
+					const scrutinsDuTexte = texte.scrutins
+						.map((uid) => scrutinByUidAN.get(uid))
+						.filter((s): s is (typeof data.scrutinsIndexAN)[number] => !!s);
+					const finalUid = findScrutinFinalUidForTexte(texte.timelineNavette, scrutinsDuTexte);
+					if (finalUid) {
+						voteFinal = anHistoryByUid.get(finalUid) ?? null;
+						scrutinFinal = scrutinByUidAN.get(finalUid) ?? null;
+						sortFinal = scrutinFinal?.sort ?? null;
+					}
+				}
 				g = {
 					texteId,
 					titre,
@@ -297,7 +338,10 @@
 					abstention: 0,
 					frondes: 0,
 					dateMin: h.date,
-					dateMax: h.date
+					dateMax: h.date,
+					voteFinal,
+					sortFinal,
+					scrutinFinal
 				};
 				map.set(key, g);
 			}
@@ -332,6 +376,7 @@
 		void selected;
 		filter = 'tous';
 		visibleCount = PAGE_SIZE;
+		groupByTexte = true;
 		scrollEl?.scrollTo({ top: 0 });
 	});
 
@@ -440,14 +485,6 @@
 				<div class="flex items-center gap-2 mb-4 text-xs">
 					<span class="text-assembly-muted">Affichage :</span>
 					<button
-						class="px-2 py-0.5 rounded {!groupByTexte
-							? 'bg-assembly-accent/20 text-assembly-accent'
-							: 'text-assembly-muted hover:text-assembly-text'}"
-						onclick={() => (groupByTexte = false)}
-					>
-						Liste chronologique
-					</button>
-					<button
 						class="px-2 py-0.5 rounded {groupByTexte
 							? 'bg-assembly-accent/20 text-assembly-accent'
 							: 'text-assembly-muted hover:text-assembly-text'}"
@@ -455,6 +492,14 @@
 						title="Regroupe les scrutins par texte législatif (cf ADR 0035)"
 					>
 						Par texte
+					</button>
+					<button
+						class="px-2 py-0.5 rounded {!groupByTexte
+							? 'bg-assembly-accent/20 text-assembly-accent'
+							: 'text-assembly-muted hover:text-assembly-text'}"
+						onclick={() => (groupByTexte = false)}
+					>
+						Par scrutin
 					</button>
 				</div>
 
@@ -505,6 +550,64 @@
 											class="absolute top-2 right-3 text-[10px] uppercase tracking-wider text-assembly-muted hover:text-assembly-accent"
 										>
 											Voir texte →
+										</a>
+									{/if}
+									{#if g.scrutinFinal}
+										{@const vf = g.voteFinal && g.voteFinal.chambre === 'AN' ? g.voteFinal : null}
+										{@const vfPosition = vf ? vf.position : 'absent'}
+										{@const vfIsFronde = vf?.isFronde ?? false}
+										{@const vfStyle = vfPosition === 'pour'
+											? 'bg-vote-pour/15 text-vote-pour border-vote-pour/40'
+											: vfPosition === 'contre'
+												? 'bg-vote-contre/15 text-vote-contre border-vote-contre/40'
+												: vfPosition === 'abstention'
+													? 'bg-vote-abstention/15 text-vote-abstention border-vote-abstention/40'
+													: 'bg-slate-500/15 text-slate-300 border-slate-500/40'}
+										{@const vfLabel = vfPosition === 'pour'
+											? 'POUR'
+											: vfPosition === 'contre'
+												? 'CONTRE'
+												: vfPosition === 'abstention'
+													? 'ABST.'
+													: vfPosition === 'nonVotant'
+														? 'N.V.'
+														: 'ABSENT'}
+										<a
+											href="/assemblee/scrutins/{g.scrutinFinal.uid}/"
+											class="block px-3 py-2 border-t border-assembly-border/40 bg-assembly-border/10 hover:bg-assembly-border/20 transition-colors"
+											title="Le scrutin qui scelle le sort du texte (lecture définitive, CMP, ou vote sur l'ensemble)"
+										>
+											<div class="flex items-center gap-2 text-[11px]">
+												<span class="uppercase tracking-wider text-assembly-muted font-semibold flex-shrink-0">
+													Vote final
+												</span>
+												{#if g.sortFinal}
+													<span
+														class="text-[10px] uppercase {g.sortFinal === 'adopté'
+															? 'text-vote-pour'
+															: g.sortFinal === 'rejeté'
+																? 'text-vote-contre'
+																: 'text-assembly-muted'}"
+													>
+														· {g.sortFinal}
+													</span>
+												{/if}
+												<span class="flex-1 min-w-0 truncate text-assembly-muted">
+													n°{g.scrutinFinal.numero}
+												</span>
+												{#if vfIsFronde}
+													<span
+														class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-rose-400/15 text-rose-300 border border-rose-400/30"
+													>
+														🔥 FRONDE
+													</span>
+												{/if}
+												<span
+													class="text-[10px] font-bold px-2 py-0.5 rounded border {vfStyle} tabular-nums"
+												>
+													{vfLabel}
+												</span>
+											</div>
 										</a>
 									{/if}
 									{#if isExpanded}

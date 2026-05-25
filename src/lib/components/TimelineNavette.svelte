@@ -16,6 +16,7 @@
 	 * un message explicite plutôt que rien.
 	 */
 	import type { TexteUnifie, TimelineActe, TimelineChambre } from '$lib/types';
+	import { isVoteActe, mainLeveeSuffix } from '$lib/main-levee';
 
 	let { texte }: { texte: TexteUnifie } = $props();
 
@@ -54,7 +55,8 @@
 		if (a.phase === 'motion-censure') return '🚫';
 		if (a.phase === 'retrait') return '↩️';
 		if (a.scrutinUid) return '🗳️'; // vote nominal
-		return '✋'; // vote à main levée (acte de vote sans scrutin nominal)
+		if (isVoteActe(a)) return '✋'; // vote à main levée
+		return '·';
 	}
 </script>
 
@@ -75,6 +77,7 @@
 		<div class="flex flex-wrap items-stretch gap-2 sm:gap-0 overflow-x-auto pb-1">
 			{#each texte.timelineNavette as a, i}
 				{@const href = scrutinHref(a)}
+				{@const suffix = mainLeveeSuffix(a, i, texte.timelineNavette, texte.datePromulgation)}
 				<div class="flex items-stretch shrink-0">
 					{#if href}
 						<a
@@ -93,15 +96,20 @@
 					{:else}
 						<div
 							class="rounded-md border px-3 py-2 text-center min-w-[140px] {chambreClass(a.chambre)}"
-							title={a.phase === 'depot' || a.phase === 'cmp' || a.phase === 'promulgation' || a.phase === 'conseil-constitutionnel'
-								? a.label
-								: 'Vote sans scrutin nominal (main levée, vote bloqué, etc.)'}
+							title={suffix
+								? `${a.label} — ${suffix} (aucun scrutin nominal n'a été déclenché)`
+								: a.label}
 						>
 							<div class="text-base leading-none mb-1">{picto(a)}</div>
 							<div class="text-[10px] uppercase tracking-wider opacity-90 leading-tight">
 								{a.label}
 							</div>
 							<div class="text-xs font-medium mt-0.5">{formatDate(a.date)}</div>
+							{#if suffix}
+								<div class="text-[10px] italic opacity-80 mt-0.5 leading-tight">
+									{suffix}
+								</div>
+							{/if}
 						</div>
 					{/if}
 					{#if i < texte.timelineNavette.length - 1}
@@ -118,7 +126,7 @@
 			<span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-purple-500"></span>CMP</span>
 			<span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Conseil constitutionnel</span>
 			<span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-vote-pour"></span>Promulgation</span>
-			<span class="ml-2">🗳️ = scrutin nominal · ✋ = main levée</span>
+			<span class="ml-2">🗳️ = scrutin nominal · ✋ = main levée (sort déduit du contexte)</span>
 		</div>
 	{/if}
 </div>
