@@ -6,6 +6,7 @@ Liste vivante des évolutions. Coche au fur et à mesure, ajoute librement.
 
 ## ✅ Fait
 
+- **Fix dump dossiers par leg** (2026-05-25, ADR 0038) — `fetch-data.ts` télécharge désormais les 3 dumps Dossiers Etalab (15ᵉ + 16ᵉ + 17ᵉ) au lieu du seul 17ᵉ. Couverture textes AN enrichis 23% → 96% (805/842), bicaméraux 177 → 563, cas RATP désormais correctement « promulgué loi n° 300 du 28/12/2023 ».
 - **PR #23** (2026-05-13) — Refonte topbar : périmètre élus + textes (retire ~17k scrutins, ajoute 1 446 textes unifiés)
 - **PR #22** (2026-05-13) — Textes législatifs + navette parlementaire (ADR 0035-0037, 1 446 textes unifiés, 177 bicaméraux, timeline 1 191 actes)
 - **Stack 7 PR** (2026-05-08) — Refonte routes + hub Élu cross-chambre (ADR 0030-0032, manifest `elus.json`, `/elus/[id]` unique point d'entrée)
@@ -20,7 +21,7 @@ Liste vivante des évolutions. Coche au fur et à mesure, ajoute librement.
 
 ### 🥇 Court terme — petites tâches actionables
 
-- [ ] **"Main levée" dans la timeline navette** : afficher "Adopté/Rejeté à main levée" plutôt que juste la date quand `scrutinUid === null` sur un acte de vote. Critère succès : sur la fiche PJL Mayotte (ou autre texte promulgué), un acte sans `scrutinUid` affiche le sort déduit du libellé Etalab. Fichier : `src/lib/components/TimelineNavette.svelte`.
+- [x] **"Main levée" dans la timeline navette** (2026-05-14) — actes sans `scrutinUid` affichent désormais "adopté à main levée" (quand la navette a continué ou que le texte est promulgué) ou "à main levée" (sinon). Logique pure extraite dans `src/lib/main-levee.ts` + 10 tests unitaires.
 - [ ] **404 custom `/elus/[id]`** invalide : remplacer le `throw error(404)` SvelteKit par dégradé (page 404 maison + suggestions). Fichier : `src/routes/+error.svelte` (à créer) + tests d'un id bidon.
 - [ ] **Doublons résiduels Sénat** (`sig-*` multiples pour un même texte en plusieurs lectures) : étendre la signature pour fusionner les lectures. Critère succès : `npm run data:smoke:senat` + nouvelle garde anti-doublons ≥ 95% de réduction sur l'échantillon connu. Fichiers : `scripts/lib/textes-senat.ts` + tests.
 - [ ] **Supprimer garde anti-fusion ADR 0023** dans le smoke-test une fois confirmé que la fusion via manifest tient (cf `scripts/smoke-test-senat.ts`).

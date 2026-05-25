@@ -15,9 +15,9 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 2. ✅ **Phase 2** (mergée 2026-05-05) — 15ᵉ législature AN ajoutée (toute l'ère Macron à l'AN couverte)
 3. ✅ **Phase 3 — Sénat** (mergée 2026-05-07, PR #8) — pipeline + UI + scope ère Macron, à parité avec les 3 législatures AN. Ministres et président à venir (Phase 3 suite).
 
-**État actuel (2026-05-13, après PR #22 mergée)** : côté AN, 1196 personnes uniques, 1925 mandats, 15 052 scrutins agrégés en 961 textes législatifs (cf ADR 0035, dont 225 enrichis par le dump dossiers via matching seanceRef↔reunionRef méthode Poligraph), 50+ vétérans 15+16+17. Smoke-test AN **88/88** ✅. Score **Overall** v2 + **Le Championnat / Les Coupes** + **FAQ** mergés 2026-05-06 (PR #6, ADR 0022). Polish UX mergé 2026-05-06 (PR #7).
+**État actuel (2026-05-25, après ADR 0038 fix dump dossiers par leg)** : côté AN, 1196 personnes uniques, 1925 mandats, 15 421 scrutins agrégés en **842 textes** législatifs (cf ADR 0035, dont **805 enrichis** = 96% via matching seanceRef↔reunionRef méthode Poligraph), 50+ vétérans 15+16+17. Smoke-test AN **88/88** ✅. Score **Overall** v2 + **Le Championnat / Les Coupes** + **FAQ** mergés 2026-05-06 (PR #6, ADR 0022). Polish UX mergé 2026-05-06 (PR #7).
 
-**Navette parlementaire (PR #22, mergée 2026-05-13)** : pipeline AN+Sénat des `Texte`/`TexteSenat` (ADR 0035+N3.b), matching cross-chambre (ADR 0036, 86 paires bicamérales), fiche unifiée **`/textes/[id]`** wireframe deux colonnes AN | Sénat, timeline navette complète depuis `actesLegislatifs` (ADR 0037, 1 191 actes, 30 codes retenus dont 49.3, motions, CMP, CC). 1 446 `TexteUnifie` au total dont **177 bicaméraux** (détection refondue via la timeline). Smoke AN 88/88 ✅, Sénat 82/82 ✅ (premier 100% vert), Élus 20/20 ✅. Routes chambre `/assemblee/textes` et `/senat/textes` **supprimées** (redondantes après unification).
+**Navette parlementaire (PR #22, mergée 2026-05-13)** : pipeline AN+Sénat des `Texte`/`TexteSenat` (ADR 0035+N3.b), matching cross-chambre (ADR 0036, 191 paires bicamérales après fix ADR 0038), fiche unifiée **`/textes/[id]`** wireframe deux colonnes AN | Sénat, timeline navette complète depuis `actesLegislatifs` (ADR 0037, 4 632 actes après fix dumps, 30 codes retenus dont 49.3, motions, CMP, CC). **1 225 `TexteUnifie`** au total dont **563 bicaméraux** (détection refondue via la timeline). Smoke AN 88/88 ✅, Sénat 82/82 ✅, Élus 20/20 ✅. Routes chambre `/assemblee/textes` et `/senat/textes` **supprimées** (redondantes après unification).
 
 **Sénat (mergé 2026-05-07, PR #8)** : 672 sénateurs (cohorte cumulée 3 triennats), 2 029 scrutins, 705k votes nominatifs, 9 sessions, 3 triennats ère Macron (`2017-2020`, `2020-2023`, `2023-2026`), 348 places hémicycle. Smoke-test Sénat 67/67 ✅. Tests unitaires 131/131 ✅. ADR 0023-0029 figées. Hémicycle "vivant" pour les triennats anciens (sénateurs sans `place` réelle placés selon le gradient gauche-droite).
 
@@ -67,6 +67,7 @@ L'app collecte les données ouvertes (Open Data Etalab : AN, Sénat, gouvernemen
 - l'**agrégation des scrutins Sénat en `TexteSenat`** (matching titre `scr.scrint` ↔ `loi.loitit` du dump dosleg, première dans l'écosystème open source FR — Poligraph avait abandonné la liaison) → vérifie `scripts/lib/textes-senat.ts`
 - le **matching cross-chambre AN↔Sénat** et la **fiche unifiée `/textes/[id]`** (slug `senatUrl` AN → `loicod` Sénat via texte/lecass/lecture, fallback titre fuzzy, source d'autorité par champ : titre = AN, promul/JO = Sénat) → vérifie ADR 0036
 - la **timeline navette** (parsing récursif `actesLegislatifs`, 30 codes retenus sur 167, croisement avec scrutins nominaux pour `scrutinUid`, détection bicaméralité refondue via présence d'un acte SEN dans la timeline) → vérifie ADR 0037
+- le **download des dumps dossiers AN par législature** (un dump par leg 15/16/17, pas seulement le 17ᵉ qui n'a que ~150 dossiers d'anciennes leg, fusion par dédup uid) → vérifie ADR 0038
 
 Si la décision te semble obsolète ou si tu veux la changer : **propose explicitement à l'utilisateur** de la marquer "déprécié" ou "remplacée par #NNNN", ne la contourne pas en silence.
 
@@ -230,7 +231,7 @@ static/data/
   senat/textes.json            # 571 textes Sénat (gitignore, généré au build)
 decisions/
   README.md                    # index auto-généré (37 ADR)
-  NNNN-slug.md                 # ADR 0001-0037
+  NNNN-slug.md                 # ADR 0001-0038
 deploy/
   nginx.conf                   # config Nginx du container
 Dockerfile                     # multi-stage node:22-alpine + nginx:1.27-alpine
