@@ -14,8 +14,8 @@
 			pour: { bg: 'bg-vote-pour/20', text: 'text-vote-pour', label: 'POUR' },
 			contre: { bg: 'bg-vote-contre/20', text: 'text-vote-contre', label: 'CONTRE' },
 			abstention: { bg: 'bg-vote-abstention/20', text: 'text-vote-abstention', label: 'ABST.' },
-			nonVotant: { bg: 'bg-slate-500/20', text: 'text-slate-400', label: 'N.V.' },
-			absent: { bg: 'bg-slate-700/40', text: 'text-slate-500', label: 'ABSENT' }
+			nonVotant: { bg: 'bg-surface-2', text: 'text-fg-muted', label: 'N.V.' },
+			absent: { bg: 'bg-surface-2', text: 'text-fg-muted', label: 'ABSENT' }
 		}[position]
 	);
 
@@ -34,15 +34,15 @@
 
 <a
 	href="/assemblee/scrutins/{scrutin.uid}/"
-	class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
+	class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors"
 >
-	<div class="text-xs text-assembly-muted whitespace-nowrap w-16 flex-shrink-0">
+	<div class="text-xs text-fg-muted whitespace-nowrap w-16 flex-shrink-0">
 		{formatDate(scrutin.date)}
 	</div>
 
 	<div class="min-w-0 flex-1">
 		<div class="text-sm leading-snug">{truncate(scrutin.titre, 110)}</div>
-		<div class="text-[10px] text-assembly-muted mt-0.5">
+		<div class="text-[10px] text-fg-muted mt-0.5">
 			n°{scrutin.numero} ·
 			<span
 				class={scrutin.sort === 'adopté'

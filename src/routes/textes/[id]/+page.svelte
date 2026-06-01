@@ -91,7 +91,7 @@
 <section class="max-w-7xl mx-auto px-6 py-8 space-y-6">
 	<a
 		href="/textes/"
-		class="text-sm text-assembly-muted hover:text-assembly-accent inline-flex items-center gap-1"
+		class="text-sm text-fg-muted hover:text-link inline-flex items-center gap-1"
 	>
 		← Tous les textes
 	</a>
@@ -102,27 +102,27 @@
 			<div class="min-w-0 flex-1">
 				<div class="flex items-center gap-2 mb-2 flex-wrap">
 					<span
-						class="text-[11px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-assembly-border/50 text-assembly-muted"
+						class="text-[11px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-border-soft/50 text-fg-muted"
 						title={t.typeLibelle}
 					>
 						{typeBadge(t.type)}
 					</span>
 					{#if !t.bicameral && t.an}
-						<span class="text-xs text-assembly-muted">Assemblée nationale uniquement</span>
+						<span class="text-xs text-fg-muted">Assemblée nationale uniquement</span>
 					{:else if !t.bicameral && t.senat}
-						<span class="text-xs text-assembly-muted">Sénat uniquement</span>
+						<span class="text-xs text-fg-muted">Sénat uniquement</span>
 					{/if}
 					{#if t.numeroLoi}
-						<span class="text-xs text-assembly-muted">· Loi n° {t.numeroLoi}</span>
+						<span class="text-xs text-fg-muted">· Loi n° {t.numeroLoi}</span>
 					{/if}
 					{#if t.procedureLibelle}
-						<span class="text-xs text-assembly-muted">· {t.procedureLibelle}</span>
+						<span class="text-xs text-fg-muted">· {t.procedureLibelle}</span>
 					{:else}
-						<span class="text-xs text-assembly-muted">· {t.typeLibelle}</span>
+						<span class="text-xs text-fg-muted">· {t.typeLibelle}</span>
 					{/if}
 				</div>
 				<h1 class="text-xl sm:text-2xl leading-snug font-semibold">{t.titre}</h1>
-				<div class="text-xs text-assembly-muted mt-2">
+				<div class="text-xs text-fg-muted mt-2">
 					Du {formatDate(t.dateDebut)} au {formatDate(t.dateFin)} · {t.nbScrutins} scrutin{t.nbScrutins >
 					1
 						? 's'
@@ -135,7 +135,7 @@
 								href={t.urlJO}
 								target="_blank"
 								rel="noopener noreferrer"
-								class="text-xs inline-flex items-center gap-1 text-assembly-accent hover:underline"
+								class="text-xs inline-flex items-center gap-1 text-link hover:underline"
 								title="Texte au Journal Officiel (Légifrance)"
 							>
 								Texte au JO <span aria-hidden="true">↗</span>
@@ -146,7 +146,7 @@
 								href={t.senatUrl}
 								target="_blank"
 								rel="noopener noreferrer"
-								class="text-xs inline-flex items-center gap-1 text-assembly-muted hover:text-assembly-accent hover:underline"
+								class="text-xs inline-flex items-center gap-1 text-fg-muted hover:text-link hover:underline"
 								title="Dossier officiel sur senat.fr"
 							>
 								Dossier senat.fr <span aria-hidden="true">↗</span>
@@ -163,7 +163,7 @@
 						Promulguée
 					</div>
 					{#if t.datePromulgation}
-						<div class="text-xs text-assembly-muted">JO du {formatDate(t.datePromulgation)}</div>
+						<div class="text-xs text-fg-muted">JO du {formatDate(t.datePromulgation)}</div>
 					{/if}
 				{:else if t.etat === 'rejete'}
 					<div
@@ -173,13 +173,13 @@
 					</div>
 				{:else if t.etat === 'caduc' || t.etat === 'retire' || t.etat === 'fusionne'}
 					<div
-						class="title-display text-base px-3 py-1.5 rounded-md whitespace-nowrap bg-assembly-border text-assembly-muted"
+						class="title-display text-base px-3 py-1.5 rounded-md whitespace-nowrap bg-border-soft text-fg-muted"
 					>
 						{t.etat === 'caduc' ? 'Caduc' : t.etat === 'retire' ? 'Retiré' : 'Fusionné'}
 					</div>
 				{:else if t.etat === 'en-cours'}
 					<div
-						class="title-display text-base px-3 py-1.5 rounded-md whitespace-nowrap bg-assembly-accent/15 text-assembly-accent"
+						class="title-display text-base px-3 py-1.5 rounded-md whitespace-nowrap bg-accent/15 text-link"
 					>
 						En cours
 					</div>
@@ -188,26 +188,26 @@
 		</div>
 
 		{#if t.initiateurs.length > 0}
-			<div class="text-sm text-assembly-muted pt-2 border-t border-assembly-border">
-				<span class="text-assembly-muted">À l'initiative de </span>
+			<div class="text-sm text-fg-muted pt-2 border-t border-border-soft">
+				<span class="text-fg-muted">À l'initiative de </span>
 				{#each t.initiateurs as paId, i}
 					{@const personne = personneById.get(paId)}
 					{@const acteur = acteurNomById.get(paId)}
 					{#if personne && t.an}
 						<a
 							href={lookupEluUrlForPaIdLeg(paId, t.an.texteId.startsWith('DLR5L17') ? 17 : t.an.texteId.startsWith('DLR5L16') ? 16 : 15)}
-							class="text-assembly-accent hover:underline"
+							class="text-link hover:underline"
 						>
 							{personne.identite.prenom} {personne.identite.nom}
 						</a>
 					{:else if acteur}
-						<span class="text-assembly-fg" title="Acteur non-député">
+						<span class="text-fg" title="Acteur non-député">
 							{acteur.prenom} {acteur.nom}
 						</span>
 					{:else}
-						<span class="text-assembly-muted/70">{paId}</span>
+						<span class="text-fg-muted/70">{paId}</span>
 					{/if}
-					{#if i < t.initiateurs.length - 1}<span class="text-assembly-muted">, </span>{/if}
+					{#if i < t.initiateurs.length - 1}<span class="text-fg-muted">, </span>{/if}
 				{/each}
 			</div>
 		{/if}
@@ -227,38 +227,38 @@
 
 			{#if t.an && anTexte}
 				<div class="grid grid-cols-3 gap-2">
-					<div class="text-center bg-assembly-bg/40 rounded-md py-2">
+					<div class="text-center bg-bg/40 rounded-md py-2">
 						<div class="text-xl font-semibold">{anTexte.nbScrutins}</div>
-						<div class="text-[10px] uppercase tracking-wider text-assembly-muted">Scrutins</div>
+						<div class="text-[10px] uppercase tracking-wider text-fg-muted">Scrutins</div>
 					</div>
-					<div class="text-center bg-assembly-bg/40 rounded-md py-2">
+					<div class="text-center bg-bg/40 rounded-md py-2">
 						<div class="text-xl font-semibold">{anTexte.nbVotesSolennels}</div>
-						<div class="text-[10px] uppercase tracking-wider text-assembly-muted">Solennels</div>
+						<div class="text-[10px] uppercase tracking-wider text-fg-muted">Solennels</div>
 					</div>
-					<div class="text-center bg-assembly-bg/40 rounded-md py-2">
+					<div class="text-center bg-bg/40 rounded-md py-2">
 						<div class="text-xl font-semibold">{tauxAdoptionAN}%</div>
-						<div class="text-[10px] uppercase tracking-wider text-assembly-muted">Adoption</div>
+						<div class="text-[10px] uppercase tracking-wider text-fg-muted">Adoption</div>
 					</div>
 				</div>
 
 				{#if votesClefsAN.length > 0}
 					<div>
-						<div class="text-xs uppercase tracking-widest text-assembly-muted mb-2 mt-2">
+						<div class="text-xs uppercase tracking-widest text-fg-muted mb-2 mt-2">
 							Votes clefs
 						</div>
 						<div class="space-y-1.5">
 							{#each votesClefsAN.slice(0, 3) as s}
 								<a
 									href="/assemblee/scrutins/{s.uid}"
-									class="block p-2 rounded-md border border-assembly-border hover:border-assembly-accent transition-colors text-xs"
+									class="block p-2 rounded-md border border-border-soft hover:border-accent transition-colors text-xs"
 								>
 									<div class="flex items-start justify-between gap-2">
 										<div class="min-w-0 flex-1">
-											<div class="text-assembly-muted">
+											<div class="text-fg-muted">
 												n°{s.numero} · {formatDate(s.date)}
 											</div>
 											<div class="leading-snug mt-0.5">{shortTitre(s.titre)}</div>
-											<div class="text-assembly-muted mt-1">
+											<div class="text-fg-muted mt-1">
 												<span class="text-vote-pour">{s.pour}</span> /
 												<span class="text-vote-contre">{s.contre}</span> /
 												<span>{s.abstention} abs</span>
@@ -269,7 +269,7 @@
 												? 'bg-vote-pour/20 text-vote-pour'
 												: s.sort === 'rejeté'
 													? 'bg-vote-contre/20 text-vote-contre'
-													: 'bg-assembly-border text-assembly-muted'}"
+													: 'bg-border-soft text-fg-muted'}"
 										>
 											{s.sort}
 										</div>
@@ -281,18 +281,18 @@
 				{/if}
 
 				<div>
-					<div class="text-xs uppercase tracking-widest text-assembly-muted mb-2 mt-2">
+					<div class="text-xs uppercase tracking-widest text-fg-muted mb-2 mt-2">
 						Tous les scrutins ({scrutinsAN.length})
 					</div>
 					<div class="space-y-0.5 max-h-[420px] overflow-y-auto pr-2">
 						{#each scrutinsAN as s}
 							<a
 								href="/assemblee/scrutins/{s.uid}"
-								class="block px-2 py-1.5 rounded-md hover:bg-assembly-border/30 transition-colors"
+								class="block px-2 py-1.5 rounded-md hover:bg-border-soft/30 transition-colors"
 							>
 								<div class="flex items-start justify-between gap-2">
 									<div class="min-w-0 flex-1">
-										<div class="text-[10px] text-assembly-muted">
+										<div class="text-[10px] text-fg-muted">
 											n°{s.numero} · {formatDate(s.date)}
 										</div>
 										<div class="text-xs leading-snug truncate">{s.titre}</div>
@@ -303,7 +303,7 @@
 											? 'bg-vote-pour/15 text-vote-pour'
 											: s.sort === 'rejeté'
 												? 'bg-vote-contre/15 text-vote-contre'
-												: 'bg-assembly-border/40 text-assembly-muted'}"
+												: 'bg-border-soft/40 text-fg-muted'}"
 									>
 										{s.sort}
 									</div>
@@ -313,7 +313,7 @@
 					</div>
 				</div>
 			{:else}
-				<div class="text-sm text-assembly-muted italic py-8 text-center bg-assembly-bg/30 rounded-md">
+				<div class="text-sm text-fg-muted italic py-8 text-center bg-bg/30 rounded-md">
 					<div class="text-3xl mb-2 opacity-60">∅</div>
 					<div>Pas examiné à l'Assemblée nationale</div>
 					<div class="text-xs mt-1 opacity-70">
@@ -332,38 +332,38 @@
 
 			{#if t.senat && senatTexte}
 				<div class="grid grid-cols-3 gap-2">
-					<div class="text-center bg-assembly-bg/40 rounded-md py-2">
+					<div class="text-center bg-bg/40 rounded-md py-2">
 						<div class="text-xl font-semibold">{senatTexte.nbScrutins}</div>
-						<div class="text-[10px] uppercase tracking-wider text-assembly-muted">Scrutins</div>
+						<div class="text-[10px] uppercase tracking-wider text-fg-muted">Scrutins</div>
 					</div>
-					<div class="text-center bg-assembly-bg/40 rounded-md py-2">
+					<div class="text-center bg-bg/40 rounded-md py-2">
 						<div class="text-xl font-semibold">{senatTexte.triennat}</div>
-						<div class="text-[10px] uppercase tracking-wider text-assembly-muted">Triennat</div>
+						<div class="text-[10px] uppercase tracking-wider text-fg-muted">Triennat</div>
 					</div>
-					<div class="text-center bg-assembly-bg/40 rounded-md py-2">
+					<div class="text-center bg-bg/40 rounded-md py-2">
 						<div class="text-xl font-semibold">{tauxAdoptionSenat}%</div>
-						<div class="text-[10px] uppercase tracking-wider text-assembly-muted">Adoption</div>
+						<div class="text-[10px] uppercase tracking-wider text-fg-muted">Adoption</div>
 					</div>
 				</div>
 
 				{#if votesClefsSenat.length > 0}
 					<div>
-						<div class="text-xs uppercase tracking-widest text-assembly-muted mb-2 mt-2">
+						<div class="text-xs uppercase tracking-widest text-fg-muted mb-2 mt-2">
 							Votes clefs
 						</div>
 						<div class="space-y-1.5">
 							{#each votesClefsSenat.slice(0, 3) as s}
 								<a
 									href="/senat/scrutins/{s.uid}"
-									class="block p-2 rounded-md border border-assembly-border hover:border-assembly-accent transition-colors text-xs"
+									class="block p-2 rounded-md border border-border-soft hover:border-accent transition-colors text-xs"
 								>
 									<div class="flex items-start justify-between gap-2">
 										<div class="min-w-0 flex-1">
-											<div class="text-assembly-muted">
+											<div class="text-fg-muted">
 												n°{s.scrnum} · {formatDate(s.date)}
 											</div>
 											<div class="leading-snug mt-0.5">{shortTitre(s.titre)}</div>
-											<div class="text-assembly-muted mt-1">
+											<div class="text-fg-muted mt-1">
 												<span class="text-vote-pour">{s.pour}</span> /
 												<span class="text-vote-contre">{s.contre}</span> /
 												<span>{s.abstention} abs</span>
@@ -374,7 +374,7 @@
 												? 'bg-vote-pour/20 text-vote-pour'
 												: /rejeté/i.test(s.sort)
 													? 'bg-vote-contre/20 text-vote-contre'
-													: 'bg-assembly-border text-assembly-muted'}"
+													: 'bg-border-soft text-fg-muted'}"
 										>
 											{s.sort}
 										</div>
@@ -386,18 +386,18 @@
 				{/if}
 
 				<div>
-					<div class="text-xs uppercase tracking-widest text-assembly-muted mb-2 mt-2">
+					<div class="text-xs uppercase tracking-widest text-fg-muted mb-2 mt-2">
 						Tous les scrutins ({scrutinsSenat.length})
 					</div>
 					<div class="space-y-0.5 max-h-[420px] overflow-y-auto pr-2">
 						{#each scrutinsSenat as s}
 							<a
 								href="/senat/scrutins/{s.uid}"
-								class="block px-2 py-1.5 rounded-md hover:bg-assembly-border/30 transition-colors"
+								class="block px-2 py-1.5 rounded-md hover:bg-border-soft/30 transition-colors"
 							>
 								<div class="flex items-start justify-between gap-2">
 									<div class="min-w-0 flex-1">
-										<div class="text-[10px] text-assembly-muted">
+										<div class="text-[10px] text-fg-muted">
 											n°{s.scrnum} · {formatDate(s.date)}
 										</div>
 										<div class="text-xs leading-snug truncate">{s.titre}</div>
@@ -409,7 +409,7 @@
 											? 'bg-vote-pour/15 text-vote-pour'
 											: /rejeté/i.test(s.sort)
 												? 'bg-vote-contre/15 text-vote-contre'
-												: 'bg-assembly-border/40 text-assembly-muted'}"
+												: 'bg-border-soft/40 text-fg-muted'}"
 									>
 										{s.sort}
 									</div>
@@ -419,7 +419,7 @@
 					</div>
 				</div>
 			{:else}
-				<div class="text-sm text-assembly-muted italic py-8 text-center bg-assembly-bg/30 rounded-md">
+				<div class="text-sm text-fg-muted italic py-8 text-center bg-bg/30 rounded-md">
 					<div class="text-3xl mb-2 opacity-60">∅</div>
 					<div>Pas examiné au Sénat</div>
 					<div class="text-xs mt-1 opacity-70">

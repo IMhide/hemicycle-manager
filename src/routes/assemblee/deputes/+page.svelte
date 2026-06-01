@@ -235,11 +235,11 @@
 	<title>Députés — PolitiDex</title>
 </svelte:head>
 
-<section class="max-w-7xl mx-auto px-6 py-8">
+<section class="max-w-[1536px] mx-auto px-6 py-8">
 	<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
 		<div>
 			<h1 class="title-display text-4xl">Députés</h1>
-			<p class="text-assembly-muted text-sm mt-1">
+			<p class="text-fg-muted text-sm mt-1">
 				{enriched.length} personne{enriched.length > 1 ? 's' : ''}
 				{#if scopeLeg !== null}
 					ayant siégé en {scopeLeg}<sup>e</sup> législature
@@ -249,11 +249,11 @@
 			</p>
 		</div>
 		<div class="flex items-center gap-1 text-xs">
-			<span class="text-assembly-muted">Vue :</span>
+			<span class="text-fg-muted">Vue :</span>
 			<button
 				class="px-3 py-1 rounded {scopeLeg === null
-					? 'bg-assembly-accent text-assembly-bg font-semibold'
-					: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+					? 'bg-accent text-accent-fg font-semibold'
+					: 'border border-border-soft text-fg-muted hover:text-fg'}"
 				onclick={() => (scopeLeg = null)}
 			>
 				Carrière
@@ -261,8 +261,8 @@
 			{#each legSorted as l (l.num)}
 				<button
 					class="px-3 py-1 rounded {scopeLeg === l.num
-						? 'bg-assembly-accent text-assembly-bg font-semibold'
-						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+						? 'bg-accent text-accent-fg font-semibold'
+						: 'border border-border-soft text-fg-muted hover:text-fg'}"
 					onclick={() => (scopeLeg = l.num)}
 				>
 					{l.num}<sup>e</sup>
@@ -275,7 +275,7 @@
 		<aside class="card p-4 lg:sticky lg:top-20 space-y-4 text-sm">
 			<div>
 				<label
-					class="text-xs uppercase tracking-widest text-assembly-muted block mb-1.5"
+					class="text-xs uppercase tracking-widest text-fg-muted block mb-1.5"
 					for="search-deputes"
 				>
 					Recherche
@@ -285,15 +285,15 @@
 					type="search"
 					bind:value={search}
 					placeholder="Nom ou prénom…"
-					class="bg-assembly-bg border border-assembly-border rounded-md px-3 py-1.5 w-full"
+					class="bg-bg border border-border-soft rounded-md px-3 py-1.5 w-full"
 				/>
 			</div>
 
 			<div>
-				<div class="text-xs uppercase tracking-widest text-assembly-muted mb-1.5">Trier par</div>
+				<div class="text-xs uppercase tracking-widest text-fg-muted mb-1.5">Trier par</div>
 				<select
 					bind:value={sortKey}
-					class="bg-assembly-bg border border-assembly-border rounded-md px-2 py-1.5 w-full"
+					class="bg-bg border border-border-soft rounded-md px-2 py-1.5 w-full"
 				>
 					<option value="nom">Nom (A→Z)</option>
 					<option value="presence">Présence ↓</option>
@@ -314,19 +314,19 @@
 			{#if scopeLeg !== null}
 				<div>
 					<label class="flex items-center gap-2 cursor-pointer">
-						<input type="checkbox" bind:checked={onlyPresidents} class="accent-assembly-accent" />
+						<input type="checkbox" bind:checked={onlyPresidents} class="accent-accent" />
 						<span class="text-xs">⭐ Présidents de groupe seulement</span>
 					</label>
 				</div>
 
 				<div>
 					<div
-						class="text-xs uppercase tracking-widest text-assembly-muted mb-1.5 flex items-center gap-1"
+						class="text-xs uppercase tracking-widest text-fg-muted mb-1.5 flex items-center gap-1"
 					>
 						Groupes
 						{#if groupFilter.size > 0}
 							<button
-								class="ml-auto text-[10px] underline hover:text-assembly-accent"
+								class="ml-auto text-[10px] underline hover:text-link"
 								onclick={() => {
 									groupFilter = new Set();
 								}}
@@ -340,8 +340,8 @@
 							{@const isActive = groupFilter.has(g.id)}
 							<button
 								class="w-full flex items-center justify-between gap-2 px-2 py-1 rounded text-left transition-colors {isActive
-									? 'bg-assembly-border/60'
-									: 'hover:bg-assembly-border/30'}"
+									? 'bg-border-soft/60'
+									: 'hover:bg-border-soft/30'}"
 								onclick={() => toggleGroup(g.id)}
 							>
 								<span class="flex items-center gap-2 min-w-0">
@@ -351,7 +351,7 @@
 									></span>
 									<span class="text-xs font-medium truncate">{g.libelleAbrege}</span>
 								</span>
-								<span class="text-[10px] text-assembly-muted tabular-nums">{g.effectifFin}</span>
+								<span class="text-[10px] text-fg-muted tabular-nums">{g.effectifFin}</span>
 							</button>
 						{/each}
 					</div>
@@ -366,17 +366,17 @@
 		</aside>
 
 		<div>
-			<div class="flex items-center justify-between gap-3 mb-3 text-xs text-assembly-muted">
+			<div class="flex items-center justify-between gap-3 mb-3 text-xs text-fg-muted">
 				<div>
-					<span class="title-display text-base text-assembly-text">{filtered.length}</span>
+					<span class="title-display text-base text-fg">{filtered.length}</span>
 					député{filtered.length > 1 ? 's' : ''} trouvé{filtered.length > 1 ? 's' : ''}
 					{#if filtered.length !== enriched.length}
-						<span class="text-assembly-muted">/ {enriched.length}</span>
+						<span class="text-fg-muted">/ {enriched.length}</span>
 					{/if}
 				</div>
 				{#if highlight}
 					<div class="flex items-center gap-1">
-						Tri : <span class="text-assembly-text font-semibold">{sortKey}</span>
+						Tri : <span class="text-fg font-semibold">{sortKey}</span>
 						<InfoTip title="Tri" size="xs">
 							Les valeurs sont mises en évidence dans la colonne {sortKey} pour faciliter la lecture.
 						</InfoTip>
@@ -385,7 +385,7 @@
 			</div>
 
 			{#if filtered.length === 0}
-				<div class="card p-8 text-center text-assembly-muted">
+				<div class="card p-8 text-center text-fg-muted">
 					<div class="title-display text-2xl mb-1">😶</div>
 					<div class="text-sm">Aucun député ne correspond à ces critères.</div>
 					<button class="btn-ghost mt-4 text-sm" onclick={clearFilters}> Réinitialiser </button>

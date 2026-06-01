@@ -444,7 +444,7 @@
 					/>
 				{/if}
 			{:else}
-				<div class="card p-6 text-sm text-assembly-muted italic">
+				<div class="card p-6 text-sm text-fg-muted italic">
 					Données indisponibles pour cette vue.
 				</div>
 			{/if}
@@ -456,14 +456,14 @@
 					<h2 class="title-display text-xl">
 						Historique de vote
 						{#if selected.kind === 'carriere'}
-							<span class="text-sm text-assembly-muted">— toute la carrière (AN + Sénat)</span>
+							<span class="text-sm text-fg-muted">— toute la carrière (AN + Sénat)</span>
 						{:else if selected.kind === 'an'}
-							<span class="text-sm text-assembly-muted">— {selected.legislature}<sup>e</sup> AN</span>
+							<span class="text-sm text-fg-muted">— {selected.legislature}<sup>e</sup> AN</span>
 						{:else}
-							<span class="text-sm text-assembly-muted">— Sénat {selected.triennat}</span>
+							<span class="text-sm text-fg-muted">— Sénat {selected.triennat}</span>
 						{/if}
 					</h2>
-					<div class="text-xs text-assembly-muted">
+					<div class="text-xs text-fg-muted">
 						{scopedHistory.length} votes exprimés
 					</div>
 				</div>
@@ -472,8 +472,8 @@
 					{#each [['tous', 'Tous'], ['pour', 'Pour'], ['contre', 'Contre'], ['abstention', 'Abst.'], ['frondes', '🔥 Frondes']] as [key, label] (key)}
 						<button
 							class="btn px-3 py-1 text-xs {filter === key
-								? 'bg-assembly-accent text-assembly-bg'
-								: 'border border-assembly-border text-assembly-muted hover:text-assembly-text'}"
+								? 'bg-accent text-accent-fg'
+								: 'border border-border-soft text-fg-muted hover:text-fg'}"
 							onclick={() => setFilter(key as Filter)}
 						>
 							{label}
@@ -483,11 +483,11 @@
 				</div>
 
 				<div class="flex items-center gap-2 mb-4 text-xs">
-					<span class="text-assembly-muted">Affichage :</span>
+					<span class="text-fg-muted">Affichage :</span>
 					<button
 						class="px-2 py-0.5 rounded {groupByTexte
-							? 'bg-assembly-accent/20 text-assembly-accent'
-							: 'text-assembly-muted hover:text-assembly-text'}"
+							? 'bg-accent text-accent-fg'
+							: 'text-fg-muted hover:text-fg'}"
 						onclick={() => (groupByTexte = true)}
 						title="Regroupe les scrutins par texte législatif (cf ADR 0035)"
 					>
@@ -495,8 +495,8 @@
 					</button>
 					<button
 						class="px-2 py-0.5 rounded {!groupByTexte
-							? 'bg-assembly-accent/20 text-assembly-accent'
-							: 'text-assembly-muted hover:text-assembly-text'}"
+							? 'bg-accent text-accent-fg'
+							: 'text-fg-muted hover:text-fg'}"
 						onclick={() => (groupByTexte = false)}
 					>
 						Par scrutin
@@ -504,32 +504,32 @@
 				</div>
 
 				{#if filteredHistory.length === 0}
-					<div class="text-sm text-assembly-muted italic py-8 text-center">
+					<div class="text-sm text-fg-muted italic py-8 text-center">
 						Aucun vote dans cette catégorie.
 					</div>
 				{:else if groupByTexte}
 					<div
 						bind:this={scrollEl}
-						class="vote-scroll overflow-y-auto pr-1 -mr-1 border-y border-assembly-border/40"
+						class="vote-scroll overflow-y-auto pr-1 -mr-1 border-y border-border-soft/40"
 					>
 						<div class="space-y-2 py-1.5">
 							{#each groupedByTexte as g (g.texteId ?? g.titre)}
 								{@const expandKey = g.texteId ?? `_${g.titre}`}
 								{@const isExpanded = expandedTexte === expandKey}
 								{@const hasTextePage = g.texteId !== null}
-								<div class="border border-assembly-border/60 rounded-md overflow-hidden relative">
+								<div class="border border-border-soft/60 rounded-md overflow-hidden relative">
 									<button
-										class="w-full px-3 py-2 text-left hover:bg-assembly-border/20 flex items-center gap-3 text-sm {hasTextePage
+										class="w-full px-3 py-2 text-left hover:bg-border-soft/20 flex items-center gap-3 text-sm {hasTextePage
 											? 'pr-24'
 											: ''}"
 										onclick={() => toggleExpandedTexte(expandKey)}
 									>
-										<span class="text-assembly-muted text-xs w-4 text-center">
+										<span class="text-fg-muted text-xs w-4 text-center">
 											{isExpanded ? '▼' : '▶'}
 										</span>
 										<div class="min-w-0 flex-1">
 											<div class="font-medium leading-snug">{g.titre}</div>
-											<div class="text-[11px] text-assembly-muted mt-0.5">
+											<div class="text-[11px] text-fg-muted mt-0.5">
 												{g.items.length} vote{g.items.length > 1 ? 's' : ''} ·
 												<span class="text-vote-pour">{g.pour} pour</span> ·
 												<span class="text-vote-contre">{g.contre} contre</span>
@@ -547,7 +547,7 @@
 									{#if hasTextePage}
 										<a
 											href="/textes/{encodeURIComponent(g.texteId!)}"
-											class="absolute top-2 right-3 text-[10px] uppercase tracking-wider text-assembly-muted hover:text-assembly-accent"
+											class="absolute top-2 right-3 text-[10px] uppercase tracking-wider text-fg-muted hover:text-link"
 										>
 											Voir texte →
 										</a>
@@ -562,7 +562,7 @@
 												? 'bg-vote-contre/15 text-vote-contre border-vote-contre/40'
 												: vfPosition === 'abstention'
 													? 'bg-vote-abstention/15 text-vote-abstention border-vote-abstention/40'
-													: 'bg-slate-500/15 text-slate-300 border-slate-500/40'}
+													: 'bg-surface-2 text-fg border-border-soft'}
 										{@const vfLabel = vfPosition === 'pour'
 											? 'POUR'
 											: vfPosition === 'contre'
@@ -574,11 +574,11 @@
 														: 'ABSENT'}
 										<a
 											href="/assemblee/scrutins/{g.scrutinFinal.uid}/"
-											class="block px-3 py-2 border-t border-assembly-border/40 bg-assembly-border/10 hover:bg-assembly-border/20 transition-colors"
+											class="block px-3 py-2 border-t border-border-soft/40 bg-border-soft/10 hover:bg-border-soft/20 transition-colors"
 											title="Le scrutin qui scelle le sort du texte (lecture définitive, CMP, ou vote sur l'ensemble)"
 										>
 											<div class="flex items-center gap-2 text-[11px]">
-												<span class="uppercase tracking-wider text-assembly-muted font-semibold flex-shrink-0">
+												<span class="uppercase tracking-wider text-fg-muted font-semibold flex-shrink-0">
 													Vote final
 												</span>
 												{#if g.sortFinal}
@@ -587,12 +587,12 @@
 															? 'text-vote-pour'
 															: g.sortFinal === 'rejeté'
 																? 'text-vote-contre'
-																: 'text-assembly-muted'}"
+																: 'text-fg-muted'}"
 													>
 														· {g.sortFinal}
 													</span>
 												{/if}
-												<span class="flex-1 min-w-0 truncate text-assembly-muted">
+												<span class="flex-1 min-w-0 truncate text-fg-muted">
 													n°{g.scrutinFinal.numero}
 												</span>
 												{#if vfIsFronde}
@@ -611,7 +611,7 @@
 										</a>
 									{/if}
 									{#if isExpanded}
-										<div class="px-3 pb-2 space-y-1.5 border-t border-assembly-border/40 bg-assembly-border/5">
+										<div class="px-3 pb-2 space-y-1.5 border-t border-border-soft/40 bg-border-soft/5">
 											{#each g.items as h (h.chambre + ':' + h.scrutin.uid)}
 												<div class="pt-1.5">
 													{#if h.chambre === 'AN'}
@@ -636,14 +636,14 @@
 						</div>
 					</div>
 
-					<div class="mt-2 text-[10px] text-assembly-muted text-right tabular-nums">
+					<div class="mt-2 text-[10px] text-fg-muted text-right tabular-nums">
 						{groupedByTexte.length} texte{groupedByTexte.length > 1 ? 's' : ''} · {filteredHistory.length}
 						vote{filteredHistory.length > 1 ? 's' : ''}
 					</div>
 				{:else}
 					<div
 						bind:this={scrollEl}
-						class="vote-scroll overflow-y-auto pr-1 -mr-1 border-y border-assembly-border/40"
+						class="vote-scroll overflow-y-auto pr-1 -mr-1 border-y border-border-soft/40"
 					>
 						<div class="space-y-1.5 py-1.5">
 							{#each visibleHistory as h (h.chambre + ':' + h.scrutin.uid)}
@@ -673,7 +673,7 @@
 						{/if}
 					</div>
 
-					<div class="mt-2 text-[10px] text-assembly-muted text-right tabular-nums">
+					<div class="mt-2 text-[10px] text-fg-muted text-right tabular-nums">
 						{Math.min(visibleCount, filteredHistory.length)} / {filteredHistory.length} affichés
 					</div>
 				{/if}

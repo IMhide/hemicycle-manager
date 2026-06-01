@@ -154,7 +154,7 @@
 		const t = (s ?? '').toLowerCase();
 		if (t.includes('adopt')) return 'bg-vote-pour/20 text-vote-pour';
 		if (t.includes('rejet') || t.includes('refus')) return 'bg-vote-contre/20 text-vote-contre';
-		return 'bg-assembly-border text-assembly-muted';
+		return 'bg-border-soft text-fg-muted';
 	}
 </script>
 
@@ -165,7 +165,7 @@
 <section class="max-w-7xl mx-auto px-6 py-8 space-y-6">
 	<a
 		href="/senat/scrutins/"
-		class="text-sm text-assembly-muted hover:text-assembly-accent inline-flex items-center gap-1"
+		class="text-sm text-fg-muted hover:text-link inline-flex items-center gap-1"
 	>
 		← Tous les scrutins Sénat
 	</a>
@@ -173,7 +173,7 @@
 	<div class="card p-6">
 		<div class="flex items-start justify-between gap-4 mb-3">
 			<div class="min-w-0 flex-1">
-				<div class="text-xs uppercase tracking-widest text-assembly-muted mb-1">
+				<div class="text-xs uppercase tracking-widest text-fg-muted mb-1">
 					Scrutin n°{detail.scrnum}{#if triennatId} · Triennat {triennatId}{/if} ·
 					{formatDate(detail.date)}
 				</div>
@@ -181,7 +181,7 @@
 				{#if data.texte}
 					<a
 						href="/textes/{encodeURIComponent(data.texte.versionAutreChambre?.texteAnId ?? data.texte.id)}"
-						class="mt-3 inline-flex items-center gap-2 text-xs text-assembly-muted hover:text-assembly-accent group"
+						class="mt-3 inline-flex items-center gap-2 text-xs text-fg-muted hover:text-link group"
 						title="Voir tous les scrutins de ce texte"
 					>
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -193,10 +193,10 @@
 							></path></svg
 						>
 						<span class="uppercase tracking-wider">Texte&nbsp;:</span>
-						<span class="text-assembly-fg group-hover:text-assembly-accent">
+						<span class="text-fg group-hover:text-link">
 							{data.texte.titre}
 						</span>
-						<span class="text-assembly-muted">·</span>
+						<span class="text-fg-muted">·</span>
 						<span>{data.texte.nbScrutins} scrutin{data.texte.nbScrutins > 1 ? 's' : ''}</span>
 					</a>
 				{/if}
@@ -296,13 +296,13 @@
 					>).
 				</InfoTip>
 			</h2>
-			<span class="text-assembly-muted">
+			<span class="text-fg-muted">
 				{frondeurs.length} sénateur{frondeurs.length > 1 ? 's' : ''} contre la ligne du groupe
 			</span>
 		</div>
 
 		{#if frondeurs.length === 0}
-			<div class="text-sm text-assembly-muted italic">
+			<div class="text-sm text-fg-muted italic">
 				Aucun frondeur sur ce scrutin — toutes les positions individuelles s'alignent sur les
 				majorités de groupe.
 			</div>
@@ -328,7 +328,7 @@
 				class="btn-ghost text-sm flex-1 max-w-xs"
 			>
 				← Scrutin n°{navigation.prev.scrnum}
-				<div class="text-xs text-assembly-muted truncate">{navigation.prev.titre}</div>
+				<div class="text-xs text-fg-muted truncate">{navigation.prev.titre}</div>
 			</a>
 		{:else}
 			<div></div>
@@ -339,7 +339,7 @@
 				class="btn-ghost text-sm flex-1 max-w-xs text-right"
 			>
 				Scrutin n°{navigation.next.scrnum} →
-				<div class="text-xs text-assembly-muted truncate">{navigation.next.titre}</div>
+				<div class="text-xs text-fg-muted truncate">{navigation.next.titre}</div>
 			</a>
 		{/if}
 	</div>

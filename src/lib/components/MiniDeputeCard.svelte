@@ -49,7 +49,7 @@
 		<img
 			src={personne.identite.photoUrl}
 			alt=""
-			class="w-16 h-20 object-cover rounded border border-assembly-border bg-assembly-border flex-shrink-0"
+			class="w-16 h-20 object-cover rounded border border-border-soft bg-border-soft flex-shrink-0"
 			loading="lazy"
 			referrerpolicy="no-referrer"
 		/>
@@ -66,26 +66,26 @@
 				{/if}
 			</div>
 			<div class="mt-1">
-				<div class="text-[10px] uppercase tracking-widest text-assembly-muted">{personne.identite.civ}</div>
+				<div class="text-[10px] uppercase tracking-widest text-fg-muted">{personne.identite.civ}</div>
 				<div class="title-display text-sm leading-tight">{personne.identite.prenom}</div>
 				<div class="title-display text-base leading-tight">{personne.identite.nom}</div>
 			</div>
 			{#if circo}
-				<div class="text-[10px] text-assembly-muted mt-1">
+				<div class="text-[10px] text-fg-muted mt-1">
 					{circo.dep} · {circo.depNum}-{circo.num}
 				</div>
 			{/if}
 			{#if !mandat}
-				<div class="text-[9px] text-assembly-muted mt-1 italic">
+				<div class="text-[9px] text-fg-muted mt-1 italic">
 					Carrière · {personne.carriere.nbMandats} mandat{personne.carriere.nbMandats > 1 ? 's' : ''}
 				</div>
 			{/if}
 		</div>
 	</div>
 
-	<div class="grid grid-cols-3 gap-2 mt-3 pt-2 border-t border-assembly-border/40 text-center">
+	<div class="grid grid-cols-3 gap-2 mt-3 pt-2 border-t border-border-soft/40 text-center">
 		<div>
-			<div class="text-[9px] uppercase text-assembly-muted">Présence</div>
+			<div class="text-[9px] uppercase text-fg-muted">Présence</div>
 			<div class="title-display text-base text-blue-400 leading-tight tabular-nums">
 				{pct(stats.presence.rate)}
 			</div>
@@ -96,7 +96,7 @@
 			{/if}
 		</div>
 		<div>
-			<div class="text-[9px] uppercase text-assembly-muted">Loyauté</div>
+			<div class="text-[9px] uppercase text-fg-muted">Loyauté</div>
 			<div class="title-display text-base text-emerald-400 leading-tight tabular-nums">
 				{pct(stats.loyaute.rate)}
 			</div>
@@ -107,7 +107,7 @@
 			{/if}
 		</div>
 		<div>
-			<div class="text-[9px] uppercase text-assembly-muted">Frondes</div>
+			<div class="text-[9px] uppercase text-fg-muted">Frondes</div>
 			<div class="title-display text-base text-rose-400 leading-tight tabular-nums">
 				{frondes}
 			</div>
@@ -119,7 +119,7 @@
 		</div>
 	</div>
 
-	<div class="text-[9px] text-assembly-muted text-center mt-2 italic">
+	<div class="text-[9px] text-fg-muted text-center mt-2 italic">
 		Cliquez pour voir la fiche complète
 	</div>
 </div>

@@ -80,30 +80,30 @@
 	}
 </script>
 
-<div
-	class="card relative overflow-hidden p-5"
-	style="background: radial-gradient(circle at 30% 0%, {groupe?.couleur ?? '#475569'}33 0%, transparent 60%), linear-gradient(180deg, #1e293b, #0f172a);"
->
+<div class="brut brut-lg relative overflow-hidden">
+	<!-- Bandeau famille politique (aplat) -->
+	<div class="h-2.5 w-full" style="background: {groupe?.couleur ?? 'var(--border-soft)'};" aria-hidden="true"></div>
+	<div class="p-5">
 	<!-- Top bar: overall + group -->
 	<div class="flex items-start justify-between gap-3 mb-4">
 		<div>
 			<div
 				class="title-display text-5xl leading-none"
-				style="color: {groupe?.couleur ?? '#fbbf24'}"
+				style="color: {groupe?.couleur ?? 'var(--accent)'}"
 			>
 				{overall}
 			</div>
-			<div class="text-[10px] uppercase tracking-widest text-assembly-muted mt-1 inline-flex items-center gap-1">
+			<div class="text-[10px] uppercase tracking-widest text-fg-muted mt-1 inline-flex items-center gap-1">
 				<span>{triennat !== null ? `Overall · Triennat ${triennat}` : 'Overall · Carrière'}</span>
 				<InfoTip title="Comment se calcule l'Overall ?" placement="bottom">
 					Note 0–99 mesurant l'assiduité d'un parlementaire à voter les lois
-					(<a href="/faq#overall" class="underline text-assembly-accent">détails</a>) :
+					(<a href="/faq#overall" class="underline text-link">détails</a>) :
 					<ul class="list-disc pl-4 mt-1 space-y-0.5">
 						<li><b>55 %</b> Participation (votes Pour ou Contre exprimés)</li>
 						<li><b>35 %</b> Volume (nb de scrutins votés, normalisé sur le centile 95 de la cohorte)</li>
 						<li><b>10 %</b> Présence (compte aussi l'abstention)</li>
 					</ul>
-					<div class="mt-2 text-assembly-muted">
+					<div class="mt-2 text-fg-muted">
 						La loyauté à un groupe n'entre pas dans la note. Décision figée en
 						<a href="https://github.com/IMhide/hemicycle-manager/blob/main/decisions/0022-score-overall.md" class="underline">ADR 0022</a>.
 					</div>
@@ -116,9 +116,9 @@
 					<span class="w-2.5 h-2.5 rounded-full" style="background-color: {groupe.couleur}"></span>
 					<span class="text-sm font-semibold">{groupe.libelleAbrege}</span>
 				</div>
-				<div class="text-[10px] text-assembly-muted max-w-[200px] truncate">{groupe.libelle}</div>
+				<div class="text-[10px] text-fg-muted max-w-[200px] truncate">{groupe.libelle}</div>
 				{#if groupeRank}
-					<div class="text-[10px] text-assembly-muted">
+					<div class="text-[10px] text-fg-muted">
 						Rang politique : {groupeRank.rank}/12
 					</div>
 				{/if}
@@ -132,25 +132,25 @@
 			<img
 				src={senateur.identite.photoUrl}
 				alt="{senateur.identite.prenom} {senateur.identite.nom}"
-				class="w-28 h-36 object-cover rounded-md border-2 border-assembly-border bg-assembly-border"
+				class="w-28 h-36 object-cover bg-surface-2"
 				loading="lazy"
 				referrerpolicy="no-referrer"
 			/>
 		</div>
 		<div class="flex-1 min-w-0 pb-1">
-			<div class="text-[10px] uppercase tracking-widest text-assembly-muted">
+			<div class="text-[10px] uppercase tracking-widest text-fg-muted">
 				{senateur.identite.civ}
 			</div>
 			<div class="title-display text-2xl leading-tight">{senateur.identite.prenom}</div>
 			<div class="title-display text-3xl leading-tight">{senateur.identite.nom}</div>
-			<div class="text-xs text-assembly-muted mt-2 space-y-0.5">
+			<div class="text-xs text-fg-muted mt-2 space-y-0.5">
 				{#if age !== null}<div>{age} ans</div>{/if}
 				{#if circo}<div>{circo}</div>{/if}
 				{#if senateur.identite.professionDeclaree}
 					<div class="italic truncate">{senateur.identite.professionDeclaree}</div>
 				{/if}
 				{#if triennat === null}
-					<div class="text-assembly-accent/80">
+					<div class="text-link">
 						{senateur.carriere.nbMandats} mandat{senateur.carriere.nbMandats > 1 ? 's' : ''}
 						· {senateur.carriere.triennats.length} triennat{senateur.carriere.triennats.length >
 						1
@@ -158,8 +158,13 @@
 							: ''}
 					</div>
 				{/if}
-				<div class="text-[10px] text-assembly-muted">
-					{senateur.identite.etat === 'ACTIF' ? '🟢 En exercice' : '⚪ Ancien·ne'}
+				<div class="text-[10px] text-fg-muted inline-flex items-center gap-1">
+					<span
+						class="inline-block w-2 h-2 rounded-full"
+						style="background: {senateur.identite.etat === 'ACTIF' ? 'var(--vote-pour)' : 'var(--fg-muted)'};"
+						aria-hidden="true"
+					></span>
+					{senateur.identite.etat === 'ACTIF' ? 'En exercice' : 'Ancien·ne'}
 				</div>
 			</div>
 		</div>
@@ -170,15 +175,15 @@
 		<StatRadar
 			axes={radarAxes}
 			size={260}
-			strokeColor={groupe?.couleur ?? '#fbbf24'}
-			fillColor="{groupe?.couleur ?? '#fbbf24'}33"
+			strokeColor={groupe?.couleur ?? 'var(--accent)'}
+			fillColor="{groupe?.couleur ?? 'var(--accent)'}33"
 		/>
 	</div>
 
 	<!-- Stats list -->
-	<div class="space-y-1.5 text-sm border-t border-assembly-border/50 pt-4">
+	<div class="space-y-1.5 text-sm border-t border-border-soft/50 pt-4">
 		<div class="flex justify-between items-center gap-2">
-			<span class="flex items-center gap-1 text-assembly-muted">
+			<span class="flex items-center gap-1 text-fg-muted">
 				Présence
 				<InfoTip title="Taux de présence" size="xs">
 					Part des scrutins où le sénateur était <strong>physiquement présent</strong> (vote
@@ -201,7 +206,7 @@
 			</span>
 		</div>
 		<div class="flex justify-between items-center gap-2">
-			<span class="flex items-center gap-1 text-assembly-muted">
+			<span class="flex items-center gap-1 text-fg-muted">
 				Participation
 				<InfoTip title="Taux de participation" size="xs">
 					Part des scrutins où le sénateur a <strong>exprimé un vote</strong> (pour, contre ou
@@ -219,7 +224,7 @@
 			</span>
 		</div>
 		<div class="flex justify-between items-center gap-2">
-			<span class="flex items-center gap-1 text-assembly-muted">
+			<span class="flex items-center gap-1 text-fg-muted">
 				Loyauté
 				<InfoTip title="Taux de loyauté au groupe" size="xs">
 					Part des votes <strong>alignés sur la majorité du groupe</strong>, parmi les scrutins
@@ -237,7 +242,7 @@
 			</span>
 		</div>
 		<div class="flex justify-between items-center gap-2">
-			<span class="flex items-center gap-1 text-assembly-muted">
+			<span class="flex items-center gap-1 text-fg-muted">
 				Frondes
 				<InfoTip title="Frondes" size="xs">
 					Nombre de votes <em>exprimés</em> opposés à la position majoritaire du groupe
@@ -255,26 +260,26 @@
 			</span>
 		</div>
 
-		<div class="grid grid-cols-3 gap-2 pt-3 mt-3 border-t border-assembly-border/30 text-center">
+		<div class="grid grid-cols-3 gap-2 pt-3 mt-3 border-t border-border-soft/30 text-center">
 			<div>
 				<div class="title-display text-lg text-vote-pour">{stats.presence.numerator}</div>
-				<div class="text-[10px] text-assembly-muted uppercase">Présents</div>
+				<div class="text-[10px] text-fg-muted uppercase">Présents</div>
 			</div>
 			<div>
 				<div class="title-display text-lg text-vote-contre">{stats.participation.numerator}</div>
-				<div class="text-[10px] text-assembly-muted uppercase">Votés</div>
+				<div class="text-[10px] text-fg-muted uppercase">Votés</div>
 			</div>
 			<div>
 				<div class="title-display text-lg text-vote-abstention">{stats.presence.denominator}</div>
-				<div class="text-[10px] text-assembly-muted uppercase">Éligibles</div>
+				<div class="text-[10px] text-fg-muted uppercase">Éligibles</div>
 			</div>
 		</div>
 	</div>
 
 	<!-- Badges -->
 	{#if badgeIds.length > 0}
-		<div class="mt-5 pt-4 border-t border-assembly-border/50">
-			<div class="text-[10px] uppercase tracking-widest text-assembly-muted mb-2">🏆 Badges</div>
+		<div class="mt-5 pt-4" style="border-top: 2px solid var(--border-soft);">
+			<div class="text-[10px] uppercase tracking-widest text-fg-muted mb-2">Badges</div>
 			<div class="flex flex-wrap gap-1.5">
 				{#each badgeIds as b (b.kind + ':' + b.id)}
 					<Badge id={b.id} kind={b.kind} />
@@ -282,4 +287,5 @@
 			</div>
 		</div>
 	{/if}
+	</div>
 </div>

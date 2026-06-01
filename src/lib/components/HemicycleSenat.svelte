@@ -254,7 +254,7 @@
 		{/each}
 	</svg>
 	{#if layout.nonPlaces > 0}
-		<div class="text-[10px] text-assembly-muted text-center mt-2 italic">
+		<div class="text-[10px] text-fg-muted text-center mt-2 italic">
 			{layout.nonPlaces} sénateur·rice·s en surplus (cohorte cumulée &gt; 348 sièges via
 			suppléances et renouvellements). Visibles dans la liste des sénateurs.
 		</div>

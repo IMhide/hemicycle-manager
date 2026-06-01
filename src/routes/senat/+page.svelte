@@ -121,18 +121,18 @@
 	<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
 		<div>
 			<h1 class="title-display text-4xl sm:text-5xl tracking-wider">Hémicycle Sénat</h1>
-			<p class="text-assembly-muted mt-1">
+			<p class="text-fg-muted mt-1">
 				Triennat {data.triennatCourant} · 348 sièges · Survolez un siège pour voir la fiche,
 				cliquez pour ouvrir.
 			</p>
 		</div>
 		<div class="flex items-center gap-1 flex-wrap justify-end max-w-md text-xs">
-			<span class="text-assembly-muted">Triennat :</span>
+			<span class="text-fg-muted">Triennat :</span>
 			{#each triennatsSorted as tri (tri.id)}
 				<button
 					class="px-2 py-1 rounded text-[11px] {tri.id === data.triennatCourant
-						? 'bg-assembly-accent text-assembly-bg font-semibold'
-						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+						? 'bg-accent text-accent-fg font-semibold'
+						: 'border border-border-soft text-fg-muted hover:text-fg'}"
 					onclick={() => basculerTriennat(tri.id as TriennatId)}
 				>
 					{tri.id}
@@ -166,7 +166,7 @@
 	{/if}
 
 	<div class="mb-8">
-		<div class="text-xs uppercase tracking-widest text-assembly-muted mb-2">Groupes politiques</div>
+		<div class="text-xs uppercase tracking-widest text-fg-muted mb-2">Groupes politiques</div>
 		<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
 			{#each sortedGroupes as g (g.code)}
 				<div
@@ -175,9 +175,9 @@
 				>
 					<div class="min-w-0 flex-1">
 						<div class="text-xs font-semibold truncate">{g.libelleAbrege}</div>
-						<div class="text-[10px] text-assembly-muted truncate">{g.libelle}</div>
+						<div class="text-[10px] text-fg-muted truncate">{g.libelle}</div>
 					</div>
-					<div class="title-display text-base text-assembly-text tabular-nums flex-shrink-0">
+					<div class="title-display text-base text-fg tabular-nums flex-shrink-0">
 						{g.effectifFin}
 					</div>
 				</div>
@@ -188,17 +188,17 @@
 	<div>
 		<div class="flex items-baseline justify-between gap-3 mb-3">
 			<h2 class="title-display text-xl">Scrutins récents</h2>
-			<div class="flex gap-3 text-xs text-assembly-muted">
-				<a href="/textes/" class="hover:text-assembly-accent">
+			<div class="flex gap-3 text-xs text-fg-muted">
+				<a href="/textes/" class="hover:text-link">
 					Textes →
 				</a>
-				<a href="/senat/scrutins/" class="hover:text-assembly-accent">
+				<a href="/senat/scrutins/" class="hover:text-link">
 					Voir tous les scrutins →
 				</a>
 			</div>
 		</div>
 		{#if recentScrutins.length === 0}
-			<div class="card p-6 text-sm text-assembly-muted text-center italic">
+			<div class="card p-6 text-sm text-fg-muted text-center italic">
 				Aucun scrutin disponible pour ce triennat.
 			</div>
 		{:else}
@@ -206,22 +206,22 @@
 				{#each recentScrutins as s (s.uid)}
 					<a
 						href="/senat/scrutins/{s.uid}/"
-						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
+						class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors"
 					>
 						<div class="text-center flex-shrink-0 w-12">
-							<div class="text-[10px] text-assembly-muted leading-none">n°</div>
+							<div class="text-[10px] text-fg-muted leading-none">n°</div>
 							<div class="title-display text-base tabular-nums">{s.scrnum}</div>
 						</div>
-						<div class="text-xs text-assembly-muted flex-shrink-0 w-14 text-right">
+						<div class="text-xs text-fg-muted flex-shrink-0 w-14 text-right">
 							{formatDate(s.date)}
 						</div>
 						<div class="min-w-0 flex-1">
 							<div class="text-sm leading-snug line-clamp-2">{truncate(s.titre, 130)}</div>
 							<div class="flex gap-2 mt-1 text-[10px] tabular-nums">
 								<span class="text-vote-pour">{s.pour}</span>
-								<span class="text-assembly-muted">·</span>
+								<span class="text-fg-muted">·</span>
 								<span class="text-vote-contre">{s.contre}</span>
-								<span class="text-assembly-muted">·</span>
+								<span class="text-fg-muted">·</span>
 								<span class="text-vote-abstention">{s.abstention}</span>
 							</div>
 						</div>
@@ -230,7 +230,7 @@
 								? 'bg-vote-pour/20 text-vote-pour'
 								: s.sort?.toLowerCase().includes('rejet')
 									? 'bg-vote-contre/20 text-vote-contre'
-									: 'bg-assembly-border text-assembly-muted'}"
+									: 'bg-border-soft text-fg-muted'}"
 						>
 							{s.sort || 'n/a'}
 						</div>

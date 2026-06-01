@@ -149,7 +149,7 @@
 		if (idx === -1) return text;
 		return (
 			text.slice(0, idx) +
-			'<mark class="bg-assembly-accent/30 text-assembly-accent rounded px-0.5">' +
+			'<mark class="bg-accent/30 text-link rounded px-0.5">' +
 			text.slice(idx, idx + q.length) +
 			'</mark>' +
 			text.slice(idx + q.length)
@@ -199,7 +199,7 @@
 <div bind:this={containerEl} class="relative w-full max-w-md" onfocusout={handleBlur}>
 	<div class="relative">
 		<svg
-			class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-assembly-muted pointer-events-none"
+			class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted pointer-events-none"
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke="currentColor"
@@ -216,13 +216,13 @@
 			onkeydown={handleKeydown}
 			type="search"
 			placeholder="Rechercher un élu, un groupe, un texte de loi…"
-			class="w-full bg-assembly-bg border border-assembly-border rounded-full pl-9 pr-12 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-assembly-accent/40 focus:border-assembly-accent/60 transition-all"
+			class="w-full bg-bg border border-border-soft rounded-full pl-9 pr-12 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent/60 transition-all"
 			aria-label="Recherche globale"
 			aria-controls="global-search-results"
 			autocomplete="off"
 		/>
 		<kbd
-			class="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-assembly-muted bg-assembly-border/40 border border-assembly-border rounded px-1.5 py-0.5 font-mono pointer-events-none hidden sm:block"
+			class="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-fg-muted bg-border-soft/40 border border-border-soft rounded px-1.5 py-0.5 font-mono pointer-events-none hidden sm:block"
 		>
 			⌘K
 		</kbd>
@@ -231,27 +231,27 @@
 	{#if isOpen}
 		<div
 			id="global-search-results"
-			class="absolute top-full left-0 right-0 mt-2 bg-assembly-surface border border-assembly-border rounded-xl shadow-2xl overflow-hidden z-50 max-h-[70vh] overflow-y-auto"
+			class="absolute top-full left-0 right-0 mt-2 bg-surface border border-border-soft rounded-xl shadow-2xl overflow-hidden z-50 max-h-[70vh] overflow-y-auto"
 		>
 			{#if isLoading && totalCount === 0}
-				<div class="p-4 text-sm text-assembly-muted text-center">
+				<div class="p-4 text-sm text-fg-muted text-center">
 					<div class="animate-pulse">Chargement de l'index…</div>
 				</div>
 			{:else if !query.trim()}
-				<div class="p-4 text-xs text-assembly-muted">
+				<div class="p-4 text-xs text-fg-muted">
 					Tapez le nom d'un élu, d'un groupe, ou un mot-clé d'un texte de loi.
 					<div class="mt-2 text-[10px]">
 						Astuce : ⌘K (Ctrl+K) ouvre la recherche depuis n'importe où.
 					</div>
 				</div>
 			{:else if totalCount === 0}
-				<div class="p-4 text-sm text-assembly-muted text-center">
-					Aucun résultat pour <span class="font-semibold text-assembly-text">{query}</span>.
+				<div class="p-4 text-sm text-fg-muted text-center">
+					Aucun résultat pour <span class="font-semibold text-fg">{query}</span>.
 				</div>
 			{:else}
 				{#if results.personnes.length > 0}
 					<div
-						class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50"
+						class="px-3 py-2 text-[10px] uppercase tracking-widest text-fg-muted bg-bg/50"
 					>
 						Personnes
 					</div>
@@ -262,8 +262,8 @@
 							type="button"
 							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
 							flatIdx
-								? 'bg-assembly-accent/10'
-								: 'hover:bg-assembly-border/30'}"
+								? 'bg-accent/10'
+								: 'hover:bg-border-soft/30'}"
 							onmouseenter={() => (activeIndex = flatIdx)}
 							onclick={() =>
 								selectItem({
@@ -275,7 +275,7 @@
 							<img
 								src={p.identite.photoUrl}
 								alt=""
-								class="w-8 h-8 rounded-full object-cover bg-assembly-border flex-shrink-0"
+								class="w-8 h-8 rounded-full object-cover bg-border-soft flex-shrink-0"
 								loading="lazy"
 								referrerpolicy="no-referrer"
 							/>
@@ -283,7 +283,7 @@
 								<div class="text-sm font-semibold truncate">
 									{@html highlightMatch(`${p.identite.prenom} ${p.identite.nom}`, query)}
 								</div>
-								<div class="flex items-center gap-1.5 text-[10px] text-assembly-muted">
+								<div class="flex items-center gap-1.5 text-[10px] text-fg-muted">
 									{#if p.groupePrincipal}
 										<span
 											class="w-1.5 h-1.5 rounded-full"
@@ -303,7 +303,7 @@
 
 				{#if results.senateurs.length > 0}
 					<div
-						class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50"
+						class="px-3 py-2 text-[10px] uppercase tracking-widest text-fg-muted bg-bg/50"
 					>
 						Sénateurs
 					</div>
@@ -313,8 +313,8 @@
 							type="button"
 							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
 							flatIdx
-								? 'bg-assembly-accent/10'
-								: 'hover:bg-assembly-border/30'}"
+								? 'bg-accent/10'
+								: 'hover:bg-border-soft/30'}"
 							onmouseenter={() => (activeIndex = flatIdx)}
 							onclick={() =>
 								selectItem({
@@ -326,7 +326,7 @@
 							<img
 								src={s.identite.photoUrl}
 								alt=""
-								class="w-8 h-8 rounded-full object-cover bg-assembly-border flex-shrink-0"
+								class="w-8 h-8 rounded-full object-cover bg-border-soft flex-shrink-0"
 								loading="lazy"
 								referrerpolicy="no-referrer"
 							/>
@@ -334,7 +334,7 @@
 								<div class="text-sm font-semibold truncate">
 									{@html highlightMatch(`${s.identite.prenom} ${s.identite.nom}`, query)}
 								</div>
-								<div class="flex items-center gap-1.5 text-[10px] text-assembly-muted">
+								<div class="flex items-center gap-1.5 text-[10px] text-fg-muted">
 									{#if s.groupePrincipal}
 										<span
 											class="w-1.5 h-1.5 rounded-full"
@@ -352,7 +352,7 @@
 
 				{#if results.groupes.length > 0}
 					<div
-						class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50"
+						class="px-3 py-2 text-[10px] uppercase tracking-widest text-fg-muted bg-bg/50"
 					>
 						Groupes (AN)
 					</div>
@@ -362,8 +362,8 @@
 							type="button"
 							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
 							flatIdx
-								? 'bg-assembly-accent/10'
-								: 'hover:bg-assembly-border/30'}"
+								? 'bg-accent/10'
+								: 'hover:bg-border-soft/30'}"
 							onmouseenter={() => (activeIndex = flatIdx)}
 							onclick={() =>
 								selectItem({
@@ -382,7 +382,7 @@
 								<div class="text-sm font-semibold truncate">
 									{@html highlightMatch(g.libelle, query)}
 								</div>
-								<div class="text-[10px] text-assembly-muted">
+								<div class="text-[10px] text-fg-muted">
 									{g.libelleAbrege} · {g.legislature}<sup>e</sup> lég. · {g.effectifFin} député{g.effectifFin >
 									1
 										? 's'
@@ -395,7 +395,7 @@
 
 				{#if results.groupesSenat.length > 0}
 					<div
-						class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50"
+						class="px-3 py-2 text-[10px] uppercase tracking-widest text-fg-muted bg-bg/50"
 					>
 						Groupes (Sénat)
 					</div>
@@ -409,8 +409,8 @@
 							type="button"
 							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
 							flatIdx
-								? 'bg-assembly-accent/10'
-								: 'hover:bg-assembly-border/30'}"
+								? 'bg-accent/10'
+								: 'hover:bg-border-soft/30'}"
 							onmouseenter={() => (activeIndex = flatIdx)}
 							onclick={() =>
 								selectItem({
@@ -429,7 +429,7 @@
 								<div class="text-sm font-semibold truncate">
 									{@html highlightMatch(g.libelle, query)}
 								</div>
-								<div class="text-[10px] text-assembly-muted">
+								<div class="text-[10px] text-fg-muted">
 									{g.libelleAbrege} · Sénat · triennat {g.triennat} · {g.effectifFin} sénateur{g.effectifFin >
 									1
 										? 's'
@@ -442,7 +442,7 @@
 
 				{#if results.textes.length > 0}
 					<div
-						class="px-3 py-2 text-[10px] uppercase tracking-widest text-assembly-muted bg-assembly-bg/50"
+						class="px-3 py-2 text-[10px] uppercase tracking-widest text-fg-muted bg-bg/50"
 					>
 						Textes législatifs
 					</div>
@@ -457,8 +457,8 @@
 							type="button"
 							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
 							flatIdx
-								? 'bg-assembly-accent/10'
-								: 'hover:bg-assembly-border/30'}"
+								? 'bg-accent/10'
+								: 'hover:bg-border-soft/30'}"
 							onmouseenter={() => (activeIndex = flatIdx)}
 							onclick={() =>
 								selectItem({
@@ -469,7 +469,7 @@
 						>
 							<div class="flex-shrink-0">
 								<span
-									class="inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-assembly-border/50 text-assembly-muted"
+									class="inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-border-soft/50 text-fg-muted"
 									title={t.typeLibelle}
 								>
 									{typeBadge(t.type)}
@@ -479,7 +479,7 @@
 								<div class="text-xs leading-snug">
 									{@html highlightMatch(truncate(t.titre, 100), query)}
 								</div>
-								<div class="text-[10px] text-assembly-muted mt-0.5">
+								<div class="text-[10px] text-fg-muted mt-0.5">
 									{formatDate(t.dateFin)} ·
 									<span
 										class={t.etat === 'promulgue'
@@ -502,11 +502,11 @@
 				{/if}
 
 				<div
-					class="px-3 py-2 border-t border-assembly-border/50 text-[10px] text-assembly-muted flex items-center gap-3"
+					class="px-3 py-2 border-t border-border-soft/50 text-[10px] text-fg-muted flex items-center gap-3"
 				>
-					<span><kbd class="bg-assembly-border/40 px-1 rounded">↑↓</kbd> naviguer</span>
-					<span><kbd class="bg-assembly-border/40 px-1 rounded">↵</kbd> ouvrir</span>
-					<span><kbd class="bg-assembly-border/40 px-1 rounded">Esc</kbd> fermer</span>
+					<span><kbd class="bg-border-soft/40 px-1 rounded">↑↓</kbd> naviguer</span>
+					<span><kbd class="bg-border-soft/40 px-1 rounded">↵</kbd> ouvrir</span>
+					<span><kbd class="bg-border-soft/40 px-1 rounded">Esc</kbd> fermer</span>
 				</div>
 			{/if}
 		</div>

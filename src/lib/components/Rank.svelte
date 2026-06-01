@@ -28,10 +28,10 @@
 	const config = $derived(
 		{
 			gold: { medal: '🥇', cls: 'text-amber-300 bg-amber-400/15 border border-amber-400/40' },
-			silver: { medal: '🥈', cls: 'text-slate-200 bg-slate-400/15 border border-slate-400/40' },
+			silver: { medal: '🥈', cls: 'text-fg bg-surface-2 border border-border-soft' },
 			bronze: { medal: '🥉', cls: 'text-orange-300 bg-orange-700/15 border border-orange-700/40' },
-			plain: { medal: '', cls: 'text-assembly-muted bg-assembly-border/30' },
-			na: { medal: '', cls: 'text-assembly-muted/50' }
+			plain: { medal: '', cls: 'text-fg-muted bg-border-soft/30' },
+			na: { medal: '', cls: 'text-fg-muted/50' }
 		}[tier]
 	);
 

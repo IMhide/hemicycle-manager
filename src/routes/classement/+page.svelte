@@ -87,14 +87,14 @@
 <section class="max-w-5xl mx-auto px-6 py-8">
 	<header class="mb-6">
 		<h1 class="title-display text-3xl">🏆 Classement global</h1>
-		<p class="text-assembly-muted text-sm mt-1">
+		<p class="text-fg-muted text-sm mt-1">
 			Tous les élus PolitiDex toutes chambres confondues, triés par <strong>Overall carrière</strong>
 			(moyenne simple cross-chambre, cf
-			<a class="underline hover:text-assembly-accent" href="/faq#elu-carriere">ADR 0032</a>). Pour
+			<a class="underline hover:text-link" href="/faq#elu-carriere">ADR 0032</a>). Pour
 			le détail scope-aware par chambre, voir
-			<a class="underline hover:text-assembly-accent" href="/assemblee/classements/">classement AN</a>
+			<a class="underline hover:text-link" href="/assemblee/classements/">classement AN</a>
 			et
-			<a class="underline hover:text-assembly-accent" href="/senat/classements/">classement Sénat</a
+			<a class="underline hover:text-link" href="/senat/classements/">classement Sénat</a
 			>.
 		</p>
 	</header>
@@ -108,36 +108,36 @@
 		/>
 	</div>
 
-	<div class="text-xs text-assembly-muted mb-2 tabular-nums">
+	<div class="text-xs text-fg-muted mb-2 tabular-nums">
 		{filtered.length} élu{filtered.length > 1 ? 's' : ''} ·
 		Top {Math.min(visibleCount, filtered.length)} visibles
 	</div>
 
 	{#if visible.length === 0}
-		<div class="card p-8 text-sm text-assembly-muted italic text-center">
+		<div class="card p-8 text-sm text-fg-muted italic text-center">
 			Aucun élu ne correspond à cette recherche.
 		</div>
 	{:else}
-		<div class="card divide-y divide-assembly-border/40">
+		<div class="card divide-y divide-border-soft/40">
 			{#each visible as e (e.id)}
 				{@const cat = eluCategorie(e)}
 				{@const rang = rangById.get(e.id) ?? 0}
 				{@const m = medal(rang)}
 				<a
 					href="/elus/{e.id}?tab=carriere"
-					class="flex items-center gap-3 px-3 py-2 hover:bg-assembly-border/20 transition-colors"
+					class="flex items-center gap-3 px-3 py-2 hover:bg-border-soft/20 transition-colors"
 				>
 					<div class="w-10 text-center flex-shrink-0">
 						{#if m}
 							<span class="text-2xl">{m}</span>
 						{:else}
-							<span class="text-xs text-assembly-muted tabular-nums">#{rang}</span>
+							<span class="text-xs text-fg-muted tabular-nums">#{rang}</span>
 						{/if}
 					</div>
 					<img
 						src={e.photoUrl}
 						alt=""
-						class="w-10 h-12 object-cover rounded-md border border-assembly-border bg-assembly-border flex-shrink-0"
+						class="w-10 h-12 object-cover rounded-md border border-border-soft bg-border-soft flex-shrink-0"
 						loading="lazy"
 						referrerpolicy="no-referrer"
 					/>
@@ -145,7 +145,7 @@
 						<div class="text-sm truncate">
 							<span class="font-semibold">{e.prenom}</span> {e.nom}
 						</div>
-						<div class="text-[10px] text-assembly-muted truncate">
+						<div class="text-[10px] text-fg-muted truncate">
 							{e.mandats.length} mandat{e.mandats.length > 1 ? 's' : ''} · {categorieLabel(cat)}
 							{#if e.badgesCarriere.includes('Bicameral')}
 								· 🏛️ Bicaméral
@@ -169,9 +169,9 @@
 		{/if}
 	{/if}
 
-	<footer class="mt-8 text-xs text-assembly-muted">
+	<footer class="mt-8 text-xs text-fg-muted">
 		<details class="card p-4">
-			<summary class="cursor-pointer font-semibold text-assembly-text">
+			<summary class="cursor-pointer font-semibold text-fg">
 				Comment se calcule ce classement ?
 			</summary>
 			<div class="mt-3 space-y-2">
@@ -182,16 +182,16 @@
 				</p>
 				<p>
 					La formule de chaque Overall mandat reste celle figée par
-					<a class="underline hover:text-assembly-accent" href="/faq#overall">ADR 0022</a> :
+					<a class="underline hover:text-link" href="/faq#overall">ADR 0022</a> :
 					0,55 · Participation + 0,35 · Volume(centile-95 cohorte) + 0,10 · Présence × 99.
 				</p>
 				<p>
 					Pour le classement scope-aware (par législature ou triennat), voir
-					<a class="underline hover:text-assembly-accent" href="/assemblee/classements/"
+					<a class="underline hover:text-link" href="/assemblee/classements/"
 						>/assemblee/classements/</a
 					>
 					et
-					<a class="underline hover:text-assembly-accent" href="/senat/classements/"
+					<a class="underline hover:text-link" href="/senat/classements/"
 						>/senat/classements/</a
 					>.
 				</p>

@@ -36,19 +36,19 @@
 
 <a
 	{href}
-	class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
+	class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors"
 >
 	<img
 		src={personne.identite.photoUrl}
 		alt=""
-		class="w-12 h-12 rounded-full object-cover bg-assembly-border flex-shrink-0"
+		class="w-12 h-12 rounded-full object-cover bg-border-soft flex-shrink-0"
 		loading="lazy"
 		referrerpolicy="no-referrer"
 	/>
 	<div class="min-w-0 flex-1">
 		<div class="font-semibold truncate">{personne.identite.prenom} {personne.identite.nom}</div>
 		{#if groupe}
-			<div class="flex items-center gap-1.5 text-xs text-assembly-muted">
+			<div class="flex items-center gap-1.5 text-xs text-fg-muted">
 				<span class="w-2 h-2 rounded-full" style="background-color: {groupe.couleur}"></span>
 				<span>{groupe.libelleAbrege}</span>
 			</div>
@@ -58,7 +58,7 @@
 		<span class="title-display text-sm" style="color: {positionColor}">
 			A voté {position}
 		</span>
-		<span class="text-assembly-muted">
+		<span class="text-fg-muted">
 			groupe : <span style="color: {majColor}">{positionMajoritaireGroupe}</span>
 		</span>
 	</div>

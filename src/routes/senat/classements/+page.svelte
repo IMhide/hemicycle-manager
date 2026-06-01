@@ -291,7 +291,7 @@
 	function tierFor(rank: number, total: number): { medal: string; cls: string } {
 		const ratio = rank / total;
 		if (ratio <= 0.1) return { medal: '🥇', cls: 'border-amber-400/40 bg-amber-400/5' };
-		if (ratio <= 0.25) return { medal: '🥈', cls: 'border-slate-400/40 bg-slate-400/5' };
+		if (ratio <= 0.25) return { medal: '🥈', cls: 'border-border-soft bg-surface-2' };
 		if (ratio <= 0.5) return { medal: '🥉', cls: 'border-orange-700/40 bg-orange-700/5' };
 		return { medal: '', cls: '' };
 	}
@@ -324,14 +324,14 @@
 	<title>Classements Sénat — PolitiDex</title>
 </svelte:head>
 
-<section class="max-w-7xl mx-auto px-6 py-8">
+<section class="max-w-[1536px] mx-auto px-6 py-8">
 	<div class="flex items-baseline justify-between gap-4 flex-wrap mb-6">
 		<div>
 			<h1 class="title-display text-4xl">🏆 Classements Sénat</h1>
-			<p class="text-assembly-muted text-sm mt-1">
+			<p class="text-fg-muted text-sm mt-1">
 				{#if mode === 'championship'}
 					<b>Le Championnat</b> — classements par
-					<a href="/faq#senat-overall" class="underline text-assembly-accent">Overall</a>
+					<a href="/faq#senat-overall" class="underline text-link">Overall</a>
 					(cf ADR 0022).
 				{:else}
 					<b>Les Coupes</b> — classements thématiques par triennat (cf ADR 0028).
@@ -339,19 +339,19 @@
 			</p>
 		</div>
 
-		<div class="flex gap-1 bg-assembly-surface border border-assembly-border rounded-lg p-1">
+		<div class="flex gap-1 bg-surface border border-border-soft rounded-lg p-1">
 			<button
 				class="btn px-4 py-1.5 text-xs font-semibold {mode === 'championship'
-					? 'bg-assembly-accent text-assembly-bg'
-					: 'text-assembly-muted hover:text-slate-200'}"
+					? 'bg-accent text-accent-fg'
+					: 'text-fg-muted hover:text-fg'}"
 				onclick={() => setMode('championship')}
 			>
 				🏆 Le Championnat
 			</button>
 			<button
 				class="btn px-4 py-1.5 text-xs font-semibold {mode === 'coupes'
-					? 'bg-assembly-accent text-assembly-bg'
-					: 'text-assembly-muted hover:text-slate-200'}"
+					? 'bg-accent text-accent-fg'
+					: 'text-fg-muted hover:text-fg'}"
 				onclick={() => setMode('coupes')}
 			>
 				⚽ Les Coupes
@@ -363,50 +363,50 @@
 		<details class="card p-4 mb-4 group">
 			<summary class="cursor-pointer flex items-center gap-2 list-none">
 				<span
-					class="text-assembly-accent text-lg leading-none transition-transform group-open:rotate-90 select-none"
+					class="text-link text-lg leading-none transition-transform group-open:rotate-90 select-none"
 					aria-hidden="true">▸</span
 				>
 				<span class="title-display text-lg">🎮 Comment se calcule l'Overall&nbsp;?</span>
-				<span class="ml-auto text-[10px] uppercase tracking-widest text-assembly-muted"
+				<span class="ml-auto text-[10px] uppercase tracking-widest text-fg-muted"
 					>Note 0–99</span
 				>
 			</summary>
-			<div class="mt-3 text-sm leading-relaxed text-slate-300 space-y-3">
+			<div class="mt-3 text-sm leading-relaxed text-fg space-y-3">
 				<p>
 					Postulat&nbsp;: un parlementaire est un <i>employé du peuple</i>, payé pour voter des
 					lois. Donc on récompense surtout l'acte de voter Pour ou Contre.
 				</p>
 				<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-					<div class="p-3 rounded border border-assembly-border bg-purple-400/5">
+					<div class="p-3 rounded border border-border-soft bg-purple-400/5">
 						<div class="title-display text-2xl text-purple-300">55&nbsp;%</div>
 						<div class="text-xs font-semibold mt-0.5">✋ Participation</div>
-						<div class="text-[11px] text-assembly-muted mt-1">
+						<div class="text-[11px] text-fg-muted mt-1">
 							% des scrutins votés <b>Pour</b> ou <b>Contre</b>
 						</div>
 					</div>
-					<div class="p-3 rounded border border-assembly-border bg-amber-400/5">
+					<div class="p-3 rounded border border-border-soft bg-amber-400/5">
 						<div class="title-display text-2xl text-amber-300">35&nbsp;%</div>
 						<div class="text-xs font-semibold mt-0.5">📈 Volume</div>
-						<div class="text-[11px] text-assembly-muted mt-1">
+						<div class="text-[11px] text-fg-muted mt-1">
 							Nb total de votes, normalisé sur le centile&nbsp;95 de la cohorte
 						</div>
 					</div>
-					<div class="p-3 rounded border border-assembly-border bg-blue-400/5">
+					<div class="p-3 rounded border border-border-soft bg-blue-400/5">
 						<div class="title-display text-2xl text-blue-300">10&nbsp;%</div>
 						<div class="text-xs font-semibold mt-0.5">🎯 Présence</div>
-						<div class="text-[11px] text-assembly-muted mt-1">
+						<div class="text-[11px] text-fg-muted mt-1">
 							Idem participation mais l'<b>abstention</b> compte aussi
 						</div>
 					</div>
 				</div>
-				<p class="text-xs text-assembly-muted">
+				<p class="text-xs text-fg-muted">
 					La <b>Loyauté</b> n'entre <b>pas</b> dans la note. Les délégations de vote sont
 					ignorées en v1 (cf
 					<a
 						href="https://github.com/IMhide/hemicycle-manager/blob/main/decisions/0027-delegations-vote-senat-v1.md"
 						class="underline">ADR 0027</a
 					>).
-					<a href="/faq#senat-overall" class="underline hover:text-assembly-accent"
+					<a href="/faq#senat-overall" class="underline hover:text-link"
 						>Plus d'explications</a
 					>.
 				</p>
@@ -417,8 +417,8 @@
 			{#each [{ id: 'senateurs', label: 'Top sénateurs', emoji: '👤' }, { id: 'groupes', label: 'Top groupes', emoji: '🎽' }, { id: 'blocs', label: 'Top blocs', emoji: '🗺️' }] as v (v.id)}
 				<button
 					class="card px-4 py-2 flex items-center gap-2 transition-colors {champView === v.id
-						? 'border-assembly-accent ring-1 ring-assembly-accent/40'
-						: 'hover:border-assembly-accent/60'}"
+						? 'border-accent ring-1 ring-accent/40'
+						: 'hover:border-accent/60'}"
 					onclick={() => setChampView(v.id as ChampView)}
 				>
 					<span aria-hidden="true">{v.emoji}</span>
@@ -431,8 +431,8 @@
 			{#if champView === 'senateurs'}
 				<button
 					class="px-3 py-1 rounded {scopeTriennat === ''
-						? 'bg-assembly-accent text-assembly-bg font-semibold'
-						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+						? 'bg-accent text-accent-fg font-semibold'
+						: 'border border-border-soft text-fg-muted hover:text-fg'}"
 					onclick={() => (scopeTriennat = '')}
 				>
 					Carrière
@@ -442,10 +442,10 @@
 				<button
 					title={tri.enCours ? 'Triennat en cours' : undefined}
 					class="px-2 py-1 rounded text-[11px] {scopeTriennat === tri.id
-						? 'bg-assembly-accent text-assembly-bg font-semibold'
-						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'} {tri.enCours &&
+						? 'bg-accent text-accent-fg font-semibold'
+						: 'border border-border-soft text-fg-muted hover:text-fg'} {tri.enCours &&
 					scopeTriennat !== tri.id
-						? 'bg-assembly-accent/5'
+						? 'bg-accent/5'
 						: ''}"
 					onclick={() => (scopeTriennat = tri.id as TriennatId)}
 				>
@@ -455,7 +455,7 @@
 		</div>
 
 		{#if champView === 'senateurs'}
-			<div class="text-sm text-assembly-muted flex items-center gap-1 mb-4">
+			<div class="text-sm text-fg-muted flex items-center gap-1 mb-4">
 				{scopeTriennat === ''
 					? 'Top sénateurs sur leur carrière entière (overall agrégé tous triennats).'
 					: `Top sénateurs du triennat ${scopeTriennat} (overall sur le triennat).`}
@@ -475,7 +475,7 @@
 						href={mandat && scopeTriennat !== ''
 							? lookupEluUrlForMatriculeTriennat(senateur.id, scopeTriennat as string) ?? '/elus/'
 							: lookupEluUrlCarriereForMatricule(senateur.id) ?? '/elus/'}
-						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors {tier.cls}"
+						class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors {tier.cls}"
 					>
 						<div
 							class="w-10 text-center title-display text-2xl tabular-nums flex-shrink-0 flex items-center justify-center"
@@ -485,7 +485,7 @@
 						<img
 							src={senateur.identite.photoUrl}
 							alt=""
-							class="w-10 h-10 rounded-full object-cover bg-assembly-border flex-shrink-0"
+							class="w-10 h-10 rounded-full object-cover bg-border-soft flex-shrink-0"
 							loading="lazy"
 							referrerpolicy="no-referrer"
 						/>
@@ -498,7 +498,7 @@
 								{#if scopeTriennat === ''}
 									{#each groupesCarriere(senateur).slice(-4) as { triennat, groupe: g } (triennat + (g?.code ?? ''))}
 										<span class="inline-flex items-center gap-1 text-[10px]">
-											<span class="text-assembly-muted tabular-nums">
+											<span class="text-fg-muted tabular-nums">
 												{triennat}
 											</span>
 											{#if g}
@@ -510,7 +510,7 @@
 													<span class="font-semibold">{g.libelleAbrege}</span>
 												</span>
 											{:else}
-												<span class="text-assembly-muted italic">—</span>
+												<span class="text-fg-muted italic">—</span>
 											{/if}
 										</span>
 									{/each}
@@ -540,7 +540,7 @@
 				</div>
 			{/if}
 		{:else if champView === 'groupes'}
-			<div class="text-sm text-assembly-muted flex items-center gap-1 mb-4">
+			<div class="text-sm text-fg-muted flex items-center gap-1 mb-4">
 				Moyenne d'overall des membres de chaque groupe (triennat
 				{scopeTriennat}).
 				<InfoTip title="Top groupes" size="xs">
@@ -553,7 +553,7 @@
 					{@const rank = i + 1}
 					<a
 						href="/senat/groupes/{scopeTriennat}/{g.code}/"
-						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
+						class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors"
 						style="border-left: 4px solid {g.couleur}"
 					>
 						<div
@@ -569,7 +569,7 @@
 								></span>
 								<span class="font-semibold">{g.libelleAbrege}</span>
 							</div>
-							<div class="text-[11px] text-assembly-muted mt-0.5 truncate">
+							<div class="text-[11px] text-fg-muted mt-0.5 truncate">
 								{g.libelle} · {g.overallEffectif} membres
 							</div>
 						</div>
@@ -580,7 +580,7 @@
 				{/each}
 			</div>
 		{:else}
-			<div class="text-sm text-assembly-muted flex items-center gap-1 mb-4">
+			<div class="text-sm text-fg-muted flex items-center gap-1 mb-4">
 				Moyenne pondérée d'overall par bloc politique (triennat
 				{scopeTriennat}).
 				<InfoTip title="Top blocs" size="xs">
@@ -604,7 +604,7 @@
 									<span aria-hidden="true">{bloc.meta.emoji}</span>
 									{bloc.meta.label}
 								</div>
-								<div class="text-[11px] text-assembly-muted">
+								<div class="text-[11px] text-fg-muted">
 									{bloc.effectif} membres · {bloc.groupes.length} groupes
 								</div>
 							</div>
@@ -616,11 +616,11 @@
 							{#each bloc.groupes as g (g.code)}
 								<a
 									href="/senat/groupes/{scopeTriennat}/{g.code}/"
-									class="text-[11px] px-2 py-1 rounded border border-assembly-border hover:border-assembly-accent transition-colors flex items-center gap-1.5"
+									class="text-[11px] px-2 py-1 rounded border border-border-soft hover:border-accent transition-colors flex items-center gap-1.5"
 									style="border-left: 3px solid {g.couleur}"
 								>
 									<span class="font-semibold">{g.libelleAbrege}</span>
-									<span class="text-assembly-muted tabular-nums">{g.overallMoyen}</span>
+									<span class="text-fg-muted tabular-nums">{g.overallMoyen}</span>
 								</a>
 							{/each}
 						</div>
@@ -636,17 +636,17 @@
 				<button
 					title={tri.enCours ? 'Triennat en cours' : undefined}
 					class="px-2 py-1 rounded text-[11px] {scopeTriennat === tri.id
-						? 'bg-assembly-accent text-assembly-bg font-semibold'
-						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'} {tri.enCours &&
+						? 'bg-accent text-accent-fg font-semibold'
+						: 'border border-border-soft text-fg-muted hover:text-fg'} {tri.enCours &&
 					scopeTriennat !== tri.id
-						? 'bg-assembly-accent/5'
+						? 'bg-accent/5'
 						: ''}"
 					onclick={() => (scopeTriennat = tri.id as TriennatId)}
 				>
 					{tri.id}
 				</button>
 			{/each}
-			<span class="ml-3 text-[10px] text-assembly-muted italic">
+			<span class="ml-3 text-[10px] text-fg-muted italic">
 				Pas de cohorte cross-triennat (cf ADR 0028).
 			</span>
 		</div>
@@ -655,8 +655,8 @@
 			{#each Object.entries(metricMeta) as [key, meta] (key)}
 				<button
 					class="card px-4 py-2 flex items-center gap-2 transition-colors {metric === key
-						? 'border-assembly-accent ring-1 ring-assembly-accent/40'
-						: 'hover:border-assembly-accent/60'}"
+						? 'border-accent ring-1 ring-accent/40'
+						: 'hover:border-accent/60'}"
 					onclick={() => (metric = key as Metric)}
 				>
 					<span aria-hidden="true">{meta.emoji}</span>
@@ -666,25 +666,25 @@
 		</div>
 
 		<div class="flex items-center gap-2 mb-4">
-			<div class="flex gap-1 bg-assembly-surface border border-assembly-border rounded-lg p-1">
+			<div class="flex gap-1 bg-surface border border-border-soft rounded-lg p-1">
 				<button
 					class="btn px-3 py-1 text-xs {coupeView === 'global'
-						? 'bg-assembly-accent text-assembly-bg'
-						: 'text-assembly-muted'}"
+						? 'bg-accent text-accent-fg'
+						: 'text-fg-muted'}"
 					onclick={() => (coupeView = 'global')}
 				>
 					Global
 				</button>
 				<button
 					class="btn px-3 py-1 text-xs {coupeView === 'by-group'
-						? 'bg-assembly-accent text-assembly-bg'
-						: 'text-assembly-muted'}"
+						? 'bg-accent text-accent-fg'
+						: 'text-fg-muted'}"
 					onclick={() => (coupeView = 'by-group')}
 				>
 					Par groupe
 				</button>
 			</div>
-			<div class="text-xs text-assembly-muted flex items-center gap-1">
+			<div class="text-xs text-fg-muted flex items-center gap-1">
 				{currentMeta.info}
 				<InfoTip title={currentMeta.label} size="xs">{currentMeta.info}</InfoTip>
 			</div>
@@ -699,7 +699,7 @@
 					{@const tier = tierFor(rank, coupesSorted.length)}
 					<a
 						href={lookupEluUrlForMatriculeTriennat(senateur.id, scopeTriennat as string) ?? '/elus/'}
-						class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors {tier.cls}"
+						class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors {tier.cls}"
 					>
 						<div
 							class="w-10 text-center title-display text-2xl tabular-nums flex-shrink-0 flex items-center justify-center"
@@ -709,7 +709,7 @@
 						<img
 							src={senateur.identite.photoUrl}
 							alt=""
-							class="w-10 h-10 rounded-full object-cover bg-assembly-border flex-shrink-0"
+							class="w-10 h-10 rounded-full object-cover bg-border-soft flex-shrink-0"
 							loading="lazy"
 							referrerpolicy="no-referrer"
 						/>
@@ -755,27 +755,27 @@
 							></span>
 							<a
 								href="/senat/groupes/{scopeTriennat}/{groupe.code}/"
-								class="font-semibold hover:text-assembly-accent"
+								class="font-semibold hover:text-link"
 							>
 								{groupe.libelleAbrege}
 							</a>
-							<span class="text-xs text-assembly-muted">— top {top.length}</span>
+							<span class="text-xs text-fg-muted">— top {top.length}</span>
 						</div>
 						<div class="space-y-1.5">
 							{#each top as { senateur, triennat }, i (senateur.id)}
 								<a
 									href={lookupEluUrlForMatriculeTriennat(senateur.id, scopeTriennat as string) ?? '/elus/'}
-									class="flex items-center gap-3 p-2 rounded hover:bg-assembly-border/30 transition-colors"
+									class="flex items-center gap-3 p-2 rounded hover:bg-border-soft/30 transition-colors"
 								>
 									<div
-										class="w-6 text-center title-display text-sm tabular-nums text-assembly-muted"
+										class="w-6 text-center title-display text-sm tabular-nums text-fg-muted"
 									>
 										#{i + 1}
 									</div>
 									<img
 										src={senateur.identite.photoUrl}
 										alt=""
-										class="w-8 h-8 rounded-full object-cover bg-assembly-border flex-shrink-0"
+										class="w-8 h-8 rounded-full object-cover bg-border-soft flex-shrink-0"
 										loading="lazy"
 										referrerpolicy="no-referrer"
 									/>
@@ -784,7 +784,7 @@
 											{senateur.identite.prenom}
 											{senateur.identite.nom}
 										</div>
-										<div class="text-[10px] text-assembly-muted">
+										<div class="text-[10px] text-fg-muted">
 											rang global #{currentMeta.rank(triennat)}
 										</div>
 									</div>

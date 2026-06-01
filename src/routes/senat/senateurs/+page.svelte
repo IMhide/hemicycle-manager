@@ -270,11 +270,11 @@
 	<title>Sénateurs — PolitiDex</title>
 </svelte:head>
 
-<section class="max-w-7xl mx-auto px-6 py-8">
+<section class="max-w-[1536px] mx-auto px-6 py-8">
 	<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
 		<div>
 			<h1 class="title-display text-4xl">Sénateurs</h1>
-			<p class="text-assembly-muted text-sm mt-1">
+			<p class="text-fg-muted text-sm mt-1">
 				{enriched.length} sénateur{enriched.length > 1 ? 's' : ''}
 				{#if scopeTriennat !== null}
 					ayant siégé sur le triennat {scopeTriennat}
@@ -284,11 +284,11 @@
 			</p>
 		</div>
 		<div class="flex items-center gap-1 text-xs flex-wrap justify-end">
-			<span class="text-assembly-muted">Vue :</span>
+			<span class="text-fg-muted">Vue :</span>
 			<button
 				class="px-3 py-1 rounded {scopeTriennat === null
-					? 'bg-assembly-accent text-assembly-bg font-semibold'
-					: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+					? 'bg-accent text-accent-fg font-semibold'
+					: 'border border-border-soft text-fg-muted hover:text-fg'}"
 				onclick={() => (scopeTriennat = null)}
 			>
 				Carrière
@@ -296,8 +296,8 @@
 			{#each triennatsSorted.slice(0, 4) as tri (tri.id)}
 				<button
 					class="px-2 py-1 rounded text-[11px] {scopeTriennat === tri.id
-						? 'bg-assembly-accent text-assembly-bg font-semibold'
-						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+						? 'bg-accent text-accent-fg font-semibold'
+						: 'border border-border-soft text-fg-muted hover:text-fg'}"
 					onclick={() => (scopeTriennat = tri.id as TriennatId)}
 				>
 					{tri.id}
@@ -310,7 +310,7 @@
 		<aside class="card p-4 lg:sticky lg:top-20 space-y-4 text-sm">
 			<div>
 				<label
-					class="text-xs uppercase tracking-widest text-assembly-muted block mb-1.5"
+					class="text-xs uppercase tracking-widest text-fg-muted block mb-1.5"
 					for="search-senateurs"
 				>
 					Recherche
@@ -320,15 +320,15 @@
 					type="search"
 					bind:value={search}
 					placeholder="Nom ou prénom…"
-					class="bg-assembly-bg border border-assembly-border rounded-md px-3 py-1.5 w-full"
+					class="bg-bg border border-border-soft rounded-md px-3 py-1.5 w-full"
 				/>
 			</div>
 
 			<div>
-				<div class="text-xs uppercase tracking-widest text-assembly-muted mb-1.5">Trier par</div>
+				<div class="text-xs uppercase tracking-widest text-fg-muted mb-1.5">Trier par</div>
 				<select
 					bind:value={sortKey}
-					class="bg-assembly-bg border border-assembly-border rounded-md px-2 py-1.5 w-full"
+					class="bg-bg border border-border-soft rounded-md px-2 py-1.5 w-full"
 				>
 					<option value="nom">Nom (A→Z)</option>
 					<option value="presence">Présence ↓</option>
@@ -347,13 +347,13 @@
 			/>
 
 			<div>
-				<div class="text-xs uppercase tracking-widest text-assembly-muted mb-1.5">État</div>
+				<div class="text-xs uppercase tracking-widest text-fg-muted mb-1.5">État</div>
 				<div class="flex gap-1">
 					{#each [['all', 'Tous'], ['ACTIF', 'En exercice'], ['ANCIEN', 'Anciens']] as [key, label] (key)}
 						<button
 							class="btn px-2 py-1 text-[11px] flex-1 {etatFilter === key
-								? 'bg-assembly-accent text-assembly-bg'
-								: 'border border-assembly-border text-assembly-muted hover:text-assembly-text'}"
+								? 'bg-accent text-accent-fg'
+								: 'border border-border-soft text-fg-muted hover:text-fg'}"
 							onclick={() => (etatFilter = key as EtatFilter)}
 						>
 							{label}
@@ -364,12 +364,12 @@
 
 			<div>
 				<div
-					class="text-xs uppercase tracking-widest text-assembly-muted mb-1.5 flex items-center gap-1"
+					class="text-xs uppercase tracking-widest text-fg-muted mb-1.5 flex items-center gap-1"
 				>
 					Groupes
 					{#if groupFilter.size > 0}
 						<button
-							class="ml-auto text-[10px] underline hover:text-assembly-accent"
+							class="ml-auto text-[10px] underline hover:text-link"
 							onclick={() => {
 								groupFilter = new Set();
 							}}
@@ -383,8 +383,8 @@
 						{@const isActive = groupFilter.has(g.code)}
 						<button
 							class="w-full flex items-center justify-between gap-2 px-2 py-1 rounded text-left transition-colors {isActive
-								? 'bg-assembly-border/60'
-								: 'hover:bg-assembly-border/30'}"
+								? 'bg-border-soft/60'
+								: 'hover:bg-border-soft/30'}"
 							onclick={() => toggleGroup(g.code)}
 						>
 							<span class="flex items-center gap-2 min-w-0">
@@ -395,7 +395,7 @@
 								<span class="text-xs font-medium truncate">{g.libelleAbrege}</span>
 							</span>
 							{#if scopeTriennat !== null}
-								<span class="text-[10px] text-assembly-muted tabular-nums">{g.effectifFin}</span>
+								<span class="text-[10px] text-fg-muted tabular-nums">{g.effectifFin}</span>
 							{/if}
 						</button>
 					{/each}
@@ -410,17 +410,17 @@
 		</aside>
 
 		<div>
-			<div class="flex items-center justify-between gap-3 mb-3 text-xs text-assembly-muted">
+			<div class="flex items-center justify-between gap-3 mb-3 text-xs text-fg-muted">
 				<div>
-					<span class="title-display text-base text-assembly-text">{filtered.length}</span>
+					<span class="title-display text-base text-fg">{filtered.length}</span>
 					sénateur{filtered.length > 1 ? 's' : ''} trouvé{filtered.length > 1 ? 's' : ''}
 					{#if filtered.length !== enriched.length}
-						<span class="text-assembly-muted">/ {enriched.length}</span>
+						<span class="text-fg-muted">/ {enriched.length}</span>
 					{/if}
 				</div>
 				{#if highlight}
 					<div class="flex items-center gap-1">
-						Tri : <span class="text-assembly-text font-semibold">{sortKey}</span>
+						Tri : <span class="text-fg font-semibold">{sortKey}</span>
 						<InfoTip title="Tri" size="xs">
 							Les valeurs sont mises en évidence dans la colonne {sortKey} pour faciliter la lecture.
 						</InfoTip>
@@ -429,7 +429,7 @@
 			</div>
 
 			{#if filtered.length === 0}
-				<div class="card p-8 text-center text-assembly-muted">
+				<div class="card p-8 text-center text-fg-muted">
 					<div class="title-display text-2xl mb-1">😶</div>
 					<div class="text-sm">Aucun sénateur ne correspond à ces critères.</div>
 					<button class="btn-ghost mt-4 text-sm" onclick={clearFilters}>Réinitialiser</button>
