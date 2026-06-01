@@ -325,7 +325,7 @@
 						<div class="text-[11px] text-fg-muted mt-1">% des scrutins votés <b>Pour</b> ou <b>Contre</b></div>
 					</div>
 					<div class="p-3 rounded border border-border-soft bg-amber-400/5">
-						<div class="title-display text-2xl text-amber-300">35&nbsp;%</div>
+						<div class="title-display text-2xl text-fg">35&nbsp;%</div>
 						<div class="text-xs font-semibold mt-0.5">📈 Volume</div>
 						<div class="text-[11px] text-fg-muted mt-1">Nb total de votes, normalisé sur le centile&nbsp;95 de la cohorte</div>
 					</div>

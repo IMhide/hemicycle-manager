@@ -131,7 +131,7 @@
 			<div>
 				<div class="text-xs uppercase tracking-widest text-fg-muted mb-1.5">Chambre</div>
 				<div class="grid grid-cols-2 gap-1">
-					{#each [['tous', 'Tous'], ['an', 'AN'], ['senat', 'Sénat'], ['bicameral', '🏛️🏛️ Bi.']] as [val, label] (val)}
+					{#each [['tous', 'Tous'], ['an', 'AN'], ['senat', 'Sénat'], ['bicameral', 'Bicam.']] as [val, label] (val)}
 						<button
 							class="btn px-2 py-1 text-xs {chambre === val
 								? 'bg-accent text-accent-fg'
@@ -168,14 +168,14 @@
 					{#each visible as e (e.id)}
 						{@const cat = eluCategorie(e)}
 						{@const grp = dernierGroupe(e)}
-						<a
-							href="/elus/{e.id}?tab=carriere"
-							class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors"
-						>
+						<a href="/elus/{e.id}?tab=carriere" class="vignette">
+							<!-- Liseré famille politique (signal CHES) -->
+							<span class="vignette-bande" style="background: {grp?.couleur ?? 'var(--border-soft)'};" aria-hidden="true"></span>
 							<img
 								src={e.photoUrl}
 								alt=""
-								class="w-12 h-14 object-cover rounded-md border border-border-soft bg-border-soft flex-shrink-0"
+								class="w-12 h-14 object-cover flex-shrink-0"
+								style="border: 2px solid var(--border); background: var(--surface-2);"
 								loading="lazy"
 								referrerpolicy="no-referrer"
 							/>
@@ -186,7 +186,8 @@
 								<div class="flex items-center gap-1.5 mt-0.5 flex-wrap text-[10px] text-fg-muted">
 									{#if grp}
 										<span
-											class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-border-soft/40"
+											class="inline-flex items-center gap-1 px-1.5 py-0.5"
+											style="border: 1px solid var(--border-soft);"
 											title={grp.libelle}
 										>
 											<span
@@ -199,12 +200,12 @@
 									<span class="truncate">
 										{e.mandats.length} mandat{e.mandats.length > 1 ? 's' : ''} · {categorieLabel(cat)}
 										{#if e.badgesCarriere.includes('Bicameral')}
-											· 🏛️ Bi.
+											· Bicam.
 										{/if}
 									</span>
 								</div>
 							</div>
-							<div class="title-display text-xl text-amber-300 tabular-nums flex-shrink-0">
+							<div class="title-display text-xl text-fg tabular-nums flex-shrink-0">
 								{e.overallCarriere}
 							</div>
 						</a>
@@ -223,3 +224,44 @@
 		</div>
 	</div>
 </section>
+
+<style>
+	/* Vignette élu (liste) — bloc brutaliste avec liseré famille politique. */
+	.vignette {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.75rem 0.75rem 0.75rem 1rem;
+		background: var(--surface);
+		border: 3px solid var(--border);
+		box-shadow: 4px 4px 0 0 var(--shadow-color);
+		transition:
+			transform 120ms ease-out,
+			box-shadow 120ms ease-out;
+	}
+	.vignette-bande {
+		position: absolute;
+		left: 0;
+		top: 0;
+		bottom: 0;
+		width: 6px;
+	}
+	@media (hover: hover) {
+		.vignette:hover {
+			transform: translate(-2px, -2px);
+			box-shadow: 6px 6px 0 0 var(--shadow-color);
+		}
+	}
+	.vignette:active {
+		transform: translate(2px, 2px);
+		box-shadow: none;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.vignette,
+		.vignette:hover {
+			transform: none;
+			transition: none;
+		}
+	}
+</style>

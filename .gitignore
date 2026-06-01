@@ -42,3 +42,6 @@ prompt.md
 
 # Artefacts du tool de screenshot (Playwright MCP)
 .playwright-mcp/
+
+# Screenshots de QA générés à la racine (ne pas committer)
+/*.png
