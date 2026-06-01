@@ -152,7 +152,7 @@
 							{/if}
 						</div>
 					</div>
-					<div class="title-display text-2xl text-amber-300 tabular-nums flex-shrink-0">
+					<div class="title-display text-2xl text-fg tabular-nums flex-shrink-0">
 						{e.overallCarriere}
 					</div>
 				</a>

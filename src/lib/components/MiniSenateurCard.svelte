@@ -53,15 +53,15 @@
 	);
 </script>
 
-<div
-	class="card p-3 shadow-2xl"
-	style="background: radial-gradient(circle at 20% 0%, {groupe?.couleur ?? '#475569'}33 0%, transparent 60%), linear-gradient(180deg, #1e293b, #0f172a); border-color: {groupe?.couleur ?? '#475569'}55; min-width: 260px;"
->
+<div class="brut p-3" style="min-width: 260px;">
+	<!-- Bandeau famille politique -->
+	<div class="h-1.5 -mx-3 -mt-3 mb-3" style="background: {groupe?.couleur ?? 'var(--border-soft)'};" aria-hidden="true"></div>
 	<div class="flex items-start gap-3">
 		<img
 			src={senateur.identite.photoUrl}
 			alt=""
-			class="w-16 h-20 object-cover rounded border border-border-soft bg-border-soft flex-shrink-0"
+			class="w-16 h-20 object-cover flex-shrink-0"
+			style="border: 2px solid var(--border); background: var(--surface-2);"
 			loading="lazy"
 			referrerpolicy="no-referrer"
 		/>
@@ -69,7 +69,7 @@
 			<div class="flex items-baseline justify-between gap-2">
 				<div
 					class="title-display text-xl leading-none"
-					style="color: {groupe?.couleur ?? '#fbbf24'}"
+					style="color: {groupe?.couleur ?? 'var(--fg)'}"
 				>
 					{overall}
 				</div>
