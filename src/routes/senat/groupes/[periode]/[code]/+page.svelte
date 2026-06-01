@@ -149,7 +149,7 @@
 <section class="max-w-7xl mx-auto px-6 py-8 space-y-6">
 	<a
 		href="/senat/triennats/{data.triennat}/"
-		class="text-sm text-assembly-muted hover:text-assembly-accent inline-flex items-center gap-1"
+		class="text-sm text-fg-muted hover:text-link inline-flex items-center gap-1"
 	>
 		← Triennat {data.triennat}
 	</a>
@@ -157,7 +157,7 @@
 	<div class="card p-6" style="border-left: 4px solid {data.groupe.couleur}">
 		<div class="flex items-start justify-between gap-4 mb-3">
 			<div class="min-w-0 flex-1">
-				<div class="text-xs uppercase tracking-widest text-assembly-muted mb-1">
+				<div class="text-xs uppercase tracking-widest text-fg-muted mb-1">
 					Triennat {data.triennat} · {data.groupe.libelleAbrege}
 				</div>
 				<h1
@@ -167,11 +167,11 @@
 					{data.groupe.libelle}
 				</h1>
 				{#if president}
-					<div class="text-xs text-assembly-muted mt-2">
+					<div class="text-xs text-fg-muted mt-2">
 						Président·e :
 						<a
 							href={lookupEluUrlForMatriculeTriennat(president.id, data.triennat) ?? '/elus/'}
-							class="hover:text-assembly-accent"
+							class="hover:text-link"
 						>
 							{president.identite.prenom}
 							{president.identite.nom}
@@ -180,14 +180,14 @@
 				{/if}
 			</div>
 		</div>
-		<div class="grid grid-cols-3 gap-4 text-sm mt-4 pt-3 border-t border-assembly-border/40">
+		<div class="grid grid-cols-3 gap-4 text-sm mt-4 pt-3 border-t border-border-soft/40">
 			<div>
 				<div class="title-display text-2xl">{data.groupe.effectifFin}</div>
-				<div class="text-xs text-assembly-muted">Sénateur·rice·s</div>
+				<div class="text-xs text-fg-muted">Sénateur·rice·s</div>
 			</div>
 			<div>
 				<div class="title-display text-2xl">{data.groupe.overallMoyen}</div>
-				<div class="text-xs text-assembly-muted flex items-center gap-1">
+				<div class="text-xs text-fg-muted flex items-center gap-1">
 					Overall moyen
 					<InfoTip title="Overall moyen du groupe" size="xs">
 						Moyenne des Overall individuels des membres du groupe pour ce triennat
@@ -200,7 +200,7 @@
 			</div>
 			<div>
 				<div class="title-display text-2xl">{data.groupe.preseance}</div>
-				<div class="text-xs text-assembly-muted">Préséance gauche-droite</div>
+				<div class="text-xs text-fg-muted">Préséance gauche-droite</div>
 			</div>
 		</div>
 	</div>
@@ -218,7 +218,7 @@
 			onhover={(id) => (hovered = id)}
 			onselect={(id) => selectSenateur(id)}
 		/>
-		<div class="text-[10px] text-assembly-muted text-center mt-2 italic">
+		<div class="text-[10px] text-fg-muted text-center mt-2 italic">
 			Les places non colorées sont celles des autres groupes pour ce triennat.
 		</div>
 	</div>
@@ -240,18 +240,18 @@
 		<div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
 			<h2 class="title-display text-xl">
 				Membres
-				<span class="text-sm text-assembly-muted">— {filteredMembers.length}</span>
+				<span class="text-sm text-fg-muted">— {filteredMembers.length}</span>
 			</h2>
 			<div class="flex items-center gap-2 text-xs">
 				<input
 					type="search"
 					bind:value={search}
 					placeholder="Rechercher un nom…"
-					class="bg-assembly-bg border border-assembly-border rounded-md px-3 py-1.5"
+					class="bg-bg border border-border-soft rounded-md px-3 py-1.5"
 				/>
 				<select
 					bind:value={sortKey}
-					class="bg-assembly-bg border border-assembly-border rounded-md px-2 py-1.5"
+					class="bg-bg border border-border-soft rounded-md px-2 py-1.5"
 				>
 					<option value="nom">Nom (A→Z)</option>
 					<option value="presence">Présence ↓</option>
@@ -262,7 +262,7 @@
 		</div>
 
 		{#if filteredMembers.length === 0}
-			<div class="text-sm text-assembly-muted italic py-8 text-center">
+			<div class="text-sm text-fg-muted italic py-8 text-center">
 				Aucun membre ne correspond.
 			</div>
 		{:else}

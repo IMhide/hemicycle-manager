@@ -25,7 +25,7 @@
 {#if visible}
 	<button
 		type="button"
-		class="text-sm text-assembly-muted hover:text-assembly-accent inline-flex items-center gap-1"
+		class="text-sm text-fg-muted hover:text-link inline-flex items-center gap-1"
 		onclick={handleClick}
 		aria-label="Revenir à la page précédente"
 	>

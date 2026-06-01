@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import GlobalSearch from '$lib/components/GlobalSearch.svelte';
+	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import { page } from '$app/stores';
 
 	let { children } = $props();
@@ -12,16 +13,14 @@
 	const SITE_URL = 'https://politidex.fr';
 	const canonical = $derived(SITE_URL + pathname);
 
-	/** Active sur le bouton header courant (sticky highlight). */
+	/** Bouton de nav principale (header). Actif = fond jaune brutaliste. */
 	function navClass(active: boolean): string {
-		return active ? 'btn-ghost text-assembly-accent' : 'btn-ghost';
+		return active ? 'navlink navlink-active' : 'navlink';
 	}
 
-	/** Active sur les liens du sous-header (AN ou Sénat). */
+	/** Onglet de sous-header (AN/Sénat). Actif = pill jaune. */
 	function subnavClass(active: boolean): string {
-		return active
-			? 'text-assembly-accent border-b-2 border-assembly-accent -mb-px font-semibold'
-			: 'text-assembly-muted hover:text-assembly-text border-b-2 border-transparent -mb-px';
+		return active ? 'subtab subtab-active' : 'subtab';
 	}
 </script>
 
@@ -36,181 +35,171 @@
 	<meta name="twitter:url" content={canonical} />
 </svelte:head>
 
-<div class="min-h-screen flex flex-col">
-	<header
-		class="border-b border-assembly-border/60 backdrop-blur sticky top-0 z-20 bg-assembly-bg/80"
-	>
-		<div class="max-w-7xl mx-auto px-6 py-3 flex items-center gap-4">
-			<a href="/" class="flex items-center gap-3 flex-shrink-0">
+<div class="flex min-h-dvh flex-col">
+	<header class="sticky top-0 z-20" style="background: var(--surface); border-bottom: 3px solid var(--border);">
+		<div class="shell flex items-center gap-4 py-3">
+			<a href="/" class="flex flex-shrink-0 items-center gap-3">
 				<div
-					class="w-9 h-9 rounded-lg bg-gradient-to-br from-assembly-accent to-orange-500 flex items-center justify-center"
+					class="flex h-10 w-10 items-center justify-center font-display text-2xl font-bold"
+					style="background: var(--accent); color: var(--accent-fg); border: 3px solid var(--border);"
 				>
-					<span class="text-assembly-bg font-display text-xl">P</span>
+					P
 				</div>
-				<div class="leading-tight hidden sm:block">
-					<div class="title-display text-xl text-assembly-text">PolitiDex</div>
-					<div class="text-[10px] uppercase tracking-widest text-assembly-muted">
+				<div class="hidden leading-tight sm:block">
+					<div class="title-display text-xl">PolitiDex</div>
+					<div class="text-[10px] font-medium uppercase tracking-widest text-fg-muted">
 						Élus nationaux
 					</div>
 				</div>
 			</a>
 
-			<div class="flex-1 max-w-md">
+			<div class="max-w-md flex-1">
 				<GlobalSearch />
 			</div>
 
-			<nav class="flex items-center gap-1 text-sm flex-shrink-0">
-				<a
-					href="/elus"
-					class={navClass(pathname.startsWith('/elus'))}
-					title="Tous les élus">Élus</a
-				>
-				<a
-					href="/textes"
-					class={navClass(pathname.startsWith('/textes'))}
-					title="Textes législatifs (cross-chambre)">Textes</a
-				>
-				<a
-					href="/assemblee"
-					class={navClass(isAN)}
-					title="Assemblée nationale">🏛️ AN</a
-				>
-				<a href="/senat" class={navClass(isSenat)} title="Sénat">🏛️ Sénat</a>
-				<a
-					href="/faq"
-					class={navClass(pathname.startsWith('/faq'))}
-					title="FAQ — Comment ça marche ?">📚</a
-				>
+			<nav class="flex flex-shrink-0 items-center gap-2 text-sm">
+				<a href="/elus" class={navClass(pathname.startsWith('/elus'))} title="Tous les élus">Élus</a>
+				<a href="/textes" class={navClass(pathname.startsWith('/textes'))} title="Textes législatifs">Textes</a>
+				<a href="/assemblee" class={navClass(isAN)} title="Assemblée nationale">AN</a>
+				<a href="/senat" class={navClass(isSenat)} title="Sénat">Sénat</a>
+				<a href="/faq" class={navClass(pathname.startsWith('/faq'))} title="FAQ — Comment ça marche ?">FAQ</a>
+				<ThemeToggle />
 			</nav>
 		</div>
 
 		{#if isAN}
 			<!-- Sous-header contextuel AN -->
-			<div class="border-t border-assembly-border/40 bg-assembly-bg/60">
-				<div class="max-w-7xl mx-auto px-6 flex items-center gap-5 text-sm overflow-x-auto">
-					<span class="text-[10px] uppercase tracking-widest text-assembly-muted/70 py-2 flex-shrink-0">
-						🏛️ AN
+			<div style="background: var(--surface-2); border-top: 2px solid var(--border);">
+				<div class="shell flex items-center gap-2 overflow-x-auto py-2 text-sm">
+					<span class="flex-shrink-0 pr-1 text-[10px] font-semibold uppercase tracking-widest text-fg-muted">
+						Assemblée
 					</span>
-					<a
-						href="/assemblee"
-						class="{subnavClass(pathname === '/assemblee/')} py-2 whitespace-nowrap"
-					>
-						Hémicycle
-					</a>
-					<a
-						href="/assemblee/deputes"
-						class="{subnavClass(pathname.startsWith('/assemblee/deputes'))} py-2 whitespace-nowrap"
-					>
-						Députés
-					</a>
-					<a
-						href="/assemblee/groupes"
-						class="{subnavClass(pathname.startsWith('/assemblee/groupes'))} py-2 whitespace-nowrap"
-					>
-						Groupes
-					</a>
-					<a
-						href="/assemblee/scrutins"
-						class="{subnavClass(pathname.startsWith('/assemblee/scrutins'))} py-2 whitespace-nowrap"
-					>
-						Scrutins
-					</a>
-					<a
-						href="/assemblee/classements"
-						class="{subnavClass(pathname.startsWith('/assemblee/classements'))} py-2 whitespace-nowrap"
-					>
-						🏆 Classement AN
-					</a>
+					<a href="/assemblee" class={subnavClass(pathname === '/assemblee/')}>Hémicycle</a>
+					<a href="/assemblee/deputes" class={subnavClass(pathname.startsWith('/assemblee/deputes'))}>Députés</a>
+					<a href="/assemblee/groupes" class={subnavClass(pathname.startsWith('/assemblee/groupes'))}>Groupes</a>
+					<a href="/assemblee/scrutins" class={subnavClass(pathname.startsWith('/assemblee/scrutins'))}>Scrutins</a>
+					<a href="/assemblee/classements" class={subnavClass(pathname.startsWith('/assemblee/classements'))}>Classement</a>
 				</div>
 			</div>
 		{:else if isSenat}
 			<!-- Sous-header contextuel Sénat -->
-			<div class="border-t border-assembly-border/40 bg-assembly-bg/60">
-				<div class="max-w-7xl mx-auto px-6 flex items-center gap-5 text-sm overflow-x-auto">
-					<span class="text-[10px] uppercase tracking-widest text-assembly-muted/70 py-2 flex-shrink-0">
-						🏛️ Sénat
+			<div style="background: var(--surface-2); border-top: 2px solid var(--border);">
+				<div class="shell flex items-center gap-2 overflow-x-auto py-2 text-sm">
+					<span class="flex-shrink-0 pr-1 text-[10px] font-semibold uppercase tracking-widest text-fg-muted">
+						Sénat
 					</span>
-					<a
-						href="/senat"
-						class="{subnavClass(pathname === '/senat/')} py-2 whitespace-nowrap"
-					>
-						Hémicycle
-					</a>
-					<a
-						href="/senat/senateurs"
-						class="{subnavClass(pathname.startsWith('/senat/senateurs'))} py-2 whitespace-nowrap"
-					>
-						Sénateurs
-					</a>
-					<a
-						href="/senat/triennats"
-						class="{subnavClass(pathname.startsWith('/senat/triennats'))} py-2 whitespace-nowrap"
-					>
-						Triennats
-					</a>
-					<a
-						href="/senat/scrutins"
-						class="{subnavClass(pathname.startsWith('/senat/scrutins'))} py-2 whitespace-nowrap"
-					>
-						Scrutins
-					</a>
-					<a
-						href="/senat/classements"
-						class="{subnavClass(pathname.startsWith('/senat/classements'))} py-2 whitespace-nowrap"
-					>
-						🏆 Classement Sénat
-					</a>
+					<a href="/senat" class={subnavClass(pathname === '/senat/')}>Hémicycle</a>
+					<a href="/senat/senateurs" class={subnavClass(pathname.startsWith('/senat/senateurs'))}>Sénateurs</a>
+					<a href="/senat/triennats" class={subnavClass(pathname.startsWith('/senat/triennats'))}>Triennats</a>
+					<a href="/senat/scrutins" class={subnavClass(pathname.startsWith('/senat/scrutins'))}>Scrutins</a>
+					<a href="/senat/classements" class={subnavClass(pathname.startsWith('/senat/classements'))}>Classement</a>
 				</div>
 			</div>
 		{/if}
 	</header>
+
 	<main class="flex-1">
 		{@render children()}
 	</main>
+
 	<footer
-		class="border-t border-assembly-border/60 mt-12 py-6 text-center text-xs text-assembly-muted space-y-2"
+		class="mt-12 space-y-2 py-6 text-center text-xs text-fg-muted"
+		style="border-top: 3px solid var(--border);"
 	>
 		<div>
-			<a class="underline hover:text-assembly-accent" href="/faq">📚 FAQ — Comment ça marche ?</a>
+			<a class="footlink" href="/faq">FAQ — Comment ça marche ?</a>
 			·
-			<a
-				class="underline hover:text-assembly-accent"
-				href="https://github.com/IMhide/hemicycle-manager"
-				target="_blank"
-				rel="noopener">⭐ Code source sur GitHub</a
-			>
+			<a class="footlink" href="https://github.com/IMhide/hemicycle-manager" target="_blank" rel="noopener">
+				Code source sur GitHub
+			</a>
 		</div>
 		<div>
 			Données :
-			<a
-				class="underline hover:text-assembly-accent"
-				href="https://data.assemblee-nationale.fr"
-				target="_blank"
-				rel="noopener">Open Data Assemblée nationale</a
-			>
+			<a class="footlink" href="https://data.assemblee-nationale.fr" target="_blank" rel="noopener">Open Data Assemblée nationale</a>
 			·
-			<a
-				class="underline hover:text-assembly-accent"
-				href="https://data.senat.fr"
-				target="_blank"
-				rel="noopener">Open Data Sénat</a
-			>
+			<a class="footlink" href="https://data.senat.fr" target="_blank" rel="noopener">Open Data Sénat</a>
 			— Licence Ouverte (Etalab) · Code sous
-			<a
-				class="underline hover:text-assembly-accent"
-				href="https://github.com/IMhide/hemicycle-manager/blob/main/LICENSE"
-				target="_blank"
-				rel="noopener">Unlicense</a
-			>
+			<a class="footlink" href="https://github.com/IMhide/hemicycle-manager/blob/main/LICENSE" target="_blank" rel="noopener">Unlicense</a>
 		</div>
 		<div class="text-[11px] italic">
 			Projet open source bénévole. Une idée, un bug, une feature ?
-			<a
-				class="underline hover:text-assembly-accent"
-				href="https://github.com/IMhide/hemicycle-manager/issues"
-				target="_blank"
-				rel="noopener">Viens nous aider sur GitHub</a
-			> 🙌
+			<a class="footlink" href="https://github.com/IMhide/hemicycle-manager/issues" target="_blank" rel="noopener">Viens nous aider sur GitHub</a>
 		</div>
 	</footer>
 </div>
+
+<style>
+	/* ── Conteneur principal (gutters cohérents, max-width lisible) ── */
+	:global(.shell) {
+		width: 100%;
+		max-width: 80rem; /* 1280px */
+		margin-inline: auto;
+		padding-inline: 1.5rem;
+	}
+	@media (min-width: 1024px) {
+		:global(.shell) {
+			padding-inline: 2rem;
+		}
+	}
+
+	/* ── Liens de nav principale (boutons brutalistes compacts) ── */
+	.navlink {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.4rem 0.75rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.02em;
+		border: 2px solid transparent;
+		transition:
+			background 120ms ease-out,
+			border-color 120ms ease-out,
+			transform 120ms ease-out;
+	}
+	.navlink:hover {
+		border-color: var(--border);
+		background: var(--surface-2);
+	}
+	.navlink:active {
+		transform: translate(1px, 1px);
+	}
+	.navlink-active {
+		background: var(--accent);
+		color: var(--accent-fg);
+		border-color: var(--border);
+	}
+
+	/* ── Onglets de sous-header (pills brutalistes) ── */
+	.subtab {
+		display: inline-flex;
+		flex-shrink: 0;
+		align-items: center;
+		white-space: nowrap;
+		padding: 0.3rem 0.7rem;
+		border: 2px solid transparent;
+		color: var(--fg-muted);
+		font-weight: 500;
+		transition:
+			background 120ms ease-out,
+			color 120ms ease-out,
+			border-color 120ms ease-out;
+	}
+	.subtab:hover {
+		color: var(--fg);
+		border-color: var(--border);
+	}
+	.subtab-active {
+		background: var(--accent);
+		color: var(--accent-fg);
+		border-color: var(--border);
+		font-weight: 700;
+	}
+
+	.footlink {
+		text-decoration: underline;
+		transition: color 120ms ease-out;
+	}
+	.footlink:hover {
+		color: var(--fg);
+	}
+</style>

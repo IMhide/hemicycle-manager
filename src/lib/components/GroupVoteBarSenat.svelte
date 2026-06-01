@@ -33,7 +33,7 @@
 	</div>
 
 	<div
-		class="flex-1 h-6 rounded overflow-hidden flex bg-assembly-bg/40 border border-assembly-border/40"
+		class="flex-1 h-6 rounded overflow-hidden flex bg-bg/40 border border-border-soft/40"
 		title="{groupe.libelle} — majorité : {positionMajoritaire}"
 	>
 		{#each segments as seg (seg.key)}
@@ -49,10 +49,10 @@
 
 	<div class="flex gap-2 text-xs flex-shrink-0 w-44 justify-end">
 		<span class="text-vote-pour tabular-nums">{decompte.pour}</span>
-		<span class="text-assembly-muted">·</span>
+		<span class="text-fg-muted">·</span>
 		<span class="text-vote-contre tabular-nums">{decompte.contre}</span>
-		<span class="text-assembly-muted">·</span>
+		<span class="text-fg-muted">·</span>
 		<span class="text-vote-abstention tabular-nums">{decompte.abstention}</span>
-		<span class="text-assembly-muted ml-2 tabular-nums w-12 text-right">/{total}</span>
+		<span class="text-fg-muted ml-2 tabular-nums w-12 text-right">/{total}</span>
 	</div>
 </div>

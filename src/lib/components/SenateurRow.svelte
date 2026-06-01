@@ -50,12 +50,12 @@
 
 <a
 	{href}
-	class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
+	class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors"
 >
 	<img
 		src={senateur.identite.photoUrl}
 		alt=""
-		class="w-10 h-10 rounded-full object-cover bg-assembly-border flex-shrink-0"
+		class="w-10 h-10 rounded-full object-cover bg-border-soft flex-shrink-0"
 		loading="lazy"
 		referrerpolicy="no-referrer"
 	/>
@@ -64,7 +64,7 @@
 			{senateur.identite.prenom} {senateur.identite.nom}
 			{#if senateur.identite.etat === 'ANCIEN'}
 				<span
-					class="text-[10px] px-1.5 py-0.5 rounded bg-assembly-border/40 text-assembly-muted"
+					class="text-[10px] px-1.5 py-0.5 rounded bg-border-soft/40 text-fg-muted"
 					title="Ancien·ne sénateur·rice"
 				>
 					ancien
@@ -79,10 +79,10 @@
 				</span>
 			{/if}
 		</div>
-		<div class="flex items-center gap-1.5 mt-0.5 flex-wrap text-[10px] text-assembly-muted">
+		<div class="flex items-center gap-1.5 mt-0.5 flex-wrap text-[10px] text-fg-muted">
 			{#if groupe}
 				<span
-					class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-assembly-border/40"
+					class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-border-soft/40"
 					title={groupe.libelleAbrege}
 				>
 					<span
@@ -106,7 +106,7 @@
 			>
 				{pct(stats.presence.rate)}
 			</div>
-			<div class="text-[9px] text-assembly-muted uppercase">Prés.</div>
+			<div class="text-[9px] text-fg-muted uppercase">Prés.</div>
 		</div>
 		<div>
 			<div
@@ -116,7 +116,7 @@
 			>
 				{pct(stats.loyaute.rate)}
 			</div>
-			<div class="text-[9px] text-assembly-muted uppercase">Loy.</div>
+			<div class="text-[9px] text-fg-muted uppercase">Loy.</div>
 		</div>
 		<div>
 			<div
@@ -126,7 +126,7 @@
 			>
 				{stats.frondes.count}
 			</div>
-			<div class="text-[9px] text-assembly-muted uppercase">Frd.</div>
+			<div class="text-[9px] text-fg-muted uppercase">Frd.</div>
 		</div>
 	</div>
 </a>

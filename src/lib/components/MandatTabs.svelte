@@ -27,12 +27,12 @@
 	}
 </script>
 
-<div class="flex flex-wrap gap-1 border-b border-assembly-border/50">
+<div class="flex flex-wrap gap-1 border-b border-border-soft/50">
 	<button
 		type="button"
 		class="px-4 py-2 text-sm font-semibold transition-colors border-b-2 -mb-px {selected === null
-			? 'border-assembly-accent text-assembly-accent'
-			: 'border-transparent text-assembly-muted hover:text-slate-200'}"
+			? 'border-accent text-link'
+			: 'border-transparent text-fg-muted hover:text-fg'}"
 		onclick={() => onSelect(null)}
 	>
 		Carrière
@@ -42,8 +42,8 @@
 			type="button"
 			class="px-4 py-2 text-sm font-semibold transition-colors border-b-2 -mb-px {selected ===
 			m.legislature
-				? 'border-assembly-accent text-assembly-accent'
-				: 'border-transparent text-assembly-muted hover:text-slate-200'}"
+				? 'border-accent text-link'
+				: 'border-transparent text-fg-muted hover:text-fg'}"
 			onclick={() => onSelect(m.legislature)}
 		>
 			{m.legislature}<sup>e</sup>

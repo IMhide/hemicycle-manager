@@ -29,12 +29,12 @@
 	);
 </script>
 
-<div class="flex flex-wrap items-center gap-1 border-b border-assembly-border/50">
+<div class="flex flex-wrap items-center gap-1 border-b border-border-soft/50">
 	<button
 		type="button"
 		class="px-4 py-2 text-sm font-semibold transition-colors border-b-2 -mb-px {selected === null
-			? 'border-assembly-accent text-assembly-accent'
-			: 'border-transparent text-assembly-muted hover:text-slate-200'}"
+			? 'border-accent text-link'
+			: 'border-transparent text-fg-muted hover:text-fg'}"
 		onclick={() => onSelect(null)}
 	>
 		Carrière
@@ -44,8 +44,8 @@
 			type="button"
 			class="px-3 py-2 text-xs font-semibold transition-colors border-b-2 -mb-px {selected ===
 			t.id
-				? 'border-assembly-accent text-assembly-accent'
-				: 'border-transparent text-assembly-muted hover:text-slate-200'}"
+				? 'border-accent text-link'
+				: 'border-transparent text-fg-muted hover:text-fg'}"
 			onclick={() => onSelect(t.id)}
 			title={`Triennat ${t.id}`}
 		>
@@ -56,7 +56,7 @@
 		<InfoTip title="Triennat sénatorial" placement="bottom">
 			Au Sénat, le <b>triennat</b> (3 ans entre 2 renouvellements de la moitié des
 			sièges) joue le rôle de la législature côté AN.
-			<a href="/faq#senat-triennat" class="text-assembly-accent hover:underline">
+			<a href="/faq#senat-triennat" class="text-link hover:underline">
 				Voir la FAQ
 			</a>
 			pour le détail.

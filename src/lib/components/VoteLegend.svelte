@@ -23,7 +23,7 @@
 		<div class="flex items-center gap-2 text-sm">
 			<span class="w-3 h-3 rounded-full" style="background-color: {item.color}"></span>
 			<span class="font-medium">{item.label}</span>
-			<span class="title-display text-lg text-assembly-accent">{item.count}</span>
+			<span class="title-display text-lg text-link">{item.count}</span>
 		</div>
 	{/each}
 </div>

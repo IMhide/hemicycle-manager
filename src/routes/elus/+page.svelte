@@ -110,10 +110,10 @@
 	<title>Tous les élus — PolitiDex</title>
 </svelte:head>
 
-<section class="max-w-7xl mx-auto px-6 py-8">
+<section class="max-w-[1536px] mx-auto px-6 py-8">
 	<header class="mb-6">
 		<h1 class="title-display text-3xl">Tous les élus</h1>
-		<p class="text-assembly-muted text-sm mt-1">
+		<p class="text-fg-muted text-sm mt-1">
 			{data.manifest.count} élus dédupliqués cross-chambre · {data.manifest.countBicameral}
 			bicaméraux. Une fiche par personne, qu'elle soit députée, sénatrice ou les deux.
 		</p>
@@ -123,19 +123,19 @@
 		<aside class="card p-4 lg:sticky lg:top-20 space-y-4 text-sm">
 			<input
 				type="search"
-				class="bg-assembly-bg border border-assembly-border rounded-md px-3 py-1.5 w-full text-sm"
+				class="bg-bg border border-border-soft rounded-md px-3 py-1.5 w-full text-sm"
 				placeholder="Rechercher un nom…"
 				bind:value={q}
 			/>
 
 			<div>
-				<div class="text-xs uppercase tracking-widest text-assembly-muted mb-1.5">Chambre</div>
+				<div class="text-xs uppercase tracking-widest text-fg-muted mb-1.5">Chambre</div>
 				<div class="grid grid-cols-2 gap-1">
 					{#each [['tous', 'Tous'], ['an', 'AN'], ['senat', 'Sénat'], ['bicameral', '🏛️🏛️ Bi.']] as [val, label] (val)}
 						<button
 							class="btn px-2 py-1 text-xs {chambre === val
-								? 'bg-assembly-accent text-assembly-bg'
-								: 'border border-assembly-border text-assembly-muted hover:text-assembly-text'}"
+								? 'bg-accent text-accent-fg'
+								: 'border border-border-soft text-fg-muted hover:text-fg'}"
 							onclick={() => (chambre = val as Chambre)}
 						>
 							{label}
@@ -154,13 +154,13 @@
 		</aside>
 
 		<div>
-			<div class="text-xs text-assembly-muted mb-2 tabular-nums">
+			<div class="text-xs text-fg-muted mb-2 tabular-nums">
 				{filtered.length} élu{filtered.length > 1 ? 's' : ''} · {Math.min(visibleCount, filtered.length)}
 				affichés
 			</div>
 
 			{#if visible.length === 0}
-				<div class="card p-8 text-sm text-assembly-muted italic text-center">
+				<div class="card p-8 text-sm text-fg-muted italic text-center">
 					Aucun élu ne correspond à ces critères.
 				</div>
 			{:else}
@@ -170,12 +170,12 @@
 						{@const grp = dernierGroupe(e)}
 						<a
 							href="/elus/{e.id}?tab=carriere"
-							class="card p-3 flex items-center gap-3 hover:border-assembly-accent/60 transition-colors"
+							class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors"
 						>
 							<img
 								src={e.photoUrl}
 								alt=""
-								class="w-12 h-14 object-cover rounded-md border border-assembly-border bg-assembly-border flex-shrink-0"
+								class="w-12 h-14 object-cover rounded-md border border-border-soft bg-border-soft flex-shrink-0"
 								loading="lazy"
 								referrerpolicy="no-referrer"
 							/>
@@ -183,10 +183,10 @@
 								<div class="text-sm truncate">
 									<span class="font-semibold">{e.prenom}</span> {e.nom}
 								</div>
-								<div class="flex items-center gap-1.5 mt-0.5 flex-wrap text-[10px] text-assembly-muted">
+								<div class="flex items-center gap-1.5 mt-0.5 flex-wrap text-[10px] text-fg-muted">
 									{#if grp}
 										<span
-											class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-assembly-border/40"
+											class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-border-soft/40"
 											title={grp.libelle}
 										>
 											<span

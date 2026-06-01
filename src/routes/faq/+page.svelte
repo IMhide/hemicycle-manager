@@ -22,7 +22,7 @@
 	};
 
 	const ADR = (n: number, slug: string) =>
-		`<a class="underline hover:text-assembly-accent" target="_blank" rel="noopener" href="https://github.com/IMhide/hemicycle-manager/blob/main/decisions/${String(n).padStart(4, '0')}-${slug}.md">ADR ${String(n).padStart(4, '0')}</a>`;
+		`<a class="underline hover:text-link" target="_blank" rel="noopener" href="https://github.com/IMhide/hemicycle-manager/blob/main/decisions/${String(n).padStart(4, '0')}-${slug}.md">ADR ${String(n).padStart(4, '0')}</a>`;
 
 	const sections: Section[] = [
 		{
@@ -40,12 +40,12 @@
 					id: 'objectivite',
 					question: 'Vous prétendez à l\'objectivité ?',
 					answer: `<p>Honnêtement non. On part de chiffres officiels (votes en hémicycle, appartenances de groupes), mais dès qu'on les <b>combine</b> en scores, en classements ou en blocs, on fait des <b>choix éditoriaux</b>. Un overall, c'est juste un chiffre partant d'un postulat. On a essayé de choisir des postulats défendables et de les expliquer ouvertement.</p>
-<p class="mt-2">Tous nos choix sont écrits noir sur blanc dans des <a class="underline hover:text-assembly-accent" target="_blank" rel="noopener" href="https://github.com/IMhide/hemicycle-manager/tree/main/decisions">décisions d'architecture (ADR)</a>. Tu peux les contester sur GitHub : on en discute.</p>`
+<p class="mt-2">Tous nos choix sont écrits noir sur blanc dans des <a class="underline hover:text-link" target="_blank" rel="noopener" href="https://github.com/IMhide/hemicycle-manager/tree/main/decisions">décisions d'architecture (ADR)</a>. Tu peux les contester sur GitHub : on en discute.</p>`
 				},
 				{
 					id: 'sources',
 					question: 'D\'où viennent les données ?',
-					answer: `<p>De l'<a class="underline hover:text-assembly-accent" target="_blank" rel="noopener" href="https://data.assemblee-nationale.fr">Open Data de l'Assemblée nationale</a> (datasets <code>AMO10</code>, <code>AMO20</code>, <code>AMO30</code> et les archives de scrutins), publiés sous Licence Ouverte Etalab. On les télécharge à chaque build, on ne stocke rien d'autre.</p>
+					answer: `<p>De l'<a class="underline hover:text-link" target="_blank" rel="noopener" href="https://data.assemblee-nationale.fr">Open Data de l'Assemblée nationale</a> (datasets <code>AMO10</code>, <code>AMO20</code>, <code>AMO30</code> et les archives de scrutins), publiés sous Licence Ouverte Etalab. On les télécharge à chaque build, on ne stocke rien d'autre.</p>
 <p class="mt-2">Les détails techniques sur <i>quel dataset on prend en priorité quand</i> sont dans ${ADR(18, 'identite-paid')}, ${ADR(19, 'priorite-sources-amo')} et ${ADR(3, 'data-sources')}.</p>`
 				}
 			]
@@ -116,7 +116,7 @@
 				{
 					id: 'blocs',
 					question: 'Comment vous découpez les 5 blocs politiques ?',
-					answer: `<p>On utilise les scores du <a class="underline hover:text-assembly-accent" target="_blank" rel="noopener" href="https://www.chesdata.eu/2024-chapel-hill-expert-survey-ches">Chapel Hill Expert Survey 2024</a>, un dataset académique qui note les partis européens sur l'axe gauche-droite (de 0 à 10) :</p>
+					answer: `<p>On utilise les scores du <a class="underline hover:text-link" target="_blank" rel="noopener" href="https://www.chesdata.eu/2024-chapel-hill-expert-survey-ches">Chapel Hill Expert Survey 2024</a>, un dataset académique qui note les partis européens sur l'axe gauche-droite (de 0 à 10) :</p>
 <ul class="list-disc pl-6 mt-2 space-y-1 text-xs">
 	<li>🚩 <b>Extrême gauche</b> : [0&nbsp;–&nbsp;2.5[</li>
 	<li>🌹 <b>Gauche</b> : [2.5&nbsp;–&nbsp;4.5[</li>
@@ -219,7 +219,7 @@
 				{
 					id: 'senat-overall',
 					question: 'L\'<b>Overall</b> au Sénat, c\'est calculé pareil ?',
-					answer: `<p>Oui, exactement la même formule que côté AN (cf <a class="underline hover:text-assembly-accent" href="#overall-formule">détails</a>) : 55 % Participation + 35 % Volume (centile 95 cohorte) + 10 % Présence. Les Overall des deux chambres ne se comparent pas directement, parce que les <b>cohortes sont distinctes</b> : un Sénat de 348 places avec une activité différente de l'AN n'a pas la même distribution naturelle.</p>
+					answer: `<p>Oui, exactement la même formule que côté AN (cf <a class="underline hover:text-link" href="#overall-formule">détails</a>) : 55 % Participation + 35 % Volume (centile 95 cohorte) + 10 % Présence. Les Overall des deux chambres ne se comparent pas directement, parce que les <b>cohortes sont distinctes</b> : un Sénat de 348 places avec une activité différente de l'AN n'a pas la même distribution naturelle.</p>
 <p class="mt-2">En pratique, la moyenne d'Overall au Sénat est plus haute (~80) qu'à l'AN (~50–70), parce que la cohorte sénatoriale est quasi exclusivement composée de présents en séance (pas de ministres, peu d'absents systématiques). Cf ${ADR(22, 'score-overall')}.</p>`
 				},
 				{
@@ -248,12 +248,12 @@
 					question: 'Un député ET un sénateur c\'est la <b>même fiche</b> maintenant ?',
 					answer: `<p>Oui — depuis la refonte routes (ADR 0030/0031/0032). Toutes les personnes, qu'elles soient députées, sénatrices ou les deux, ont <b>une seule fiche</b> sous <code>/elus/[eluId]</code> avec un sélecteur de mandat permettant de basculer entre Carrière, mandats AN et triennats Sénat.</p>
 <p class="mt-2">Le matching cross-chambre se fait sur <code>prénom + nom + dateNaissance</code> normalisés (sans accents, particules <code>de/du/des/le/la</code> remplacées par <code>_</code>). Quand la date de naissance manque d'un côté, la fusion est <b>refusée par défaut</b> (mieux vaut deux fiches distinctes qu'une fusion erronée). Cas exotiques (nom marital, etc.) gérés via <code>static/data/elus-overrides.json</code> commité.</p>
-<p class="mt-2">~10 bicaméraux détectés sur l'ère Macron (Bonnecarrère, Bourguignon, Boyer, Demilly, Florennes, Folliot, Girardin, Létard, Taillé-Polian, Cazebonne). Cf <a class="underline hover:text-assembly-accent" href="#elu-carriere">section dédiée</a>, ${ADR(31, 'modele-elu-cross-chambre-manifest')} et ${ADR(32, 'semantique-carriere-cross-chambre')}.</p>`
+<p class="mt-2">~10 bicaméraux détectés sur l'ère Macron (Bonnecarrère, Bourguignon, Boyer, Demilly, Florennes, Folliot, Girardin, Létard, Taillé-Polian, Cazebonne). Cf <a class="underline hover:text-link" href="#elu-carriere">section dédiée</a>, ${ADR(31, 'modele-elu-cross-chambre-manifest')} et ${ADR(32, 'semantique-carriere-cross-chambre')}.</p>`
 				},
 				{
 					id: 'senat-hemicycle',
 					question: 'D\'où vient le layout de l\'<b>hémicycle Sénat</b> à 348 sièges ?',
-					answer: `<p>Adapté du projet open-source <a class="underline hover:text-assembly-accent" target="_blank" rel="noopener" href="https://github.com/Kurea/visu_senat">Kurea/visu_senat</a> (MIT). 9 couches concentriques, places 1..348 alignées avec le champ <code>siege</code> de l'API live du Sénat.</p>
+					answer: `<p>Adapté du projet open-source <a class="underline hover:text-link" target="_blank" rel="noopener" href="https://github.com/Kurea/visu_senat">Kurea/visu_senat</a> (MIT). 9 couches concentriques, places 1..348 alignées avec le champ <code>siege</code> de l'API live du Sénat.</p>
 <p class="mt-2">Crédit MIT préservé dans le fichier <code>senat-seats.json</code>. Cf ${ADR(26, 'hemicycle-senat-kurea')}.</p>`
 				}
 			]
@@ -310,14 +310,14 @@
 				{
 					id: 'open-source',
 					question: 'C\'est open source ?',
-					answer: `<p>Oui, sous <a class="underline hover:text-assembly-accent" target="_blank" rel="noopener" href="https://github.com/IMhide/hemicycle-manager/blob/main/LICENSE">Unlicense</a> (domaine public). Le code, les ADR, les choix de pondération, tout est sur <a class="underline hover:text-assembly-accent" target="_blank" rel="noopener" href="https://github.com/IMhide/hemicycle-manager">GitHub</a>. Tu peux forker, contribuer, contester, tout est bienvenu.</p>`
+					answer: `<p>Oui, sous <a class="underline hover:text-link" target="_blank" rel="noopener" href="https://github.com/IMhide/hemicycle-manager/blob/main/LICENSE">Unlicense</a> (domaine public). Le code, les ADR, les choix de pondération, tout est sur <a class="underline hover:text-link" target="_blank" rel="noopener" href="https://github.com/IMhide/hemicycle-manager">GitHub</a>. Tu peux forker, contribuer, contester, tout est bienvenu.</p>`
 				},
 				{
 					id: 'contribuer',
 					question: 'Comment je peux <b>contribuer</b> ?',
 					answer: `<p>Plein de façons :</p>
 <ul class="list-disc pl-6 mt-2 space-y-1">
-	<li>Ouvrir une <a class="underline hover:text-assembly-accent" target="_blank" rel="noopener" href="https://github.com/IMhide/hemicycle-manager/issues">issue GitHub</a> pour un bug, une idée de feature, ou contester un postulat éditorial.</li>
+	<li>Ouvrir une <a class="underline hover:text-link" target="_blank" rel="noopener" href="https://github.com/IMhide/hemicycle-manager/issues">issue GitHub</a> pour un bug, une idée de feature, ou contester un postulat éditorial.</li>
 	<li>Faire une PR — on revue avec plaisir.</li>
 	<li>Mettre une étoile ⭐ sur le repo si tu trouves le projet utile.</li>
 </ul>
@@ -326,7 +326,7 @@
 				{
 					id: 'phase-3',
 					question: 'Y aura-t-il les <b>sénateurs</b> et les <b>ministres</b> ?',
-					answer: `<p><b>Les sénateurs sont là !</b> Phase 3 PolitiDex couvre les 3 triennats de l'ère Macron (2017-2020 → 2023-2026), à parité avec les 3 législatures AN. Voir la <a class="underline hover:text-assembly-accent" href="/senat">home Sénat</a> et la section <a class="underline hover:text-assembly-accent" href="#senat">FAQ Sénat</a> ci-dessus.</p>
+					answer: `<p><b>Les sénateurs sont là !</b> Phase 3 PolitiDex couvre les 3 triennats de l'ère Macron (2017-2020 → 2023-2026), à parité avec les 3 législatures AN. Voir la <a class="underline hover:text-link" href="/senat">home Sénat</a> et la section <a class="underline hover:text-link" href="#senat">FAQ Sénat</a> ci-dessus.</p>
 <p class="mt-2">Côté <b>ministres</b> et <b>présidents de la République</b>, c'est la suite de la Phase 3. Pour l'instant on couvre députés (15ᵉ + 16ᵉ + 17ᵉ législatures) et sénateurs en séparé — la fusion bicamérale (Phase 3c) viendra ensuite. Cf ${ADR(14, 'pivot-politidex')}.</p>`
 				}
 			]
@@ -348,21 +348,21 @@
 <section class="max-w-4xl mx-auto px-6 py-10">
 	<div class="mb-8">
 		<h1 class="title-display text-5xl">📚 FAQ</h1>
-		<p class="text-assembly-muted mt-3">
+		<p class="text-fg-muted mt-3">
 			Comment ça marche ici ? Réponses honnêtes aux questions qu'on se pose en regardant les chiffres.
 		</p>
-		<p class="text-xs text-assembly-muted mt-2 italic">
-			Spoiler : on n'a pas la prétention d'être mathématiquement parfaits. On a fait des choix, on les explique, et on les écrit noir sur blanc dans des <a class="underline hover:text-assembly-accent" target="_blank" rel="noopener" href="https://github.com/IMhide/hemicycle-manager/tree/main/decisions">ADR sur GitHub</a>.
+		<p class="text-xs text-fg-muted mt-2 italic">
+			Spoiler : on n'a pas la prétention d'être mathématiquement parfaits. On a fait des choix, on les explique, et on les écrit noir sur blanc dans des <a class="underline hover:text-link" target="_blank" rel="noopener" href="https://github.com/IMhide/hemicycle-manager/tree/main/decisions">ADR sur GitHub</a>.
 		</p>
 	</div>
 
 	<!-- TOC -->
 	<nav class="card p-4 mb-8">
-		<div class="text-[10px] uppercase tracking-widest text-assembly-muted mb-2">Sommaire</div>
+		<div class="text-[10px] uppercase tracking-widest text-fg-muted mb-2">Sommaire</div>
 		<ul class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
 			{#each sections as section (section.id)}
 				<li>
-					<a href="#{section.id}" class="hover:text-assembly-accent transition-colors">
+					<a href="#{section.id}" class="hover:text-link transition-colors">
 						<span aria-hidden="true">{section.emoji}</span>
 						{section.title}
 					</a>
@@ -378,7 +378,7 @@
 				{section.title}
 			</h2>
 			{#if section.intro}
-				<p class="text-sm text-assembly-muted mb-4">{section.intro}</p>
+				<p class="text-sm text-fg-muted mb-4">{section.intro}</p>
 			{/if}
 
 			<div class="space-y-2">
@@ -390,7 +390,7 @@
 					>
 						<!-- svelte-ignore a11y_no_redundant_roles -->
 						<summary
-							class="cursor-pointer p-4 flex items-start gap-3 list-none hover:bg-assembly-border/20 transition-colors rounded-lg"
+							class="cursor-pointer p-4 flex items-start gap-3 list-none hover:bg-border-soft/20 transition-colors rounded-lg"
 							onclick={(e) => {
 								e.preventDefault();
 								toggleSection(item.id);
@@ -398,12 +398,12 @@
 							}}
 						>
 							<span
-								class="text-assembly-accent text-lg leading-none transition-transform group-open:rotate-90 select-none"
+								class="text-link text-lg leading-none transition-transform group-open:rotate-90 select-none"
 								aria-hidden="true">▸</span
 							>
 							<span class="font-semibold flex-1">{@html item.question}</span>
 						</summary>
-						<div class="px-4 pb-4 pl-12 text-sm text-slate-300 leading-relaxed">
+						<div class="px-4 pb-4 pl-12 text-sm text-fg leading-relaxed">
 							{@html item.answer}
 						</div>
 					</details>
@@ -414,8 +414,8 @@
 
 	<div class="card p-5 text-center">
 		<div class="title-display text-xl mb-2">Une question qui n'a pas sa réponse ?</div>
-		<p class="text-sm text-assembly-muted">
-			Ouvre une <a class="underline hover:text-assembly-accent" target="_blank" rel="noopener" href="https://github.com/IMhide/hemicycle-manager/issues">issue sur GitHub</a> ou viens nous filer un coup de main 🙌
+		<p class="text-sm text-fg-muted">
+			Ouvre une <a class="underline hover:text-link" target="_blank" rel="noopener" href="https://github.com/IMhide/hemicycle-manager/issues">issue sur GitHub</a> ou viens nous filer un coup de main 🙌
 		</p>
 	</div>
 </section>

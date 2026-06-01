@@ -20,14 +20,16 @@
 	let {
 		axes,
 		size = 240,
-		strokeColor = '#fbbf24',
-		fillColor = 'rgba(251, 191, 36, 0.25)'
+		strokeColor = 'var(--accent)',
+		fillColor = 'rgba(255, 230, 0, 0.22)'
 	}: Props = $props();
 
 	const cx = $derived(size / 2);
 	const cy = $derived(size / 2);
-	const radius = $derived(size * 0.3);
-	const labelRadius = $derived(radius + size * 0.12);
+	const radius = $derived(size * 0.28);
+	const labelRadius = $derived(radius + size * 0.1);
+	// Marge horizontale de la viewBox : place pour les labels latéraux longs.
+	const padX = $derived(size * 0.22);
 
 	function pointAt(axisIndex: number, ratio: number, r: number) {
 		// Top axis is index 0 (angle = -π/2); axes laid out clockwise.
@@ -49,7 +51,9 @@
 	const gridLevels = [0.25, 0.5, 0.75, 1];
 </script>
 
-<svg viewBox="0 0 {size} {size}" style="width: 100%; height: auto; max-width: {size}px; display: block; margin: 0 auto;" role="img" aria-label="Radar des statistiques">
+<!-- viewBox élargie horizontalement (marge `pad`) pour que les labels latéraux
+     longs (« Participation », « Volume ») ne soient pas clippés. -->
+<svg viewBox="{-padX} 0 {size + padX * 2} {size}" style="width: 100%; height: auto; max-width: {size + padX * 2}px; display: block; margin: 0 auto;" role="img" aria-label="Radar des statistiques">
 	<!-- Grid circles -->
 	{#each gridLevels as level}
 		<circle
@@ -57,7 +61,8 @@
 			cy={cy}
 			r={radius * level}
 			fill="none"
-			stroke="rgba(148, 163, 184, 0.15)"
+			stroke="var(--border-soft)"
+			opacity="0.4"
 			stroke-width="0.5"
 		/>
 	{/each}
@@ -65,7 +70,7 @@
 	<!-- Axis lines -->
 	{#each axes as _, i}
 		{@const p = pointAt(i, 1, radius)}
-		<line x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="rgba(148, 163, 184, 0.2)" stroke-width="0.5" />
+		<line x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="var(--border-soft)" opacity="0.5" stroke-width="0.5" />
 	{/each}
 
 	<!-- Polygon -->
@@ -86,12 +91,12 @@
 			y={p.y}
 			text-anchor={anchor}
 			dominant-baseline="middle"
-			fill="#94a3b8"
+			fill="var(--fg-muted)"
 			font-size="10"
-			font-family="Inter, system-ui"
+			font-family='"Space Grotesk", system-ui'
 			class="select-none"
 		>
-			<tspan font-weight="600" fill="#f1f5f9">{a.label}</tspan>
+			<tspan font-weight="600" fill="var(--fg)">{a.label}</tspan>
 			<tspan x={p.x} dy="12" fill={a.color ?? '#fbbf24'} font-weight="700">
 				{Math.round(a.value * 100)}%
 			</tspan>

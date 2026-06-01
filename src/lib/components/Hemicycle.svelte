@@ -238,7 +238,7 @@
 		{/if}
 	</svg>
 	{#if layout.nonPlaces > 0}
-		<div class="text-[10px] text-assembly-muted text-center mt-2 italic">
+		<div class="text-[10px] text-fg-muted text-center mt-2 italic">
 			{layout.nonPlaces} député·e·s sans siège officiel publié par l'Assemblée pour cette législature (suppléants, démissionnaires, ministres). Visibles dans la liste des députés.
 		</div>
 	{/if}

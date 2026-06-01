@@ -13,7 +13,7 @@
 </script>
 
 <div class="flex items-center gap-1">
-	<span class="text-assembly-muted inline-flex items-center gap-1">
+	<span class="text-fg-muted inline-flex items-center gap-1">
 		Couleur
 		<InfoTip title="Mode de coloration de l'hémicycle" size="xs" placement="bottom">
 			<strong>GCHES</strong> — gradient politique gauche → droite basé sur les scores
@@ -31,8 +31,8 @@
 	</span>
 	<button
 		class="px-3 py-1 rounded font-semibold {colorMode.current === 'gradient'
-			? 'bg-assembly-accent text-assembly-bg'
-			: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+			? 'bg-accent text-accent-fg'
+			: 'border border-border-soft text-fg-muted hover:text-fg'}"
 		onclick={() => set('gradient')}
 		aria-pressed={colorMode.current === 'gradient'}
 	>
@@ -40,8 +40,8 @@
 	</button>
 	<button
 		class="px-3 py-1 rounded font-semibold {colorMode.current === 'groupe'
-			? 'bg-assembly-accent text-assembly-bg'
-			: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+			? 'bg-accent text-accent-fg'
+			: 'border border-border-soft text-fg-muted hover:text-fg'}"
 		onclick={() => set('groupe')}
 		aria-pressed={colorMode.current === 'groupe'}
 	>

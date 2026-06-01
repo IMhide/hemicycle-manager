@@ -81,10 +81,10 @@
 	<title>Textes législatifs — PolitiDex</title>
 </svelte:head>
 
-<section class="max-w-7xl mx-auto px-6 py-8 space-y-6">
+<section class="max-w-[1536px] mx-auto px-6 py-8 space-y-6">
 	<div>
 		<h1 class="text-2xl font-semibold mb-2">Textes législatifs</h1>
-		<p class="text-sm text-assembly-muted">
+		<p class="text-sm text-fg-muted">
 			Vue cross-chambre : chaque entrée regroupe les votes AN et Sénat sur un même texte législatif
 			quand les deux chambres l'ont examiné. {stats.total} textes
 			({stats.promul} promulgués) sur les législatures et triennats couverts.
@@ -97,14 +97,14 @@
 				type="text"
 				bind:value={search}
 				placeholder="Rechercher un texte par titre…"
-				class="flex-1 min-w-[200px] px-3 py-2 rounded-md bg-assembly-bg border border-assembly-border text-sm"
+				class="flex-1 min-w-[200px] px-3 py-2 rounded-md bg-bg border border-border-soft text-sm"
 			/>
 			<div class="flex gap-1 flex-wrap">
 				{#each [{ k: 'all', l: 'Toutes chambres' }, { k: 'an', l: 'AN' }, { k: 'senat', l: 'Sénat' }] as opt}
 					<button
 						class="px-3 py-1 text-xs rounded-md border {scope === opt.k
-							? 'bg-assembly-accent/20 border-assembly-accent text-assembly-accent'
-							: 'border-assembly-border'}"
+							? 'bg-accent text-accent-fg border-accent'
+							: 'border-border-soft'}"
 						onclick={() => (scope = opt.k as Scope)}
 					>
 						{opt.l}
@@ -115,8 +115,8 @@
 				{#each [{ k: null, l: 'Tous états' }, { k: 'promulgue', l: 'Promulguée' }, { k: 'rejete', l: 'Rejeté' }, { k: 'en-cours', l: 'En cours' }] as opt}
 					<button
 						class="px-3 py-1 text-xs rounded-md border {scopeEtat === opt.k
-							? 'bg-assembly-accent/20 border-assembly-accent text-assembly-accent'
-							: 'border-assembly-border'}"
+							? 'bg-accent text-accent-fg border-accent'
+							: 'border-border-soft'}"
 						onclick={() => (scopeEtat = opt.k)}
 					>
 						{opt.l}
@@ -124,12 +124,12 @@
 				{/each}
 			</div>
 			{#if search || scope !== 'all' || scopeEtat}
-				<button class="text-xs text-assembly-muted hover:text-assembly-accent" onclick={clearFilters}
+				<button class="text-xs text-fg-muted hover:text-link" onclick={clearFilters}
 					>Réinitialiser</button
 				>
 			{/if}
 		</div>
-		<div class="text-xs text-assembly-muted">
+		<div class="text-xs text-fg-muted">
 			{filtered.length} texte{filtered.length > 1 ? 's' : ''} affiché{filtered.length > 1 ? 's' : ''}
 		</div>
 	</div>
@@ -138,30 +138,30 @@
 		{#each visible as t (t.id)}
 			<a
 				href="/textes/{encodeURIComponent(t.id)}"
-				class="card block p-4 hover:border-assembly-accent transition-colors"
+				class="card block p-4 hover:border-accent transition-colors"
 			>
 				<div class="flex items-start justify-between gap-3">
 					<div class="min-w-0 flex-1">
 						<div class="flex items-center gap-2 mb-1 flex-wrap">
 							<span
-								class="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-assembly-border/50 text-assembly-muted"
+								class="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-border-soft/50 text-fg-muted"
 								title={t.typeLibelle}
 							>
 								{typeBadge(t.type)}
 							</span>
 							{#if t.bicameral}
 								<span
-									class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-assembly-border/40 text-assembly-muted"
+									class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-border-soft/40 text-fg-muted"
 									title="Scrutins nominaux dans les deux chambres"
 								>
 									AN + Sénat
 								</span>
 							{:else if t.an}
-								<span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-assembly-border/40 text-assembly-muted">
+								<span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-border-soft/40 text-fg-muted">
 									AN
 								</span>
 							{:else if t.senat}
-								<span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-assembly-border/40 text-assembly-muted">
+								<span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-border-soft/40 text-fg-muted">
 									Sénat
 								</span>
 							{/if}
@@ -174,20 +174,20 @@
 									Rejeté
 								</span>
 							{:else if t.etat === 'caduc' || t.etat === 'retire' || t.etat === 'fusionne'}
-								<span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-assembly-border/40 text-assembly-muted">
+								<span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-border-soft/40 text-fg-muted">
 									{t.etat === 'caduc' ? 'Caduc' : t.etat === 'retire' ? 'Retiré' : 'Fusionné'}
 								</span>
 							{:else if t.etat === 'en-cours'}
-								<span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-assembly-accent/10 text-assembly-accent">
+								<span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent/10 text-link">
 									En cours
 								</span>
 							{/if}
 							{#if t.numeroLoi}
-								<span class="text-xs text-assembly-muted">· Loi n° {t.numeroLoi}</span>
+								<span class="text-xs text-fg-muted">· Loi n° {t.numeroLoi}</span>
 							{/if}
 						</div>
 						<div class="text-sm leading-snug font-medium line-clamp-2">{t.titre}</div>
-						<div class="text-xs text-assembly-muted mt-1">
+						<div class="text-xs text-fg-muted mt-1">
 							{t.nbScrutins} scrutin{t.nbScrutins > 1 ? 's' : ''}
 							{#if t.bicameral}
 								(AN&nbsp;{t.an?.nbScrutins} + Sénat&nbsp;{t.senat?.nbScrutins})
@@ -200,7 +200,7 @@
 		{/each}
 		{#if visibleCount < filtered.length}
 			<button
-				class="w-full py-3 text-sm text-assembly-muted hover:text-assembly-accent border border-assembly-border rounded-md"
+				class="w-full py-3 text-sm text-fg-muted hover:text-link border border-border-soft rounded-md"
 				onclick={() => (visibleCount += 50)}
 			>
 				Afficher {Math.min(50, filtered.length - visibleCount)} de plus ({filtered.length - visibleCount}
@@ -208,7 +208,7 @@
 			</button>
 		{/if}
 		{#if filtered.length === 0}
-			<div class="card p-6 text-center text-sm text-assembly-muted">
+			<div class="card p-6 text-center text-sm text-fg-muted">
 				Aucun texte ne correspond à ces filtres.
 			</div>
 		{/if}

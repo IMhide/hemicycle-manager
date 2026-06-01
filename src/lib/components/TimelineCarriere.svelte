@@ -149,7 +149,7 @@
 
 {#if sections.length > 0}
 	<div class="card p-4 mt-3 text-xs">
-		<div class="text-[10px] uppercase tracking-widest text-assembly-muted mb-3">
+		<div class="text-[10px] uppercase tracking-widest text-fg-muted mb-3">
 			{#if mode.kind === 'an-mandat'}
 				Appartenances de groupe — {mode.mandat.legislature}<sup>e</sup>
 			{:else if mode.kind === 'senat-mandat'}
@@ -162,26 +162,26 @@
 			{#each sections as s, i (s.chambre + ':' + (s.chambre === 'AN' ? s.legislature : s.triennat) + ':' + i)}
 				<div>
 					{#if showHeaderPerSection}
-						<div class="flex items-baseline justify-between gap-2 mb-1.5 pb-1 border-b border-assembly-border/40">
+						<div class="flex items-baseline justify-between gap-2 mb-1.5 pb-1 border-b border-border-soft/40">
 							<div class="font-semibold flex items-center gap-1.5">
 								{#if s.chambre === 'AN'}
-									<span class="text-[10px] px-1.5 py-0.5 rounded bg-assembly-border/40 text-assembly-muted">
+									<span class="text-[10px] px-1.5 py-0.5 rounded bg-border-soft/40 text-fg-muted">
 										🏛️ AN
 									</span>
 									{s.legislature}<sup>e</sup> législature
 								{:else}
-									<span class="text-[10px] px-1.5 py-0.5 rounded bg-assembly-border/40 text-assembly-muted">
+									<span class="text-[10px] px-1.5 py-0.5 rounded bg-border-soft/40 text-fg-muted">
 										🏛️ Sénat
 									</span>
 									Triennat {s.triennat}
 								{/if}
 								{#if s.circonscription}
-									<span class="text-[10px] text-assembly-muted font-normal">
+									<span class="text-[10px] text-fg-muted font-normal">
 										· {s.circonscription}
 									</span>
 								{/if}
 							</div>
-							<span class="text-[10px] text-assembly-muted whitespace-nowrap">
+							<span class="text-[10px] text-fg-muted whitespace-nowrap">
 								{formatDate(s.dateDebut)} → {s.dateFin ? formatDate(s.dateFin) : 'en cours'}
 							</span>
 						</div>
@@ -198,18 +198,18 @@
 											></span>
 											<span class="font-medium truncate">{a.groupe.libelleAbrege}</span>
 										{:else}
-											<span class="text-assembly-muted italic">Groupe inconnu</span>
+											<span class="text-fg-muted italic">Groupe inconnu</span>
 										{/if}
-										<span class="text-[10px] text-assembly-muted">· {a.qualite}</span>
+										<span class="text-[10px] text-fg-muted">· {a.qualite}</span>
 										{#if a.isTransitoireNI}
 											<span
-												class="text-[9px] text-assembly-muted/70 italic"
+												class="text-[9px] text-fg-muted/70 italic"
 												title="NI transitoire en début de législature, avant inscription au groupe"
 												>(transitoire)</span
 											>
 										{/if}
 									</div>
-									<span class="text-[10px] text-assembly-muted whitespace-nowrap">
+									<span class="text-[10px] text-fg-muted whitespace-nowrap">
 										{formatDate(a.dateDebut)} → {a.dateFin ? formatDate(a.dateFin) : 'en cours'}
 									</span>
 								</div>
@@ -225,11 +225,11 @@
 											></span>
 											<span class="font-medium truncate">{a.groupe.libelleAbrege}</span>
 										{:else}
-											<span class="text-assembly-muted italic">Groupe inconnu</span>
+											<span class="text-fg-muted italic">Groupe inconnu</span>
 										{/if}
-										<span class="text-[10px] text-assembly-muted">· {a.fonction}</span>
+										<span class="text-[10px] text-fg-muted">· {a.fonction}</span>
 									</div>
-									<span class="text-[10px] text-assembly-muted whitespace-nowrap">
+									<span class="text-[10px] text-fg-muted whitespace-nowrap">
 										{formatDate(a.dateDebut)} → {a.dateFin ? formatDate(a.dateFin) : 'en cours'}
 									</span>
 								</div>

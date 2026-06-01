@@ -39,3 +39,6 @@ static/data/**/
 .claude/
 thoughts/
 prompt.md
+
+# Artefacts du tool de screenshot (Playwright MCP)
+.playwright-mcp/

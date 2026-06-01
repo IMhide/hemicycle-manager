@@ -120,7 +120,7 @@
 <section class="max-w-7xl mx-auto px-6 py-8 space-y-6">
 	<a
 		href="/assemblee/groupes/"
-		class="text-sm text-assembly-muted hover:text-assembly-accent inline-flex items-center gap-1"
+		class="text-sm text-fg-muted hover:text-link inline-flex items-center gap-1"
 	>
 		← Tous les groupes
 	</a>
@@ -139,7 +139,7 @@
 				</div>
 				<div class="min-w-0">
 					<h1 class="title-display text-3xl sm:text-4xl leading-tight">{data.groupe.libelle}</h1>
-					<div class="text-sm text-assembly-muted mt-1">
+					<div class="text-sm text-fg-muted mt-1">
 						{data.groupe.libelleAbrege} · {data.legislature}<sup>e</sup> législature ·
 						{data.groupe.effectifFin} député{data.groupe.effectifFin > 1 ? 's' : ''}
 						{#if politicalRank}
@@ -152,17 +152,17 @@
 			{#if president}
 				<a
 					href={lookupEluUrlForPaIdLeg(president.id, data.legislature) ?? '/elus/'}
-					class="card flex items-center gap-3 px-3 py-2 hover:border-assembly-accent/60"
+					class="card flex items-center gap-3 px-3 py-2 hover:border-accent/60"
 				>
 					<img
 						src={president.identite.photoUrl}
 						alt=""
-						class="w-10 h-10 rounded-full object-cover bg-assembly-border"
+						class="w-10 h-10 rounded-full object-cover bg-border-soft"
 						loading="lazy"
 						referrerpolicy="no-referrer"
 					/>
 					<div>
-						<div class="text-[10px] uppercase tracking-widest text-assembly-muted">⭐ Président</div>
+						<div class="text-[10px] uppercase tracking-widest text-fg-muted">⭐ Président</div>
 						<div class="text-sm font-semibold">
 							{president.identite.prenom}
 							{president.identite.nom}
@@ -173,9 +173,9 @@
 		</div>
 
 		{#if politicalRank}
-			<div class="mt-4 text-xs text-assembly-muted">
+			<div class="mt-4 text-xs text-fg-muted">
 				{#if politicalRank.chesScore !== null}
-					Score CHES 2024 : <span class="text-assembly-text font-semibold">
+					Score CHES 2024 : <span class="text-fg font-semibold">
 						{politicalRank.chesScore.toFixed(2)}/10
 					</span>
 					·
@@ -184,7 +184,7 @@
 			</div>
 		{/if}
 
-		<div class="mt-3 text-xs text-assembly-muted">
+		<div class="mt-3 text-xs text-fg-muted">
 			<strong>{membresActuels.length}</strong> membre{membresActuels.length > 1 ? 's' : ''} actuel{membresActuels.length >
 			1
 				? 's'
@@ -213,7 +213,7 @@
 				</InfoTip>
 			</h3>
 			{#if topPresence.length === 0}
-				<div class="text-sm text-assembly-muted italic">Pas assez de données.</div>
+				<div class="text-sm text-fg-muted italic">Pas assez de données.</div>
 			{:else}
 				<div class="space-y-1.5">
 					{#each topPresence as p (p.personne.id)}
@@ -236,7 +236,7 @@
 				</InfoTip>
 			</h3>
 			{#if topLoyalistes.length === 0}
-				<div class="text-sm text-assembly-muted italic">Pas assez de données.</div>
+				<div class="text-sm text-fg-muted italic">Pas assez de données.</div>
 			{:else}
 				<div class="space-y-1.5">
 					{#each topLoyalistes as l (l.personne.id)}
@@ -259,7 +259,7 @@
 				</InfoTip>
 			</h3>
 			{#if topFrondeurs.length === 0}
-				<div class="text-sm text-assembly-muted italic">Aucun frondeur identifié.</div>
+				<div class="text-sm text-fg-muted italic">Aucun frondeur identifié.</div>
 			{:else}
 				<div class="space-y-1.5">
 					{#each topFrondeurs as f (f.personne.id)}
@@ -283,11 +283,11 @@
 					type="search"
 					bind:value={search}
 					placeholder="Rechercher…"
-					class="bg-assembly-bg border border-assembly-border rounded-md px-3 py-1 text-sm w-48"
+					class="bg-bg border border-border-soft rounded-md px-3 py-1 text-sm w-48"
 				/>
 				<select
 					bind:value={sortKey}
-					class="bg-assembly-bg border border-assembly-border rounded-md px-2 py-1 text-sm"
+					class="bg-bg border border-border-soft rounded-md px-2 py-1 text-sm"
 				>
 					<option value="nom">Trier : nom</option>
 					<option value="loyaute">Trier : loyauté</option>
@@ -298,7 +298,7 @@
 		</div>
 
 		{#if filteredMembers.length === 0}
-			<div class="text-sm text-assembly-muted italic py-6 text-center">
+			<div class="text-sm text-fg-muted italic py-6 text-center">
 				Aucun député ne correspond.
 			</div>
 		{:else}

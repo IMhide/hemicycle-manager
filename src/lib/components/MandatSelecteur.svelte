@@ -69,13 +69,13 @@
 	}
 </script>
 
-<div class="flex flex-wrap gap-1 border-b border-assembly-border/50">
+<div class="flex flex-wrap gap-1 border-b border-border-soft/50">
 	<button
 		type="button"
 		class="px-4 py-2 text-sm font-semibold transition-colors border-b-2 -mb-px {selected.kind ===
 		'carriere'
-			? 'border-assembly-accent text-assembly-accent'
-			: 'border-transparent text-assembly-muted hover:text-slate-200'}"
+			? 'border-accent text-link'
+			: 'border-transparent text-fg-muted hover:text-fg'}"
 		onclick={() => onSelect({ kind: 'carriere' })}
 	>
 		Carrière
@@ -87,9 +87,9 @@
 			class="px-4 py-2 text-sm font-semibold transition-colors border-b-2 -mb-px flex items-center gap-1.5 {isActive(
 				m
 			)
-				? 'border-assembly-accent text-assembly-accent'
-				: 'border-transparent text-assembly-muted hover:text-slate-200'} {isCurrent(m)
-				? 'bg-assembly-accent/5'
+				? 'border-accent text-link'
+				: 'border-transparent text-fg-muted hover:text-fg'} {isCurrent(m)
+				? 'bg-accent/5'
 				: ''}"
 			onclick={() => selectMandat(m)}
 		>

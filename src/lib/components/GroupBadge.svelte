@@ -23,12 +23,12 @@
 {#if linked}
 	<a
 		href="/assemblee/groupes/{groupe.legislature}/{groupe.id}/"
-		class="inline-flex items-center {sizeClasses} hover:text-assembly-accent transition-colors"
+		class="inline-flex items-center {sizeClasses} hover:text-link transition-colors"
 	>
 		<span class="{dotSize} rounded-full flex-shrink-0" style="background-color: {groupe.couleur}"></span>
 		<span class="font-semibold">{groupe.libelleAbrege}</span>
 		{#if showFullName}
-			<span class="text-assembly-muted truncate">— {groupe.libelle}</span>
+			<span class="text-fg-muted truncate">— {groupe.libelle}</span>
 		{/if}
 	</a>
 {:else}
@@ -36,7 +36,7 @@
 		<span class="{dotSize} rounded-full flex-shrink-0" style="background-color: {groupe.couleur}"></span>
 		<span class="font-semibold">{groupe.libelleAbrege}</span>
 		{#if showFullName}
-			<span class="text-assembly-muted truncate">— {groupe.libelle}</span>
+			<span class="text-fg-muted truncate">— {groupe.libelle}</span>
 		{/if}
 	</span>
 {/if}

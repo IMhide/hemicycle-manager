@@ -23,14 +23,14 @@
 	<title>Groupes politiques — PolitiDex</title>
 </svelte:head>
 
-<section class="max-w-7xl mx-auto px-6 py-8">
+<section class="max-w-[1536px] mx-auto px-6 py-8">
 	<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
 		<div>
 			<h1 class="title-display text-4xl">Groupes politiques</h1>
-			<p class="text-assembly-muted text-sm mt-1">
+			<p class="text-fg-muted text-sm mt-1">
 				Classés de gauche à droite (selon les scores
 				<a
-					class="underline hover:text-assembly-accent"
+					class="underline hover:text-link"
 					href="https://www.chesdata.eu/2024-chapel-hill-expert-survey-ches"
 					target="_blank"
 					rel="noopener">CHES 2024</a
@@ -38,12 +38,12 @@
 			</p>
 		</div>
 		<div class="flex items-center gap-1 text-xs">
-			<span class="text-assembly-muted">Législature :</span>
+			<span class="text-fg-muted">Législature :</span>
 			{#each legSorted as l (l.num)}
 				<button
 					class="px-3 py-1 rounded {scope === l.num
-						? 'bg-assembly-accent text-assembly-bg font-semibold'
-						: 'border border-assembly-border text-assembly-muted hover:text-slate-200'}"
+						? 'bg-accent text-accent-fg font-semibold'
+						: 'border border-border-soft text-fg-muted hover:text-fg'}"
 					onclick={() => (scope = l.num)}
 				>
 					{l.num}<sup>e</sup>
@@ -57,7 +57,7 @@
 			{@const rank = POLITICAL_ORDER[groupe.libelleAbrege]?.rank ?? 99}
 			<a
 				href="/assemblee/groupes/{groupe.legislature}/{groupe.id}/"
-				class="card p-4 hover:border-assembly-accent/60 transition-colors flex items-start gap-4"
+				class="card p-4 hover:border-accent/60 transition-colors flex items-start gap-4"
 				style="border-left: 4px solid {groupe.couleur}"
 			>
 				<div
@@ -70,10 +70,10 @@
 					<div class="flex items-center gap-2 flex-wrap">
 						<h2 class="font-semibold truncate">{groupe.libelle}</h2>
 						{#if rank < 99}
-							<span class="text-[10px] text-assembly-muted">rang {rank}/12</span>
+							<span class="text-[10px] text-fg-muted">rang {rank}/12</span>
 						{/if}
 					</div>
-					<div class="text-xs text-assembly-muted mt-0.5">
+					<div class="text-xs text-fg-muted mt-0.5">
 						{groupe.libelleAbrege} · {groupe.effectifFin} député{groupe.effectifFin > 1 ? 's' : ''}
 					</div>
 				</div>
