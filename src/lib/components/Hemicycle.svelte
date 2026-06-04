@@ -69,11 +69,11 @@
 		const abrev = groupe?.libelleAbrege ?? null;
 
 		if (mode.kind === 'gradient') return gradientColorFor(abrev);
-		if (mode.kind === 'groupe') return groupe?.couleur ?? '#888';
+		if (mode.kind === 'groupe') return groupe?.couleur ?? 'var(--fg-muted)';
 
 		if (mode.kind === 'highlight-groupe') {
-			if (app?.groupeId === mode.groupeId) return groupe?.couleur ?? '#fbbf24';
-			return '#334155';
+			if (app?.groupeId === mode.groupeId) return groupe?.couleur ?? 'var(--accent)';
+			return 'var(--border-soft)';
 		}
 
 		// vote mode
@@ -150,22 +150,22 @@
 		role="img"
 		aria-label="Hémicycle de l'Assemblée nationale, {legislature}ᵉ législature"
 	>
-		<g opacity="0.5">
+		<g opacity="0.7">
 			<rect
 				x={HEMICYCLE_VIEWBOX.x + HEMICYCLE_VIEWBOX.width / 2 - 30}
 				y={HEMICYCLE_VIEWBOX.y + HEMICYCLE_VIEWBOX.height - 18}
 				width="60"
 				height="6"
-				rx="2"
-				fill="#475569"
+				fill="var(--border)"
 			/>
 			<text
 				x={HEMICYCLE_VIEWBOX.x + HEMICYCLE_VIEWBOX.width / 2}
 				y={HEMICYCLE_VIEWBOX.y + HEMICYCLE_VIEWBOX.height - 4}
 				text-anchor="middle"
-				fill="#64748b"
+				fill="var(--fg-muted)"
 				font-size="6"
-				font-family="Inter, system-ui"
+				font-family='"Space Grotesk", system-ui'
+				letter-spacing="0.08em"
 			>
 				PERCHOIR
 			</text>
@@ -179,9 +179,9 @@
 				r={SEAT_RADIUS * (isHovered ? 1.6 : 1)}
 				fill={colorForPersonne(personne, mandat)}
 				opacity={opacityForPersonne(personne, mandat)}
-				stroke={isHovered ? '#fbbf24' : 'rgba(15,23,42,0.4)'}
-				stroke-width={isHovered ? 1.2 : 0.4}
-				class="cursor-pointer transition-all duration-300"
+				stroke={isHovered ? 'var(--accent)' : 'var(--border)'}
+				stroke-width={isHovered ? 1.5 : 0.4}
+				class="cursor-pointer transition-all duration-150"
 				onmouseenter={() => onhover?.(personne.id)}
 				onmouseleave={() => onhover?.(null)}
 				onclick={() => onselect?.(personne.id)}
@@ -199,17 +199,16 @@
 					y={benchY - 4}
 					width={HEMICYCLE_VIEWBOX.width - 40}
 					height="22"
-					rx="4"
-					fill="#1e293b"
-					stroke="#334155"
+					fill="var(--surface-2)"
+					stroke="var(--border)"
 					stroke-width="0.5"
 				/>
 				<text
 					x={HEMICYCLE_VIEWBOX.x + 25}
 					y={benchY + 9}
-					fill="#64748b"
+					fill="var(--fg-muted)"
 					font-size="6"
-					font-family="Inter, system-ui"
+					font-family='"Space Grotesk", system-ui'
 					letter-spacing="0.1em"
 				>
 					BANC · NON INSCRITS
@@ -222,9 +221,9 @@
 						r={SEAT_RADIUS * (isHovered ? 1.6 : 1)}
 						fill={colorForPersonne(personne, mandat)}
 						opacity={opacityForPersonne(personne, mandat)}
-						stroke={isHovered ? '#fbbf24' : 'rgba(15,23,42,0.4)'}
-						stroke-width={isHovered ? 1.2 : 0.4}
-						class="cursor-pointer transition-all duration-300"
+						stroke={isHovered ? 'var(--accent)' : 'var(--border)'}
+						stroke-width={isHovered ? 1.5 : 0.4}
+						class="cursor-pointer transition-all duration-150"
 						onmouseenter={() => onhover?.(personne.id)}
 						onmouseleave={() => onhover?.(null)}
 						onclick={() => onselect?.(personne.id)}

@@ -97,7 +97,7 @@
 			class="select-none"
 		>
 			<tspan font-weight="600" fill="var(--fg)">{a.label}</tspan>
-			<tspan x={p.x} dy="12" fill={a.color ?? '#fbbf24'} font-weight="700">
+			<tspan x={p.x} dy="12" fill={a.color ?? 'var(--accent)'} font-weight="700">
 				{Math.round(a.value * 100)}%
 			</tspan>
 		</text>

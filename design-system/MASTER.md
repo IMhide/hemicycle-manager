@@ -154,13 +154,19 @@ Bebas Neue + Inter **supprimés**. (Échelle type : 12 / 14 / 16 / 18 / 24 / 32 
 ## 8. Ordre de déroulé (chantier)
 
 1. ✅ MASTER.md (ce fichier)
-2. ⬜ Tokens CSS + tailwind.config (variables, Space Grotesk, suppr `assembly.*`/Bebas)
-3. ⬜ **Carte-pilote `EluCard`** (le trophée — valider visuellement avant le reste)
-4. ⬜ Home `/` (4 portes, suppr emojis, ton brutaliste)
-5. ⬜ Listes (élus, textes) + filtres
-6. ⬜ Fiches détail (élu, texte)
-7. ⬜ Hémicycles (AN/Sénat) — intégrer le trait brutaliste sans casser la dataviz
-8. ⬜ Classements, FAQ, footer
+2. ✅ Tokens CSS + tailwind.config (variables, Space Grotesk, suppr `assembly.*`/Bebas)
+3. ✅ **Carte-pilote `EluCard`** (le trophée — validé visuellement)
+4. ✅ Home `/` (4 portes, ton brutaliste)
+5. ✅ Listes (élus, textes) + filtres + mini-cartes
+6. ✅ Fiches détail (élu, texte) + composants associés (timelines, radar, vote bars…)
+7. 🚧 Hémicycles (AN/Sénat) — intégrer le trait brutaliste sans casser la dataviz
+   _(à ce stade : seul `text-assembly-muted`→`text-fg-muted` migré ; le SVG des sièges
+   garde son rendu d'origine, reste à brutaliser bordures/contour sans nuire à la lisibilité)_
+8. ✅ Classements (podiums pastilles or/argent/bronze), FAQ, footer
 9. ⬜ Passe a11y finale (contraste Light+Dark, reduced-motion, focus, 375px)
+
+> **Reste avant merge** (cf prochaines étapes) : étape 7 (hémicycles), étape 9 (a11y),
+> tri des emojis résiduels (décoratifs à virer / fonctionnels à garder, cf §7),
+> puis `npm run check` + smoke-tests + PR.
 
 Chaque étape : consigner les écarts page-spécifiques dans `design-system/pages/<page>.md`.

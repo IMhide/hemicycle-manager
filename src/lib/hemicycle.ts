@@ -46,13 +46,15 @@ export const TOTAL_SEATS = SEAT_MAP_INTERNAL.size;
 export const SEAT_RADIUS = 5.5;
 
 /** Color palette for vote positions.
- *  `absent` est volontairement un gris clair franc (slate-400) pour que les
- *  députés absents soient visibles dans l'hémicycle d'un scrutin, et non
- *  fantômes comme avec l'ancien `#1e293b` à opacity 0.25. */
+ *  Aligné sur les tokens sémantiques du design system (cf MASTER.md §2) : les
+ *  valeurs sont des `var(--vote-*)` qui s'adaptent au thème Light/Dark. Ces
+ *  chaînes sont injectées dans des attributs SVG `fill` / des `style` CSS, où
+ *  `var()` est résolu nativement. `nonVotant` n'a pas de token dédié : il
+ *  réutilise `--vote-absent` (même sémantique « pas d'expression de vote »). */
 export const VOTE_COLORS = {
-	pour: '#22c55e',
-	contre: '#ef4444',
-	abstention: '#eab308',
-	nonVotant: '#64748b',
-	absent: '#94a3b8'
+	pour: 'var(--vote-pour)',
+	contre: 'var(--vote-contre)',
+	abstention: 'var(--vote-abstention)',
+	nonVotant: 'var(--vote-absent)',
+	absent: 'var(--vote-absent)'
 } as const;
