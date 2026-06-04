@@ -57,7 +57,7 @@
 
 	const tierColor: Record<string, string> = {
 		bronze: '#CD7F32',
-		argent: '#C0C0C0',
+		argent: '#B8B8C0',
 		or: '#FFC400',
 		legende: 'var(--accent)'
 	};

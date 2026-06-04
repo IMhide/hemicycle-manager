@@ -4,12 +4,12 @@
 	 *
 	 * Deux modes inspirés du football, comme côté AN :
 	 *
-	 * - 🏆 LE CHAMPIONNAT (overall, cf ADR 0022)
+	 * - LE CHAMPIONNAT (overall, cf ADR 0022)
 	 *   - Top sénateurs (par triennat ou carrière)
 	 *   - Top groupes (overallMoyen pré-calculé pipeline)
 	 *   - Top blocs (5 blocs CHES, cf political-order)
 	 *
-	 * - ⚽ Les Coupes (présence/participation/loyauté/frondes, par triennat)
+	 * - Les Coupes (présence/participation/loyauté/frondes, par triennat)
 	 *   - Vues Global / Par groupe
 	 *
 	 * Au Sénat, l'unité de cohorte est le **triennat** (3 ans entre 2 renouvellements),
@@ -78,7 +78,7 @@
 	const metricMeta = {
 		presence: {
 			label: 'Présence',
-			emoji: '🎯',
+			emoji: '',
 			format: (t: TriennatStats) => `${(t.stats.presence.rate * 100).toFixed(1)} %`,
 			value: (t: TriennatStats) => t.stats.presence.rate,
 			rank: (t: TriennatStats) => t.rangs.presence.rank,
@@ -87,7 +87,7 @@
 		},
 		participation: {
 			label: 'Participation',
-			emoji: '✋',
+			emoji: '',
 			format: (t: TriennatStats) => `${(t.stats.participation.rate * 100).toFixed(1)} %`,
 			value: (t: TriennatStats) => t.stats.participation.rate,
 			rank: (t: TriennatStats) => t.rangs.participation.rank,
@@ -96,7 +96,7 @@
 		},
 		loyaute: {
 			label: 'Loyauté',
-			emoji: '🤝',
+			emoji: '',
 			format: (t: TriennatStats) =>
 				t.stats.loyaute.rate === null
 					? 'N/A'
@@ -108,7 +108,7 @@
 		},
 		frondes: {
 			label: 'Frondes',
-			emoji: '🔥',
+			emoji: '',
 			format: (t: TriennatStats) => `${t.stats.frondes.count}`,
 			value: (t: TriennatStats) => t.stats.frondes.count,
 			rank: (t: TriennatStats) => t.rangs.frondes.rank,
@@ -212,7 +212,7 @@
 	});
 
 	// ────────────────────────────────────────────────────────────────────
-	// 🏆 LE CHAMPIONNAT — Top sénateurs
+	// LE CHAMPIONNAT — Top sénateurs
 	// ────────────────────────────────────────────────────────────────────
 
 	const championSenateurs = $derived.by(() => {
@@ -244,7 +244,7 @@
 	const championSenateursTop = $derived(championSenateurs.slice(0, topN));
 
 	// ────────────────────────────────────────────────────────────────────
-	// 🏆 LE CHAMPIONNAT — Top groupes (overall pré-calculé pipeline)
+	// LE CHAMPIONNAT — Top groupes (overall pré-calculé pipeline)
 	// ────────────────────────────────────────────────────────────────────
 
 	const championGroupes = $derived(
@@ -254,7 +254,7 @@
 	);
 
 	// ────────────────────────────────────────────────────────────────────
-	// 🏆 LE CHAMPIONNAT — Top blocs
+	// LE CHAMPIONNAT — Top blocs
 	// ────────────────────────────────────────────────────────────────────
 
 	const championBlocs = $derived.by(() => {
@@ -288,19 +288,21 @@
 	// Helpers
 	// ────────────────────────────────────────────────────────────────────
 
-	function tierFor(rank: number, total: number): { medal: string; cls: string } {
-		const ratio = rank / total;
-		if (ratio <= 0.1) return { medal: '🥇', cls: 'border-amber-400/40 bg-amber-400/5' };
-		if (ratio <= 0.25) return { medal: '🥈', cls: 'border-border-soft bg-surface-2' };
-		if (ratio <= 0.5) return { medal: '🥉', cls: 'border-orange-700/40 bg-orange-700/5' };
-		return { medal: '', cls: '' };
+	/** Couleur de pastille de podium pour les 3 premiers (rang absolu), sinon null. */
+	function podiumColor(rank: number): string | null {
+		if (rank === 1) return '#FFC400'; // or
+		if (rank === 2) return '#B8B8C0'; // argent
+		if (rank === 3) return '#CD7F32'; // bronze
+		return null;
 	}
 
-	function medalFor(rank: number): string {
-		if (rank === 1) return '🥇';
-		if (rank === 2) return '🥈';
-		if (rank === 3) return '🥉';
-		return `#${rank}`;
+	/** Tier par ratio (top 10/25/50%) : colore la carte entière. */
+	function tierFor(rank: number, total: number): { cls: string } {
+		const ratio = rank / total;
+		if (ratio <= 0.1) return { cls: 'border-amber-400/40 bg-amber-400/5' };
+		if (ratio <= 0.25) return { cls: 'border-border-soft bg-surface-2' };
+		if (ratio <= 0.5) return { cls: 'border-orange-700/40 bg-orange-700/5' };
+		return { cls: '' };
 	}
 
 	function setMode(m: Mode) {
@@ -324,10 +326,23 @@
 	<title>Classements Sénat — PolitiDex</title>
 </svelte:head>
 
+<!-- Pastille de rang : carré coloré or/argent/bronze pour le podium, sinon #N discret. -->
+{#snippet rankBadge(rank: number)}
+	{@const pc = podiumColor(rank)}
+	{#if pc}
+		<span
+			class="inline-flex items-center justify-center w-9 h-9 title-display text-lg tabular-nums"
+			style="background: {pc}; color: #0a0a0a; border: 2px solid var(--border);"
+		>{rank}</span>
+	{:else}
+		<span class="title-display text-base tabular-nums text-fg-muted">#{rank}</span>
+	{/if}
+{/snippet}
+
 <section class="max-w-[1536px] mx-auto px-6 py-8">
 	<div class="flex items-baseline justify-between gap-4 flex-wrap mb-6">
 		<div>
-			<h1 class="title-display text-4xl">🏆 Classements Sénat</h1>
+			<h1 class="title-display text-4xl">Classements Sénat</h1>
 			<p class="text-fg-muted text-sm mt-1">
 				{#if mode === 'championship'}
 					<b>Le Championnat</b> — classements par
@@ -339,14 +354,14 @@
 			</p>
 		</div>
 
-		<div class="flex gap-1 bg-surface border border-border-soft rounded-lg p-1">
+		<div class="flex gap-1 bg-surface border border-border-soft p-1">
 			<button
 				class="btn px-4 py-1.5 text-xs font-semibold {mode === 'championship'
 					? 'bg-accent text-accent-fg'
 					: 'text-fg-muted hover:text-fg'}"
 				onclick={() => setMode('championship')}
 			>
-				🏆 Le Championnat
+				Le Championnat
 			</button>
 			<button
 				class="btn px-4 py-1.5 text-xs font-semibold {mode === 'coupes'
@@ -354,7 +369,7 @@
 					: 'text-fg-muted hover:text-fg'}"
 				onclick={() => setMode('coupes')}
 			>
-				⚽ Les Coupes
+				Les Coupes
 			</button>
 		</div>
 	</div>
@@ -366,7 +381,7 @@
 					class="text-link text-lg leading-none transition-transform group-open:rotate-90 select-none"
 					aria-hidden="true">▸</span
 				>
-				<span class="title-display text-lg">🎮 Comment se calcule l'Overall&nbsp;?</span>
+				<span class="title-display text-lg">Comment se calcule l'Overall&nbsp;?</span>
 				<span class="ml-auto text-[10px] uppercase tracking-widest text-fg-muted"
 					>Note 0–99</span
 				>
@@ -377,23 +392,23 @@
 					lois. Donc on récompense surtout l'acte de voter Pour ou Contre.
 				</p>
 				<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-					<div class="p-3 rounded border border-border-soft bg-purple-400/5">
-						<div class="title-display text-2xl text-purple-300">55&nbsp;%</div>
-						<div class="text-xs font-semibold mt-0.5">✋ Participation</div>
+					<div class="p-3 border border-border-soft bg-purple-400/5">
+						<div class="title-display text-2xl text-purple-400">55&nbsp;%</div>
+						<div class="text-xs font-semibold mt-0.5">Participation</div>
 						<div class="text-[11px] text-fg-muted mt-1">
 							% des scrutins votés <b>Pour</b> ou <b>Contre</b>
 						</div>
 					</div>
-					<div class="p-3 rounded border border-border-soft bg-amber-400/5">
+					<div class="p-3 border border-border-soft bg-amber-400/5">
 						<div class="title-display text-2xl text-fg">35&nbsp;%</div>
-						<div class="text-xs font-semibold mt-0.5">📈 Volume</div>
+						<div class="text-xs font-semibold mt-0.5">Volume</div>
 						<div class="text-[11px] text-fg-muted mt-1">
 							Nb total de votes, normalisé sur le centile&nbsp;95 de la cohorte
 						</div>
 					</div>
-					<div class="p-3 rounded border border-border-soft bg-blue-400/5">
-						<div class="title-display text-2xl text-blue-300">10&nbsp;%</div>
-						<div class="text-xs font-semibold mt-0.5">🎯 Présence</div>
+					<div class="p-3 border border-border-soft bg-blue-400/5">
+						<div class="title-display text-2xl text-blue-400">10&nbsp;%</div>
+						<div class="text-xs font-semibold mt-0.5">Présence</div>
 						<div class="text-[11px] text-fg-muted mt-1">
 							Idem participation mais l'<b>abstention</b> compte aussi
 						</div>
@@ -430,7 +445,7 @@
 		<div class="flex items-center gap-1 text-xs mb-6 flex-wrap">
 			{#if champView === 'senateurs'}
 				<button
-					class="px-3 py-1 rounded {scopeTriennat === ''
+					class="px-3 py-1 {scopeTriennat === ''
 						? 'bg-accent text-accent-fg font-semibold'
 						: 'border border-border-soft text-fg-muted hover:text-fg'}"
 					onclick={() => (scopeTriennat = '')}
@@ -441,7 +456,7 @@
 			{#each triennatsSorted.slice(0, 8) as tri (tri.id)}
 				<button
 					title={tri.enCours ? 'Triennat en cours' : undefined}
-					class="px-2 py-1 rounded text-[11px] {scopeTriennat === tri.id
+					class="px-2 py-1 text-[11px] {scopeTriennat === tri.id
 						? 'bg-accent text-accent-fg font-semibold'
 						: 'border border-border-soft text-fg-muted hover:text-fg'} {tri.enCours &&
 					scopeTriennat !== tri.id
@@ -477,10 +492,8 @@
 							: lookupEluUrlCarriereForMatricule(senateur.id) ?? '/elus/'}
 						class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors {tier.cls}"
 					>
-						<div
-							class="w-10 text-center title-display text-2xl tabular-nums flex-shrink-0 flex items-center justify-center"
-						>
-							{tier.medal || `#${rank}`}
+						<div class="w-10 flex-shrink-0 flex items-center justify-center">
+							{@render rankBadge(rank)}
 						</div>
 						<img
 							src={senateur.identite.photoUrl}
@@ -556,10 +569,8 @@
 						class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors"
 						style="border-left: 4px solid {g.couleur}"
 					>
-						<div
-							class="w-12 text-center title-display text-2xl tabular-nums flex-shrink-0 flex items-center justify-center"
-						>
-							{medalFor(rank)}
+						<div class="w-12 flex-shrink-0 flex items-center justify-center">
+							{@render rankBadge(rank)}
 						</div>
 						<div class="min-w-0 flex-1">
 							<div class="flex items-center gap-2">
@@ -594,10 +605,8 @@
 					{@const rank = i + 1}
 					<div class="card p-4" style="border-left: 6px solid {bloc.meta.color}">
 						<div class="flex items-center gap-3 mb-3">
-							<div
-								class="w-12 text-center title-display text-2xl tabular-nums flex-shrink-0"
-							>
-								{medalFor(rank)}
+							<div class="w-12 flex-shrink-0 flex items-center justify-center">
+								{@render rankBadge(rank)}
 							</div>
 							<div class="flex-1 min-w-0">
 								<div class="title-display text-xl flex items-center gap-2">
@@ -616,7 +625,7 @@
 							{#each bloc.groupes as g (g.code)}
 								<a
 									href="/senat/groupes/{scopeTriennat}/{g.code}/"
-									class="text-[11px] px-2 py-1 rounded border border-border-soft hover:border-accent transition-colors flex items-center gap-1.5"
+									class="text-[11px] px-2 py-1 border border-border-soft hover:border-accent transition-colors flex items-center gap-1.5"
 									style="border-left: 3px solid {g.couleur}"
 								>
 									<span class="font-semibold">{g.libelleAbrege}</span>
@@ -629,13 +638,13 @@
 			</div>
 		{/if}
 	{:else}
-		<!-- ⚽ LES COUPES -->
+		<!-- LES COUPES -->
 
 		<div class="flex items-center gap-1 text-xs mb-4 flex-wrap">
 			{#each triennatsSorted.slice(0, 8) as tri (tri.id)}
 				<button
 					title={tri.enCours ? 'Triennat en cours' : undefined}
-					class="px-2 py-1 rounded text-[11px] {scopeTriennat === tri.id
+					class="px-2 py-1 text-[11px] {scopeTriennat === tri.id
 						? 'bg-accent text-accent-fg font-semibold'
 						: 'border border-border-soft text-fg-muted hover:text-fg'} {tri.enCours &&
 					scopeTriennat !== tri.id
@@ -659,14 +668,13 @@
 						: 'hover:border-accent/60'}"
 					onclick={() => (metric = key as Metric)}
 				>
-					<span aria-hidden="true">{meta.emoji}</span>
 					<span class="font-semibold">{meta.label}</span>
 				</button>
 			{/each}
 		</div>
 
 		<div class="flex items-center gap-2 mb-4">
-			<div class="flex gap-1 bg-surface border border-border-soft rounded-lg p-1">
+			<div class="flex gap-1 bg-surface border border-border-soft p-1">
 				<button
 					class="btn px-3 py-1 text-xs {coupeView === 'global'
 						? 'bg-accent text-accent-fg'
@@ -701,10 +709,8 @@
 						href={lookupEluUrlForMatriculeTriennat(senateur.id, scopeTriennat as string) ?? '/elus/'}
 						class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors {tier.cls}"
 					>
-						<div
-							class="w-10 text-center title-display text-2xl tabular-nums flex-shrink-0 flex items-center justify-center"
-						>
-							{tier.medal || `#${rank}`}
+						<div class="w-10 flex-shrink-0 flex items-center justify-center">
+							{@render rankBadge(rank)}
 						</div>
 						<img
 							src={senateur.identite.photoUrl}
@@ -765,7 +771,7 @@
 							{#each top as { senateur, triennat }, i (senateur.id)}
 								<a
 									href={lookupEluUrlForMatriculeTriennat(senateur.id, scopeTriennat as string) ?? '/elus/'}
-									class="flex items-center gap-3 p-2 rounded hover:bg-border-soft/30 transition-colors"
+									class="flex items-center gap-3 p-2 hover:bg-border-soft/30 transition-colors"
 								>
 									<div
 										class="w-6 text-center title-display text-sm tabular-nums text-fg-muted"

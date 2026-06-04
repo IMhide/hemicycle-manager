@@ -11,7 +11,7 @@
 	 * Seule recherche par nom autorisée — utile pour retrouver une personne
 	 * dans 1856 élus.
 	 *
-	 * Médailles 🥇 🥈 🥉 sur Top 3. Pagination Top 50 + lazy load.
+	 * Pastilles de podium or/argent/bronze sur Top 3. Pagination Top 50 + lazy load.
 	 *
 	 * Items linkent vers `/elus/[eluId]?tab=carriere` (vue cross-chambre).
 	 */
@@ -59,11 +59,11 @@
 		return 'Bicaméral';
 	}
 
-	/** Médaille pour les 3 premiers (rang absolu, sans dépendre du filtre recherche). */
-	function medal(rang: number): string | null {
-		if (rang === 1) return '🥇';
-		if (rang === 2) return '🥈';
-		if (rang === 3) return '🥉';
+	/** Couleur de podium pour les 3 premiers (rang absolu), sinon null. */
+	function podiumColor(rang: number): string | null {
+		if (rang === 1) return '#FFC400'; // or
+		if (rang === 2) return '#B8B8C0'; // argent
+		if (rang === 3) return '#CD7F32'; // bronze
 		return null;
 	}
 
@@ -86,7 +86,7 @@
 
 <section class="max-w-5xl mx-auto px-6 py-8">
 	<header class="mb-6">
-		<h1 class="title-display text-3xl">🏆 Classement global</h1>
+		<h1 class="title-display text-3xl">Classement global</h1>
 		<p class="text-fg-muted text-sm mt-1">
 			Tous les élus PolitiDex toutes chambres confondues, triés par <strong>Overall carrière</strong>
 			(moyenne simple cross-chambre, cf
@@ -122,14 +122,17 @@
 			{#each visible as e (e.id)}
 				{@const cat = eluCategorie(e)}
 				{@const rang = rangById.get(e.id) ?? 0}
-				{@const m = medal(rang)}
+				{@const pc = podiumColor(rang)}
 				<a
 					href="/elus/{e.id}?tab=carriere"
-					class="flex items-center gap-3 px-3 py-2 hover:bg-border-soft/20 transition-colors"
+					class="flex items-center gap-3 px-3 py-2 hover:bg-surface-2 transition-colors"
 				>
-					<div class="w-10 text-center flex-shrink-0">
-						{#if m}
-							<span class="text-2xl">{m}</span>
+					<div class="w-9 flex-shrink-0 flex justify-center">
+						{#if pc}
+							<span
+								class="inline-flex items-center justify-center w-8 h-8 title-display text-lg tabular-nums"
+								style="background: {pc}; color: #0a0a0a; border: 2px solid var(--border);"
+							>{rang}</span>
 						{:else}
 							<span class="text-xs text-fg-muted tabular-nums">#{rang}</span>
 						{/if}
@@ -137,7 +140,8 @@
 					<img
 						src={e.photoUrl}
 						alt=""
-						class="w-10 h-12 object-cover rounded-md border border-border-soft bg-border-soft flex-shrink-0"
+						class="w-10 h-12 object-cover flex-shrink-0"
+						style="border: 2px solid var(--border); background: var(--surface-2);"
 						loading="lazy"
 						referrerpolicy="no-referrer"
 					/>
@@ -148,7 +152,7 @@
 						<div class="text-[10px] text-fg-muted truncate">
 							{e.mandats.length} mandat{e.mandats.length > 1 ? 's' : ''} · {categorieLabel(cat)}
 							{#if e.badgesCarriere.includes('Bicameral')}
-								· 🏛️ Bicaméral
+								· Bicaméral
 							{/if}
 						</div>
 					</div>
