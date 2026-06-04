@@ -21,6 +21,13 @@ import {
 	loadTriennats,
 	loadTextesUnifies
 } from './data';
+import {
+	lookupEluByPaId,
+	lookupEluByMatricule,
+	eluCategorie,
+	eluUrlCarriere,
+	type Elu
+} from './elus';
 
 export interface SearchIndex {
 	personnes: Personne[];
@@ -87,19 +94,63 @@ export function normalize(s: string): string {
 		.toLowerCase();
 }
 
+/**
+ * Résultat « élu » unifié cross-chambre (ADR 0031, principe « une personne =
+ * une fiche »). Un bicaméral n'apparaît qu'UNE fois ici, peu importe qu'il ait
+ * matché côté AN, côté Sénat, ou les deux. Construit en dédupliquant
+ * `personnes` + `senateurs` par `eluId`.
+ */
+export interface SearchEluResult {
+	eluId: string;
+	href: string;
+	prenom: string;
+	nom: string;
+	photoUrl: string;
+	/** Groupe le plus récent (pastille + sigle), tous mandats confondus. */
+	groupeLibelleAbrege: string | null;
+	groupeCouleur: string | null;
+	/** 'an' | 'senat' | 'bicameral' — pilote le libellé chambre affiché. */
+	categorie: 'an' | 'senat' | 'bicameral';
+	/** true si en exercice (au moins un mandat sans date de fin). */
+	enExercice: boolean;
+}
+
+/**
+ * Résultat « groupe » unifié AN + Sénat. Contrairement aux élus, PAS de
+ * déduplication : un groupe AN et un groupe Sénat sont des entités distinctes
+ * (pages différentes). On les affiche dans une seule section avec un tag de
+ * chambre pour distinguer.
+ */
+export interface SearchGroupeResult {
+	key: string;
+	href: string;
+	chambre: 'AN' | 'SENAT';
+	libelle: string;
+	libelleAbrege: string;
+	couleur: string;
+	effectif: number;
+	/** Contexte temporel affiché : « 17ᵉ » (AN) ou « 2023-2026 » (Sénat). */
+	contexte: string;
+}
+
 export interface SearchResults {
-	personnes: Array<Personne & { groupePrincipal?: Groupe }>;
-	groupes: Groupe[];
-	senateurs: Array<Senateur & { groupePrincipal?: GroupeSenat }>;
-	groupesSenat: GroupeSenat[];
+	/** Liste UNIFIÉE et dédupliquée AN + Sénat (cf SearchEluResult). */
+	elus: SearchEluResult[];
+	/** Liste UNIFIÉE AN + Sénat, non dédupliquée (cf SearchGroupeResult). */
+	groupes: SearchGroupeResult[];
 	textes: TexteUnifie[];
 }
 
 const MAX_PER_CATEGORY = {
+	// Matching interne AN/Sénat : on en garde plus en amont (6×) car la fusion
+	// dédoublonne ensuite ; `elus`/`groupes` sont les plafonds des listes
+	// unifiées affichées.
 	personnes: 5,
 	senateurs: 5,
-	groupes: 3,
-	groupesSenat: 3,
+	elus: 7,
+	groupesAN: 4, // matching interne par chambre
+	groupesSenat: 4,
+	groupes: 5, // plafond de la liste GROUPES unifiée affichée
 	textes: 5
 };
 
@@ -135,9 +186,113 @@ function groupePrincipalSenateurDe(
 	return [...candidats].sort((a, b) => b.triennat.localeCompare(a.triennat))[0];
 }
 
+/** Mandat le plus récent d'un Elu (date de début max) — porte le groupe affiché. */
+function mandatLePlusRecent(elu: Elu): Elu['mandats'][number] | undefined {
+	if (elu.mandats.length === 0) return undefined;
+	return [...elu.mandats].sort((a, b) => b.debut.localeCompare(a.debut))[0];
+}
+
+/** Projette un Elu du manifest en résultat de recherche affichable. */
+function toEluResult(elu: Elu): SearchEluResult {
+	const dernier = mandatLePlusRecent(elu);
+	return {
+		eluId: elu.id,
+		href: eluUrlCarriere(elu.id),
+		prenom: elu.prenom,
+		nom: elu.nom,
+		photoUrl: elu.photoUrl,
+		groupeLibelleAbrege: dernier?.groupeLibelleAbrege ?? null,
+		groupeCouleur: dernier?.groupeCouleur ?? null,
+		categorie: eluCategorie(elu),
+		enExercice: elu.mandats.some((m) => m.fin === null)
+	};
+}
+
+/**
+ * Fusionne les résultats AN (`personnes`) et Sénat (`senateurs`) en UNE liste
+ * d'élus dédupliquée par `eluId` (cf ADR 0031). L'ordre d'apparition (=
+ * pertinence) des deux listes sources est préservé via un merge entrelacé :
+ * on parcourt alternativement les deux files, en sautant les eluId déjà vus —
+ * ainsi un bicaméral bien classé d'un côté ne se retrouve pas relégué.
+ *
+ * Si le manifest `elus.json` n'est pas (encore) chargé, `lookupElu*` renvoie
+ * `null` : on tombe en mode dégradé (l'entrée est ignorée). En pratique le
+ * layout charge le manifest avant toute recherche.
+ */
+function fusionnerElus(
+	personnes: Personne[],
+	senateurs: Senateur[],
+	max: number
+): SearchEluResult[] {
+	const out: SearchEluResult[] = [];
+	const vus = new Set<string>();
+	const push = (elu: Elu | null) => {
+		if (!elu || vus.has(elu.id)) return;
+		vus.add(elu.id);
+		out.push(toEluResult(elu));
+	};
+	const n = Math.max(personnes.length, senateurs.length);
+	for (let i = 0; i < n && out.length < max; i++) {
+		// Personne.id = PA-id (ex. "PA1592") ; Senateur.id = matricule (ADR 0024).
+		if (i < personnes.length) push(lookupEluByPaId(personnes[i].id));
+		if (out.length >= max) break;
+		if (i < senateurs.length) push(lookupEluByMatricule(senateurs[i].id));
+	}
+	return out.slice(0, max);
+}
+
+/** Projette un groupe AN en résultat de recherche unifié. */
+function groupeANToResult(g: Groupe): SearchGroupeResult {
+	return {
+		key: `an:${g.legislature}:${g.id}`,
+		href: `/assemblee/groupes/${g.legislature}/${g.id}/`,
+		chambre: 'AN',
+		libelle: g.libelle,
+		libelleAbrege: g.libelleAbrege,
+		couleur: g.couleur,
+		effectif: g.effectifFin,
+		contexte: `${g.legislature}ᵉ`
+	};
+}
+
+/** Projette un groupe Sénat en résultat de recherche unifié. */
+function groupeSenatToResult(g: GroupeSenat): SearchGroupeResult {
+	return {
+		key: `senat:${g.triennat}:${g.code}`,
+		href: `/senat/triennats/${g.triennat}/`,
+		chambre: 'SENAT',
+		libelle: g.libelle,
+		libelleAbrege: g.libelleAbrege,
+		couleur: g.couleur,
+		effectif: g.effectifFin,
+		contexte: g.triennat
+	};
+}
+
+/**
+ * Fusionne les groupes AN et Sénat en UNE liste affichée, SANS déduplication
+ * (entités distinctes, pages distinctes) — juste un merge entrelacé qui
+ * préserve la pertinence de chaque source, plafonné à `max`. Le tag de chambre
+ * (porté par `chambre`) distingue visuellement les deux.
+ */
+function fusionnerGroupes(
+	groupesAN: Groupe[],
+	groupesSenat: GroupeSenat[],
+	max: number
+): SearchGroupeResult[] {
+	const out: SearchGroupeResult[] = [];
+	const n = Math.max(groupesAN.length, groupesSenat.length);
+	for (let i = 0; i < n && out.length < max; i++) {
+		if (i < groupesAN.length) out.push(groupeANToResult(groupesAN[i]));
+		if (out.length >= max) break;
+		if (i < groupesSenat.length) out.push(groupeSenatToResult(groupesSenat[i]));
+	}
+	return out.slice(0, max);
+}
+
 export function searchAll(index: SearchIndex, query: string): SearchResults {
 	const q = normalize(query.trim());
-	if (!q) return { personnes: [], groupes: [], senateurs: [], groupesSenat: [], textes: [] };
+	if (!q) return { elus: [], groupes: [], textes: [] };
 
 	// ─── Personnes (AN) ────────────────────────────────────────────────
 	const matchedPersonnes: Array<Personne & { groupePrincipal?: Groupe }> = [];
@@ -250,11 +405,16 @@ export function searchAll(index: SearchIndex, query: string): SearchResults {
 		}
 	}
 
+	// ─── Fusions cross-chambre (ADR 0031) ─────────────────────────────
+	// Élus : entrelace + dédoublonne par eluId (un bicaméral = 1 entrée).
+	// Groupes : entrelace SANS dédup (entités/pages distinctes), tag chambre.
+	// On passe les listes matchées complètes (déjà triées par pertinence).
+	const elus = fusionnerElus(matchedPersonnes, matchedSenateurs, MAX_PER_CATEGORY.elus);
+	const groupes = fusionnerGroupes(matchedGroupes, matchedGroupesSenat, MAX_PER_CATEGORY.groupes);
+
 	return {
-		personnes: matchedPersonnes.slice(0, MAX_PER_CATEGORY.personnes),
-		senateurs: matchedSenateurs.slice(0, MAX_PER_CATEGORY.senateurs),
-		groupes: matchedGroupes.slice(0, MAX_PER_CATEGORY.groupes),
-		groupesSenat: matchedGroupesSenat.slice(0, MAX_PER_CATEGORY.groupesSenat),
+		elus,
+		groupes,
 		textes: matchedTextes
 	};
 }
