@@ -243,6 +243,12 @@ Dockerfile                     # multi-stage node:22-alpine + nginx:1.27-alpine
 - **Une personne = une fiche** : le côté Pokédex impose qu'une personne politique ait **une seule entrée** dans le projet, peu importe le nombre de mandats successifs (cf ADR 0015).
 - **Sourçage rigoureux** : toute affirmation chiffrée a une source documentée (ADR ou InfoTip dans l'app).
 - **Transparence** : les InfoTips expliquent chaque **métrique ET chaque badge** en français clair, jamais d'opacité (cf ADR 0016, 0017).
+- **♿ Contraste & lisibilité — non négociable** : PolitiDex doit être **utilisable par tout le monde**. C'est un critère de qualité de **premier ordre**, à vérifier à **chaque** changement visuel, pas une finition optionnelle.
+  - **Texte ≥ 4.5:1** sur son fond (≥ 3:1 pour le gros texte et les glyphes d'UI). Vérifier **Light ET Dark séparément** — jamais déduire l'un de l'autre.
+  - **La couleur du texte suit toujours son fond.** Piège récurrent : un élément en état actif/hover passe sur un **aplat** (le jaune `--accent`, une couleur de groupe CHES, un vert/rouge de vote) mais garde sa couleur de texte héritée → illisible. Sur fond `--accent` (le **même jaune en Light et Dark**), le texte est **toujours** `--accent-fg` (noir). Forcer la couleur sur **tous** les sous-éléments (nom principal **et** méta), pas seulement certains.
+  - **Jamais la couleur seule** pour porter une info (vote, statut, famille politique) → toujours doublée d'un libellé/icône/motif (cf `color-not-only`, MASTER §7).
+  - **Focus clavier visible** partout (ring jaune épais), jamais `outline: none` orphelin. Cibles tactiles ≥ 44px.
+  - En cas de doute sur une paire couleur, **calculer le ratio** (ou tester via un outil) avant de committer. Le design system (`design-system/MASTER.md`) fixe les tokens — toujours passer par eux, jamais de hex brut.
 - **Domaine public** : code Unlicense, données sous Etalab. Pas de propriété intellectuelle.
 
 ## 🤝 Conventions de travail avec l'utilisateur
