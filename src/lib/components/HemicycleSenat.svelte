@@ -24,14 +24,16 @@
 	} from '$lib/hemicycle-senat';
 	import { gradientColorFor, POLITICAL_ORDER } from '$lib/political-order';
 
-	// `absent` en gris clair franc (slate-400) pour que les sénateurs absents
-	// soient visibles, et non fantômes (cf alignement avec hemicycle.ts AN).
+	// Aligné sur les tokens sémantiques du design system (cf MASTER.md §2,
+	// alignement avec hemicycle.ts AN). Les `var(--vote-*)` s'adaptent au thème
+	// Light/Dark et sont résolus nativement dans les attributs SVG `fill`.
+	// `nonVotant` réutilise `--vote-absent` (même sémantique « pas d'expression »).
 	const VOTE_COLORS = {
-		pour: '#22c55e',
-		contre: '#ef4444',
-		abstention: '#eab308',
-		nonVotant: '#64748b',
-		absent: '#94a3b8'
+		pour: 'var(--vote-pour)',
+		contre: 'var(--vote-contre)',
+		abstention: 'var(--vote-abstention)',
+		nonVotant: 'var(--vote-absent)',
+		absent: 'var(--vote-absent)'
 	} as const;
 
 	type Mode =
@@ -101,11 +103,11 @@
 		const abrev = groupe?.libelleAbrege ?? null;
 
 		if (mode.kind === 'gradient') return gradientColorFor(abrev);
-		if (mode.kind === 'groupe') return groupe?.couleur ?? '#888';
+		if (mode.kind === 'groupe') return groupe?.couleur ?? 'var(--fg-muted)';
 
 		if (mode.kind === 'highlight-groupe') {
-			if (app?.groupeCode === mode.groupeCode) return groupe?.couleur ?? '#fbbf24';
-			return '#334155';
+			if (app?.groupeCode === mode.groupeCode) return groupe?.couleur ?? 'var(--accent)';
+			return 'var(--border-soft)';
 		}
 
 		const pos = mode.votes[s.id] ?? 'absent';
@@ -211,22 +213,22 @@
 		role="img"
 		aria-label="Hémicycle du Sénat, triennat {triennat}"
 	>
-		<g opacity="0.5">
+		<g opacity="0.7">
 			<rect
 				x={HEMICYCLE_VIEWBOX_SENAT.x + HEMICYCLE_VIEWBOX_SENAT.width / 2 - 40}
 				y={HEMICYCLE_VIEWBOX_SENAT.y + HEMICYCLE_VIEWBOX_SENAT.height - 24}
 				width="80"
 				height="8"
-				rx="2"
-				fill="#475569"
+				fill="var(--border)"
 			/>
 			<text
 				x={HEMICYCLE_VIEWBOX_SENAT.x + HEMICYCLE_VIEWBOX_SENAT.width / 2}
 				y={HEMICYCLE_VIEWBOX_SENAT.y + HEMICYCLE_VIEWBOX_SENAT.height - 6}
 				text-anchor="middle"
-				fill="#64748b"
+				fill="var(--fg-muted)"
 				font-size="9"
-				font-family="Inter, system-ui"
+				font-family='"Space Grotesk", system-ui'
+				letter-spacing="0.08em"
 			>
 				PRÉSIDENCE
 			</text>
@@ -240,9 +242,9 @@
 				r={SEAT_RADIUS_SENAT * (isHovered ? 1.4 : 1)}
 				fill={colorForSenateur(senateur, mandat)}
 				opacity={opacityForSenateur(senateur, mandat)}
-				stroke={isHovered ? '#fbbf24' : 'rgba(15,23,42,0.4)'}
+				stroke={isHovered ? 'var(--accent)' : 'var(--border)'}
 				stroke-width={isHovered ? 1.5 : 0.5}
-				class="cursor-pointer transition-all duration-300"
+				class="cursor-pointer transition-all duration-150"
 				onmouseenter={() => onhover?.(senateur.id)}
 				onmouseleave={() => onhover?.(null)}
 				onclick={() => onselect?.(senateur.id)}
