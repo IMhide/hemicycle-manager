@@ -131,9 +131,21 @@
 		background: var(--accent);
 		color: var(--accent-fg);
 	}
+	/* Bouton/ lien secondaire : padding + bordure 2px sans ombre au repos.
+	   Autonome (n'hérite pas de .btn) pour rester en casse normale, mais doit
+	   porter son propre padding — sinon le contenu colle aux bords. */
 	.btn-ghost {
+		display: inline-block;
+		padding: 0.5rem 0.75rem;
+		border: 2px solid var(--border);
+		border-radius: 0;
+		background: var(--surface);
+		color: var(--fg);
 		box-shadow: none;
-		border-width: 2px;
+		transition:
+			transform 120ms ease-out,
+			box-shadow 120ms ease-out,
+			background 120ms ease-out;
 	}
 	.btn-ghost:hover {
 		background: var(--surface-2);
