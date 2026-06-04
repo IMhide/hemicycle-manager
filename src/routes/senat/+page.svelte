@@ -166,11 +166,17 @@
 	{/if}
 
 	<div class="mb-8">
-		<div class="text-xs uppercase tracking-widest text-fg-muted mb-2">Groupes politiques</div>
+		<div class="flex items-baseline justify-between gap-3 mb-2">
+			<div class="text-xs uppercase tracking-widest text-fg-muted">Groupes politiques</div>
+			<a href="/senat/groupes/" class="text-xs text-fg-muted hover:text-link">
+				Tous les groupes →
+			</a>
+		</div>
 		<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
 			{#each sortedGroupes as g (g.code)}
-				<div
-					class="card flex items-center gap-2 px-2.5 py-2 min-w-0"
+				<a
+					href="/senat/groupes/{g.triennat}/{g.code}/"
+					class="card flex items-center gap-2 px-2.5 py-2 hover:border-accent/60 transition-colors min-w-0"
 					style="border-left: 3px solid {g.couleur}"
 				>
 					<div class="min-w-0 flex-1">
@@ -180,7 +186,7 @@
 					<div class="title-display text-base text-fg tabular-nums flex-shrink-0">
 						{g.effectifFin}
 					</div>
-				</div>
+				</a>
 			{/each}
 		</div>
 	</div>
