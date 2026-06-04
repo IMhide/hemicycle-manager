@@ -244,13 +244,15 @@
 				opacity={opacityForSenateur(senateur, mandat)}
 				stroke={isHovered ? 'var(--accent)' : 'var(--border)'}
 				stroke-width={isHovered ? 1.5 : 0.5}
-				class="cursor-pointer transition-all duration-150"
+				class="seat cursor-pointer transition-all duration-150"
 				onmouseenter={() => onhover?.(senateur.id)}
 				onmouseleave={() => onhover?.(null)}
+				onfocus={() => onhover?.(senateur.id)}
+				onblur={() => onhover?.(null)}
 				onclick={() => onselect?.(senateur.id)}
-				onkeydown={(e) => (e.key === 'Enter' ? onselect?.(senateur.id) : null)}
+				onkeydown={(e) => (e.key === 'Enter' || e.key === ' ' ? (e.preventDefault(), onselect?.(senateur.id)) : null)}
 				role="button"
-				tabindex="-1"
+				tabindex="0"
 				aria-label="{senateur.identite.prenom} {senateur.identite.nom}"
 			/>
 		{/each}
@@ -262,3 +264,13 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	/* Focus clavier : contour jaune acide épais (cohérent avec le hover) plutôt
+	   qu'un outline rectangulaire autour d'un cercle. */
+	.seat:focus-visible {
+		outline: none;
+		stroke: var(--accent);
+		stroke-width: 2;
+	}
+</style>

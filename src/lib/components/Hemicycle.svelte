@@ -181,13 +181,15 @@
 				opacity={opacityForPersonne(personne, mandat)}
 				stroke={isHovered ? 'var(--accent)' : 'var(--border)'}
 				stroke-width={isHovered ? 1.5 : 0.4}
-				class="cursor-pointer transition-all duration-150"
+				class="seat cursor-pointer transition-all duration-150"
 				onmouseenter={() => onhover?.(personne.id)}
 				onmouseleave={() => onhover?.(null)}
+				onfocus={() => onhover?.(personne.id)}
+				onblur={() => onhover?.(null)}
 				onclick={() => onselect?.(personne.id)}
-				onkeydown={(e) => (e.key === 'Enter' ? onselect?.(personne.id) : null)}
+				onkeydown={(e) => (e.key === 'Enter' || e.key === ' ' ? (e.preventDefault(), onselect?.(personne.id)) : null)}
 				role="button"
-				tabindex="-1"
+				tabindex="0"
 				aria-label="{personne.identite.prenom} {personne.identite.nom}"
 			/>
 		{/each}
@@ -223,13 +225,15 @@
 						opacity={opacityForPersonne(personne, mandat)}
 						stroke={isHovered ? 'var(--accent)' : 'var(--border)'}
 						stroke-width={isHovered ? 1.5 : 0.4}
-						class="cursor-pointer transition-all duration-150"
+						class="seat cursor-pointer transition-all duration-150"
 						onmouseenter={() => onhover?.(personne.id)}
 						onmouseleave={() => onhover?.(null)}
+						onfocus={() => onhover?.(personne.id)}
+						onblur={() => onhover?.(null)}
 						onclick={() => onselect?.(personne.id)}
-						onkeydown={(e) => (e.key === 'Enter' ? onselect?.(personne.id) : null)}
+						onkeydown={(e) => (e.key === 'Enter' || e.key === ' ' ? (e.preventDefault(), onselect?.(personne.id)) : null)}
 						role="button"
-						tabindex="-1"
+						tabindex="0"
 						aria-label="{personne.identite.prenom} {personne.identite.nom}"
 					/>
 				{/each}
@@ -242,3 +246,13 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	/* Focus clavier : on remplace l'outline rectangulaire (moche autour d'un
+	   cercle) par un contour jaune acide épais, cohérent avec l'état hover. */
+	.seat:focus-visible {
+		outline: none;
+		stroke: var(--accent);
+		stroke-width: 2;
+	}
+</style>

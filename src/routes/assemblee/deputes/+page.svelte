@@ -315,7 +315,7 @@
 				<div>
 					<label class="flex items-center gap-2 cursor-pointer">
 						<input type="checkbox" bind:checked={onlyPresidents} class="accent-accent" />
-						<span class="text-xs">⭐ Présidents de groupe seulement</span>
+						<span class="text-xs">Présidents de groupe seulement</span>
 					</label>
 				</div>
 
@@ -386,7 +386,7 @@
 
 			{#if filtered.length === 0}
 				<div class="card p-8 text-center text-fg-muted">
-					<div class="title-display text-2xl mb-1">😶</div>
+					<div class="title-display text-4xl mb-2 text-fg-muted">∅</div>
 					<div class="text-sm">Aucun député ne correspond à ces critères.</div>
 					<button class="btn-ghost mt-4 text-sm" onclick={clearFilters}> Réinitialiser </button>
 				</div>

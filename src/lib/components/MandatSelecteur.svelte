@@ -94,7 +94,7 @@
 			onclick={() => selectMandat(m)}
 		>
 			<span class="text-[10px] opacity-60">
-				{m.chambre === 'AN' ? '🏛️ AN' : '🏛️ Sén.'}
+				{m.chambre === 'AN' ? 'AN' : 'Sén.'}
 			</span>
 			<span>{libelle(m)}</span>
 			<span class="text-[10px] font-normal opacity-60">({annees(m)})</span>

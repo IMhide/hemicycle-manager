@@ -42,19 +42,23 @@
 		return badgeDisplayUnknown(id);
 	});
 
+	// Aplats francs (DS §2/§4) : bordure brutaliste --border + fond plein coloré
+	// par tier + texte sombre. Contraste AA garanti en Light comme en Dark
+	// (texte noir sur aplats vifs). `legend` = jaune acide (la rareté max).
 	const tierStyle = $derived(
 		{
-			gold: 'border-amber-400/60 bg-amber-400/10 text-amber-200',
-			silver: 'border-border-soft bg-surface-2 text-fg',
-			bronze: 'border-orange-700/60 bg-orange-700/15 text-orange-300',
-			special: 'border-rose-400/60 bg-rose-400/10 text-rose-200',
-			legend:
-				'border-fuchsia-400/70 bg-gradient-to-r from-fuchsia-400/15 to-amber-400/15 text-fuchsia-200'
+			gold: 'bg-amber-400 text-[#0a0a0a]',
+			silver: 'bg-surface-2 text-fg',
+			bronze: 'bg-orange-400 text-[#0a0a0a]',
+			special: 'bg-rose-400 text-[#0a0a0a]',
+			legend: 'bg-accent text-accent-fg'
 		}[display.tier]
 	);
 </script>
 
-<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs {tierStyle}">
+<span
+	class="inline-flex items-center gap-1.5 px-2.5 py-1 border-2 border-border text-xs {tierStyle}"
+>
 	<span aria-hidden="true">{display.emoji}</span>
 	<span class="font-semibold whitespace-nowrap">{display.label}</span>
 	<InfoTip title={display.label} size="xs">

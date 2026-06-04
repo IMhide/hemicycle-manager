@@ -159,14 +159,20 @@ Bebas Neue + Inter **supprimés**. (Échelle type : 12 / 14 / 16 / 18 / 24 / 32 
 4. ✅ Home `/` (4 portes, ton brutaliste)
 5. ✅ Listes (élus, textes) + filtres + mini-cartes
 6. ✅ Fiches détail (élu, texte) + composants associés (timelines, radar, vote bars…)
-7. 🚧 Hémicycles (AN/Sénat) — intégrer le trait brutaliste sans casser la dataviz
-   _(à ce stade : seul `text-assembly-muted`→`text-fg-muted` migré ; le SVG des sièges
-   garde son rendu d'origine, reste à brutaliser bordures/contour sans nuire à la lisibilité)_
+7. ✅ Hémicycles (AN/Sénat) — tokens sémantiques Light/Dark, contour sièges fin
+   mais franc, hover/focus jaune acide, dataviz CHES intacte.
 8. ✅ Classements (podiums pastilles or/argent/bronze), FAQ, footer
-9. ⬜ Passe a11y finale (contraste Light+Dark, reduced-motion, focus, 375px)
+9. ✅ Passe a11y finale : focus clavier (sièges hémicycle tabbables + ring jaune,
+   suppression `focus:outline-none` orphelins), reduced-motion (transforms hover/active
+   neutralisés), contraste Light+Dark (badges/Rank/timeline en aplats francs ≥ AA).
 
-> **Reste avant merge** (cf prochaines étapes) : étape 7 (hémicycles), étape 9 (a11y),
-> tri des emojis résiduels (décoratifs à virer / fonctionnels à garder, cf §7),
-> puis `npm run check` + smoke-tests + PR.
+**Tri des emojis (cf §6/§7)** : emojis décoratifs supprimés (titres FAQ, sous-vues
+classements, empty states → `∅`, préfixes chambre 🏛️, ⭐ Président, 🔍, familles
+politiques). **Conservés** : les glyphes typographiques (→ ← ✓ ∅), les emojis-badges
+de `badges.ts` (convention produit ludique) et les pictos de vote/timeline (fonctionnels).
+`Badge.svelte` brutalisé (aplats francs + bordure 2px + tokens).
+
+> **Reste avant merge** : `npm run check` ✅ + smoke-tests + PR de la branche
+> `design/refonte-brutalisme` dans `main`.
 
 Chaque étape : consigner les écarts page-spécifiques dans `design-system/pages/<page>.md`.

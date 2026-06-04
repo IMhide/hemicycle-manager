@@ -56,7 +56,7 @@
 <div class="card p-4 sm:p-6">
 	<label class="block">
 		<div class="flex items-baseline gap-2 mb-2">
-			<span class="title-display text-sm">🔍 Trouver un {label}</span>
+			<span class="title-display text-sm">Trouver un {label}</span>
 			<span class="text-xs text-fg-muted">
 				Tape un nom ou un groupe pour voir son vote
 			</span>
@@ -65,7 +65,7 @@
 			type="search"
 			bind:value={query}
 			placeholder="ex. Tondelier, LFI, Larcher…"
-			class="w-full px-3 py-2 rounded-md bg-bg border border-border-soft focus:border-accent focus:outline-none text-sm"
+			class="w-full px-3 py-2 bg-bg border border-border-soft focus:border-accent text-sm"
 		/>
 	</label>
 
