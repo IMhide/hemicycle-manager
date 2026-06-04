@@ -4,13 +4,13 @@
 	 *
 	 * Deux grands modes inspirés du football :
 	 *
-	 * - 🏆 LE CHAMPIONNAT (overall, cf ADR 0022)
+	 * - LE CHAMPIONNAT (overall, cf ADR 0022)
 	 *   - Top députés (par leg ou carrière)
 	 *   - Top groupes politiques (moyenne d'overall des membres rattachés
 	 *     comme groupe principal — cf ADR 0016)
 	 *   - Top blocs (5 blocs CHES, cf political-order.ts + ADR 0007)
 	 *
-	 * - ⚽ Les Coupes (classements thématiques mono-stat, par leg uniquement)
+	 * - Les Coupes (classements thématiques mono-stat, par leg uniquement)
 	 *   - Présence / Participation / Loyauté / Frondes
 	 *   - Vues Global / Par groupe (= page existante)
 	 *
@@ -62,7 +62,7 @@
 	const metricMeta = {
 		presence: {
 			label: 'Présence',
-			emoji: '🎯',
+			emoji: '',
 			format: (m: Mandat) => `${(m.stats.presence.rate * 100).toFixed(1)} %`,
 			value: (m: Mandat) => m.stats.presence.rate,
 			rank: (m: Mandat) => m.rangs.presence.rank,
@@ -71,7 +71,7 @@
 		},
 		participation: {
 			label: 'Participation',
-			emoji: '✋',
+			emoji: '',
 			format: (m: Mandat) => `${(m.stats.participation.rate * 100).toFixed(1)} %`,
 			value: (m: Mandat) => m.stats.participation.rate,
 			rank: (m: Mandat) => m.rangs.participation.rank,
@@ -80,7 +80,7 @@
 		},
 		loyaute: {
 			label: 'Loyauté',
-			emoji: '🤝',
+			emoji: '',
 			format: (m: Mandat) =>
 				m.stats.loyaute.rate === null ? 'N/A' : `${(m.stats.loyaute.rate * 100).toFixed(1)} %`,
 			value: (m: Mandat) => m.stats.loyaute.rate,
@@ -90,7 +90,7 @@
 		},
 		frondes: {
 			label: 'Frondes',
-			emoji: '🔥',
+			emoji: '',
 			format: (m: Mandat) => `${m.stats.frondes.count}`,
 			value: (m: Mandat) => m.stats.frondes.count,
 			rank: (m: Mandat) => m.rangs.frondes.rank,
@@ -158,7 +158,7 @@
 	});
 
 	// ────────────────────────────────────────────────────────────────────
-	// 🏆 LE CHAMPIONNAT — Top députés
+	// LE CHAMPIONNAT — Top députés
 	// ────────────────────────────────────────────────────────────────────
 
 	/** Liste triée des entrées (personne, mandat-ou-null). mandat=null = vue carrière. */
@@ -187,7 +187,7 @@
 	const championDeputesTop = $derived(championDeputes.slice(0, topN));
 
 	// ────────────────────────────────────────────────────────────────────
-	// 🏆 LE CHAMPIONNAT — Top groupes (overall pré-calculé pipeline)
+	// LE CHAMPIONNAT — Top groupes (overall pré-calculé pipeline)
 	// ────────────────────────────────────────────────────────────────────
 
 	const championGroupes = $derived(
@@ -197,7 +197,7 @@
 	);
 
 	// ────────────────────────────────────────────────────────────────────
-	// 🏆 LE CHAMPIONNAT — Top blocs (agrégat à partir des groupes)
+	// LE CHAMPIONNAT — Top blocs (agrégat à partir des groupes)
 	// ────────────────────────────────────────────────────────────────────
 
 	const championBlocs = $derived.by(() => {
@@ -233,19 +233,21 @@
 	// Helpers
 	// ────────────────────────────────────────────────────────────────────
 
-	function tierFor(rank: number, total: number): { medal: string; cls: string } {
-		const ratio = rank / total;
-		if (ratio <= 0.1) return { medal: '🥇', cls: 'border-amber-400/40 bg-amber-400/5' };
-		if (ratio <= 0.25) return { medal: '🥈', cls: 'border-border-soft bg-surface-2' };
-		if (ratio <= 0.5) return { medal: '🥉', cls: 'border-orange-700/40 bg-orange-700/5' };
-		return { medal: '', cls: '' };
+	/** Couleur de pastille de podium pour les 3 premiers (rang absolu), sinon null. */
+	function podiumColor(rank: number): string | null {
+		if (rank === 1) return '#FFC400'; // or
+		if (rank === 2) return '#B8B8C0'; // argent
+		if (rank === 3) return '#CD7F32'; // bronze
+		return null;
 	}
 
-	function medalFor(rank: number): string {
-		if (rank === 1) return '🥇';
-		if (rank === 2) return '🥈';
-		if (rank === 3) return '🥉';
-		return `#${rank}`;
+	/** Tier par ratio (top 10/25/50%) : colore la carte entière. */
+	function tierFor(rank: number, total: number): { cls: string } {
+		const ratio = rank / total;
+		if (ratio <= 0.1) return { cls: 'border-amber-400/40 bg-amber-400/5' };
+		if (ratio <= 0.25) return { cls: 'border-border-soft bg-surface-2' };
+		if (ratio <= 0.5) return { cls: 'border-orange-700/40 bg-orange-700/5' };
+		return { cls: '' };
 	}
 
 	function setMode(m: Mode) {
@@ -271,10 +273,23 @@
 	<title>Classements — PolitiDex</title>
 </svelte:head>
 
+<!-- Pastille de rang : carré coloré or/argent/bronze pour le podium, sinon #N discret. -->
+{#snippet rankBadge(rank: number)}
+	{@const pc = podiumColor(rank)}
+	{#if pc}
+		<span
+			class="inline-flex items-center justify-center w-9 h-9 title-display text-lg tabular-nums"
+			style="background: {pc}; color: #0a0a0a; border: 2px solid var(--border);"
+		>{rank}</span>
+	{:else}
+		<span class="title-display text-base tabular-nums text-fg-muted">#{rank}</span>
+	{/if}
+{/snippet}
+
 <section class="max-w-[1536px] mx-auto px-6 py-8">
 	<div class="flex items-baseline justify-between gap-4 flex-wrap mb-6">
 		<div>
-			<h1 class="title-display text-4xl">🏆 Classements</h1>
+			<h1 class="title-display text-4xl">Classements</h1>
 			<p class="text-fg-muted text-sm mt-1">
 				{#if mode === 'championship'}
 					<b>Le Championnat</b> — classements par <a href="/faq#overall" class="underline text-link">Overall</a> (cf ADR 0022).
@@ -285,14 +300,14 @@
 		</div>
 
 		<!-- Switch Championnat / Coupes -->
-		<div class="flex gap-1 bg-surface border border-border-soft rounded-lg p-1">
+		<div class="flex gap-1 bg-surface border border-border-soft p-1">
 			<button
 				class="btn px-4 py-1.5 text-xs font-semibold {mode === 'championship'
 					? 'bg-accent text-accent-fg'
 					: 'text-fg-muted hover:text-fg'}"
 				onclick={() => setMode('championship')}
 			>
-				🏆 Le Championnat
+				Le Championnat
 			</button>
 			<button
 				class="btn px-4 py-1.5 text-xs font-semibold {mode === 'coupes'
@@ -300,7 +315,7 @@
 					: 'text-fg-muted hover:text-fg'}"
 				onclick={() => setMode('coupes')}
 			>
-				⚽ Les Coupes
+				Les Coupes
 			</button>
 		</div>
 	</div>
@@ -310,7 +325,7 @@
 		<details class="card p-4 mb-4 group">
 			<summary class="cursor-pointer flex items-center gap-2 list-none">
 				<span class="text-link text-lg leading-none transition-transform group-open:rotate-90 select-none" aria-hidden="true">▸</span>
-				<span class="title-display text-lg">🎮 Comment se calcule l'Overall&nbsp;?</span>
+				<span class="title-display text-lg">Comment se calcule l'Overall&nbsp;?</span>
 				<span class="ml-auto text-[10px] uppercase tracking-widest text-fg-muted">Note 0–99</span>
 			</summary>
 			<div class="mt-3 text-sm leading-relaxed text-fg space-y-3">
@@ -319,19 +334,19 @@
 					Donc on récompense surtout l'acte de voter Pour ou Contre.
 				</p>
 				<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-					<div class="p-3 rounded border border-border-soft bg-purple-400/5">
-						<div class="title-display text-2xl text-purple-300">55&nbsp;%</div>
-						<div class="text-xs font-semibold mt-0.5">✋ Participation</div>
+					<div class="p-3 border border-border-soft bg-purple-400/5">
+						<div class="title-display text-2xl text-purple-400">55&nbsp;%</div>
+						<div class="text-xs font-semibold mt-0.5">Participation</div>
 						<div class="text-[11px] text-fg-muted mt-1">% des scrutins votés <b>Pour</b> ou <b>Contre</b></div>
 					</div>
-					<div class="p-3 rounded border border-border-soft bg-amber-400/5">
+					<div class="p-3 border border-border-soft bg-amber-400/5">
 						<div class="title-display text-2xl text-fg">35&nbsp;%</div>
-						<div class="text-xs font-semibold mt-0.5">📈 Volume</div>
+						<div class="text-xs font-semibold mt-0.5">Volume</div>
 						<div class="text-[11px] text-fg-muted mt-1">Nb total de votes, normalisé sur le centile&nbsp;95 de la cohorte</div>
 					</div>
-					<div class="p-3 rounded border border-border-soft bg-blue-400/5">
-						<div class="title-display text-2xl text-blue-300">10&nbsp;%</div>
-						<div class="text-xs font-semibold mt-0.5">🎯 Présence</div>
+					<div class="p-3 border border-border-soft bg-blue-400/5">
+						<div class="title-display text-2xl text-blue-400">10&nbsp;%</div>
+						<div class="text-xs font-semibold mt-0.5">Présence</div>
 						<div class="text-[11px] text-fg-muted mt-1">Idem participation mais l'<b>abstention</b> compte aussi</div>
 					</div>
 				</div>
@@ -363,7 +378,7 @@
 		<div class="flex items-center gap-1 text-xs mb-6">
 			{#if champView === 'deputes'}
 				<button
-					class="px-3 py-1 rounded {scopeLeg === 0
+					class="px-3 py-1 {scopeLeg === 0
 						? 'bg-accent text-accent-fg font-semibold'
 						: 'border border-border-soft text-fg-muted hover:text-fg'}"
 					onclick={() => (scopeLeg = 0)}
@@ -373,7 +388,7 @@
 			{/if}
 			{#each legSorted as l (l.num)}
 				<button
-					class="px-3 py-1 rounded {scopeLeg === l.num
+					class="px-3 py-1 {scopeLeg === l.num
 						? 'bg-accent text-accent-fg font-semibold'
 						: 'border border-border-soft text-fg-muted hover:text-fg'}"
 					onclick={() => (scopeLeg = l.num)}
@@ -406,10 +421,8 @@
 							: lookupEluUrlCarriereForPaId(personne.id) ?? '/elus/'}
 						class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors {tier.cls}"
 					>
-						<div
-							class="w-10 text-center title-display text-2xl tabular-nums flex-shrink-0 flex items-center justify-center"
-						>
-							{tier.medal || `#${rank}`}
+						<div class="w-10 flex-shrink-0 flex items-center justify-center">
+							{@render rankBadge(rank)}
 						</div>
 						<img
 							src={personne.identite.photoUrl}
@@ -473,10 +486,8 @@
 						class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors"
 						style="border-left: 4px solid {g.couleur}"
 					>
-						<div
-							class="w-12 text-center title-display text-2xl tabular-nums flex-shrink-0 flex items-center justify-center"
-						>
-							{medalFor(rank)}
+						<div class="w-12 flex-shrink-0 flex items-center justify-center">
+							{@render rankBadge(rank)}
 						</div>
 						<div class="min-w-0 flex-1">
 							<div class="flex items-center gap-2">
@@ -512,8 +523,8 @@
 						style="border-left: 6px solid {bloc.meta.color}"
 					>
 						<div class="flex items-center gap-3 mb-3">
-							<div class="w-12 text-center title-display text-2xl tabular-nums flex-shrink-0">
-								{medalFor(rank)}
+							<div class="w-12 flex-shrink-0 flex items-center justify-center">
+								{@render rankBadge(rank)}
 							</div>
 							<div class="flex-1 min-w-0">
 								<div class="title-display text-xl flex items-center gap-2">
@@ -532,7 +543,7 @@
 							{#each bloc.groupes as g (g.id)}
 								<a
 									href="/assemblee/groupes/{g.legislature}/{g.id}/"
-									class="text-[11px] px-2 py-1 rounded border border-border-soft hover:border-accent transition-colors flex items-center gap-1.5"
+									class="text-[11px] px-2 py-1 border border-border-soft hover:border-accent transition-colors flex items-center gap-1.5"
 									style="border-left: 3px solid {g.couleur}"
 								>
 									<span class="font-semibold">{g.libelleAbrege}</span>
@@ -546,13 +557,13 @@
 		{/if}
 
 	{:else}
-		<!-- ⚽ LES COUPES (page existante) -->
+		<!-- LES COUPES (page existante) -->
 
 		<!-- Sélecteur de leg (pas de Carrière sur Coupes) -->
 		<div class="flex items-center gap-1 text-xs mb-4">
 			{#each legSorted as l (l.num)}
 				<button
-					class="px-3 py-1 rounded {scopeLeg === l.num
+					class="px-3 py-1 {scopeLeg === l.num
 						? 'bg-accent text-accent-fg font-semibold'
 						: 'border border-border-soft text-fg-muted hover:text-fg'}"
 					onclick={() => (scopeLeg = l.num)}
@@ -573,14 +584,13 @@
 						: 'hover:border-accent/60'}"
 					onclick={() => (metric = key as Metric)}
 				>
-					<span aria-hidden="true">{meta.emoji}</span>
 					<span class="font-semibold">{meta.label}</span>
 				</button>
 			{/each}
 		</div>
 
 		<div class="flex items-center gap-2 mb-4">
-			<div class="flex gap-1 bg-surface border border-border-soft rounded-lg p-1">
+			<div class="flex gap-1 bg-surface border border-border-soft p-1">
 				<button
 					class="btn px-3 py-1 text-xs {coupeView === 'global'
 						? 'bg-accent text-accent-fg'
@@ -614,10 +624,8 @@
 						href={lookupEluUrlForPaIdLeg(personne.id, scopeLeg) ?? '/elus/'}
 						class="card p-3 flex items-center gap-3 hover:border-accent/60 transition-colors {tier.cls}"
 					>
-						<div
-							class="w-10 text-center title-display text-2xl tabular-nums flex-shrink-0 flex items-center justify-center"
-						>
-							{tier.medal || `#${rank}`}
+						<div class="w-10 flex-shrink-0 flex items-center justify-center">
+							{@render rankBadge(rank)}
 						</div>
 						<img
 							src={personne.identite.photoUrl}
@@ -663,7 +671,7 @@
 							{#each top as { personne, mandat }, i (personne.id)}
 								<a
 									href={lookupEluUrlForPaIdLeg(personne.id, scopeLeg) ?? '/elus/'}
-									class="flex items-center gap-3 p-2 rounded hover:bg-border-soft/30 transition-colors"
+									class="flex items-center gap-3 p-2 hover:bg-border-soft/30 transition-colors"
 								>
 									<div
 										class="w-6 text-center title-display text-sm tabular-nums text-fg-muted"
