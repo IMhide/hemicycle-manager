@@ -2,10 +2,27 @@
 	Racine neutre `/` (cf ADR 0030).
 
 	Hub d'orientation entre les espaces AN, Sénat, Élus, Textes.
-	Design v2 (néo-brutalisme) : hero franc, 4 portes en blocs brutalistes
-	(ombre dure + hover mécanique), bloc « À propos » assumant la posture
-	éditoriale. Icônes SVG (Lucide), zéro emoji. Cf design-system/MASTER.md.
+	Design v2 (néo-brutalisme), pattern « Directory » : la RECHERCHE est la CTA
+	première (grande barre brutaliste + suggestions). Puis les 4 portes pour agir
+	vite, puis le bloc « À propos » qui assume la posture éditoriale.
+	Icônes SVG (Lucide), zéro emoji. Cf design-system/MASTER.md.
 -->
+<script lang="ts">
+	import GlobalSearch from '$lib/components/GlobalSearch.svelte';
+
+	let searchEl: GlobalSearch;
+
+	/** Suggestions « recherches populaires » (pattern Directory). Toutes
+	 *  résolvent dans l'index : 3 députés, 1 sénateur, 2 textes connus. */
+	const suggestions = ['Mélenchon', 'Le Pen', 'Attal', 'Retailleau', 'immigration', 'retraite'];
+
+	function pick(term: string) {
+		searchEl?.searchFor(term);
+		// Remonte vers la barre si on a scrollé (la barre est en haut du hero).
+		document.getElementById('home-search')?.scrollIntoView({ block: 'center' });
+	}
+</script>
+
 <svelte:head>
 	<title>PolitiDex — Le Pokédex des élus nationaux français</title>
 	<meta
@@ -25,8 +42,8 @@
 </svelte:head>
 
 <section class="mx-auto max-w-6xl px-6 py-10 sm:py-16">
-	<!-- Hero -->
-	<header class="mb-12">
+	<!-- ── 1. HERO + RECHERCHE (la CTA première) ───────────────────────── -->
+	<header class="mb-14">
 		<div
 			class="mb-5 inline-block px-3 py-1 text-[11px] font-bold uppercase tracking-widest"
 			style="background: var(--accent); color: var(--accent-fg); border: 2px solid var(--border);"
@@ -37,12 +54,29 @@
 			Le Pokédex des<br />élus nationaux
 		</h1>
 		<p class="mt-5 max-w-2xl text-lg text-fg-muted">
-			Cartes Football Manager, hémicycles, scrutins, classements — tout ce qu'il faut pour suivre
-			les députés et sénateurs sous l'ère Macron.
+			Cherchez un député, un sénateur ou un texte de loi — ou explorez par espace plus bas.
 		</p>
+
+		<!-- Grande barre de recherche brutaliste (variante hero) -->
+		<div id="home-search" class="mt-7 max-w-2xl">
+			<GlobalSearch bind:this={searchEl} size="hero" />
+
+			<!-- Recherches populaires -->
+			<div class="mt-4 flex flex-wrap items-center gap-2">
+				<span class="text-[11px] font-semibold uppercase tracking-widest text-fg-muted">
+					Essayez
+				</span>
+				{#each suggestions as s (s)}
+					<button type="button" class="suggestion" onclick={() => pick(s)}>{s}</button>
+				{/each}
+			</div>
+		</div>
 	</header>
 
-	<!-- 4 portes d'entrée (blocs brutalistes) -->
+	<!-- ── 2. LES 4 PORTES (explorer par espace) ───────────────────────── -->
+	<h2 class="title-display mb-5 text-sm uppercase tracking-widest text-fg-muted">
+		Ou explorez par espace
+	</h2>
 	<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
 		<a href="/assemblee" class="porte">
 			<span class="porte-icon" aria-hidden="true">
@@ -88,7 +122,7 @@
 		</a>
 	</div>
 
-	<!-- À propos -->
+	<!-- ── 3. À PROPOS (la posture, en bas pour qui veut comprendre) ────── -->
 	<div class="brut mt-14 p-6 text-sm leading-relaxed sm:p-8">
 		<h2 class="title-display mb-3 text-2xl">À propos</h2>
 		<p class="text-fg-muted">
@@ -116,6 +150,33 @@
 </section>
 
 <style>
+	/* ── Puces « recherches populaires » (mini-boutons brutalistes) ────── */
+	.suggestion {
+		padding: 0.3rem 0.7rem;
+		font-size: 0.8rem;
+		font-weight: 500;
+		background: var(--surface);
+		color: var(--fg);
+		border: 2px solid var(--border);
+		box-shadow: 2px 2px 0 0 var(--shadow-color);
+		transition:
+			transform 100ms ease-out,
+			box-shadow 100ms ease-out,
+			background 100ms ease-out;
+	}
+	@media (hover: hover) {
+		.suggestion:hover {
+			background: var(--accent);
+			color: var(--accent-fg);
+			transform: translate(-1px, -1px);
+			box-shadow: 3px 3px 0 0 var(--shadow-color);
+		}
+	}
+	.suggestion:active {
+		transform: translate(2px, 2px);
+		box-shadow: none;
+	}
+
 	.porte {
 		display: flex;
 		flex-direction: column;
@@ -171,7 +232,9 @@
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.porte,
-		.porte:hover {
+		.porte:hover,
+		.suggestion,
+		.suggestion:hover {
 			transform: none;
 			transition: none;
 		}
