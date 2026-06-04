@@ -2,60 +2,67 @@
 	import { goto } from '$app/navigation';
 	import { ensureSearchIndex, searchAll, type SearchResults } from '$lib/search-index';
 	import type { SearchIndex } from '$lib/search-index';
-	import { lookupEluUrlCarriereForPaId, lookupEluUrlCarriereForMatricule } from '$lib/elus';
 
-	let query = $state('');
+	/**
+	 * `size` :
+	 *  - `topbar` (défaut) — widget compact du header, inchangé.
+	 *  - `hero` — grande barre brutaliste de la home (bordure 3px, ombre dure,
+	 *    input plus haut, rangées de résultats plus grandes).
+	 * `query` est `$bindable` pour que la home puisse la remplir depuis une
+	 *  puce de suggestion (« Retailleau », « PLF 2025 »…).
+	 */
+	let { size = 'topbar', query = $bindable('') }: { size?: 'topbar' | 'hero'; query?: string } =
+		$props();
+
+	const isHero = $derived(size === 'hero');
 	let isOpen = $state(false);
 	let isLoading = $state(false);
 	let index: SearchIndex | null = $state(null);
 	let results: SearchResults = $state({
-		personnes: [],
+		elus: [],
 		groupes: [],
-		senateurs: [],
-		groupesSenat: [],
 		textes: []
 	});
 	let activeIndex = $state(0);
 	let inputEl: HTMLInputElement | null = $state(null);
 	let containerEl: HTMLDivElement | null = $state(null);
+	let resultsEl: HTMLDivElement | null = $state(null);
+
+	/** Garde la ligne active (flèches ↑↓) visible dans le dropdown scrollable. */
+	$effect(() => {
+		// Dépend de activeIndex : se redéclenche à chaque déplacement clavier.
+		const idx = activeIndex;
+		if (!isOpen || !resultsEl) return;
+		const rows = resultsEl.querySelectorAll<HTMLElement>('.search-row');
+		rows[idx]?.scrollIntoView({ block: 'nearest' });
+	});
 
 	type Item =
-		| { kind: 'personne'; href: string; data: SearchResults['personnes'][number] }
-		| { kind: 'senateur'; href: string; data: SearchResults['senateurs'][number] }
+		| { kind: 'elu'; href: string; data: SearchResults['elus'][number] }
 		| { kind: 'groupe'; href: string; data: SearchResults['groupes'][number] }
-		| { kind: 'groupeSenat'; href: string; data: SearchResults['groupesSenat'][number] }
 		| { kind: 'texte'; href: string; data: SearchResults['textes'][number] };
 
+	// L'href est désormais calculé en amont (search-index) et porté par chaque
+	// résultat — flatResults se contente d'aplatir dans l'ordre d'affichage.
 	const flatResults = $derived.by(() => {
 		const out: Item[] = [];
-		for (const p of results.personnes)
-			out.push({
-				kind: 'personne',
-				href: lookupEluUrlCarriereForPaId(p.id) ?? '/elus/',
-				data: p
-			});
-		for (const s of results.senateurs)
-			out.push({
-				kind: 'senateur',
-				href: lookupEluUrlCarriereForMatricule(s.id) ?? '/elus/',
-				data: s
-			});
-		for (const g of results.groupes)
-			out.push({ kind: 'groupe', href: `/assemblee/groupes/${g.legislature}/${g.id}/`, data: g });
-		for (const g of results.groupesSenat)
-			out.push({ kind: 'groupeSenat', href: `/senat/triennats/${g.triennat}/`, data: g });
+		for (const e of results.elus) out.push({ kind: 'elu', href: e.href, data: e });
+		for (const g of results.groupes) out.push({ kind: 'groupe', href: g.href, data: g });
 		for (const t of results.textes)
 			out.push({ kind: 'texte', href: `/textes/${encodeURIComponent(t.id)}`, data: t });
 		return out;
 	});
 
 	const totalCount = $derived(
-		results.personnes.length +
-			results.senateurs.length +
-			results.groupes.length +
-			results.groupesSenat.length +
-			results.textes.length
+		results.elus.length + results.groupes.length + results.textes.length
 	);
+
+	/** Libellé de chambre d'un élu pour la ligne de résultat. */
+	function chambreLabelElu(cat: 'an' | 'senat' | 'bicameral'): string {
+		if (cat === 'bicameral') return 'Député·e + Sénateur·rice';
+		if (cat === 'an') return 'Assemblée nationale';
+		return 'Sénat';
+	}
 
 	async function ensureLoaded() {
 		if (index) return index;
@@ -120,13 +127,22 @@
 	function close() {
 		isOpen = false;
 		query = '';
-		results = { personnes: [], groupes: [], senateurs: [], groupesSenat: [], textes: [] };
+		results = { elus: [], groupes: [], textes: [] };
 		inputEl?.blur();
 	}
 
 	function selectItem(item: Item) {
 		goto(item.href);
 		close();
+	}
+
+	/** Appelé par la home (puces de suggestion) : remplit, focus, recherche. */
+	export async function searchFor(term: string) {
+		query = term;
+		isOpen = true;
+		inputEl?.focus();
+		await ensureLoaded();
+		runSearch();
 	}
 
 	function handleGlobalKeydown(e: KeyboardEvent) {
@@ -149,7 +165,7 @@
 		if (idx === -1) return text;
 		return (
 			text.slice(0, idx) +
-			'<mark class="bg-accent/30 text-link rounded px-0.5">' +
+			'<mark class="search-hl">' +
 			text.slice(idx, idx + q.length) +
 			'</mark>' +
 			text.slice(idx + q.length)
@@ -196,10 +212,16 @@
 	}
 </script>
 
-<div bind:this={containerEl} class="relative w-full max-w-md" onfocusout={handleBlur}>
+<div
+	bind:this={containerEl}
+	class="relative w-full {isHero ? '' : 'max-w-md'}"
+	onfocusout={handleBlur}
+>
 	<div class="relative">
 		<svg
-			class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted pointer-events-none"
+			class="absolute top-1/2 -translate-y-1/2 text-fg-muted pointer-events-none {isHero
+				? 'left-4 w-6 h-6'
+				: 'left-3 w-4 h-4'}"
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke="currentColor"
@@ -208,30 +230,56 @@
 			<circle cx="11" cy="11" r="7" />
 			<path d="m21 21-4.3-4.3" />
 		</svg>
-		<input
-			bind:this={inputEl}
-			bind:value={query}
-			oninput={handleInput}
-			onfocus={handleFocus}
-			onkeydown={handleKeydown}
-			type="search"
-			placeholder="Rechercher un élu, un groupe, un texte de loi…"
-			class="w-full bg-bg border border-border-soft rounded-full pl-9 pr-12 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent/60 transition-all"
-			aria-label="Recherche globale"
-			aria-controls="global-search-results"
-			autocomplete="off"
-		/>
-		<kbd
-			class="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-fg-muted bg-border-soft/40 border border-border-soft rounded px-1.5 py-0.5 font-mono pointer-events-none hidden sm:block"
-		>
-			⌘K
-		</kbd>
+		{#if isHero}
+			<input
+				bind:this={inputEl}
+				bind:value={query}
+				oninput={handleInput}
+				onfocus={handleFocus}
+				onkeydown={handleKeydown}
+				type="search"
+				placeholder="Mélenchon, Le Pen, loi immigration…"
+				class="search-hero w-full pl-14 pr-16 py-4 text-lg sm:text-xl"
+				aria-label="Recherche globale"
+				aria-controls="global-search-results"
+				autocomplete="off"
+			/>
+			<kbd
+				class="search-hero-kbd absolute right-4 top-1/2 hidden -translate-y-1/2 px-2 py-1 text-xs sm:block"
+			>
+				⌘K
+			</kbd>
+		{:else}
+			<input
+				bind:this={inputEl}
+				bind:value={query}
+				oninput={handleInput}
+				onfocus={handleFocus}
+				onkeydown={handleKeydown}
+				type="search"
+				placeholder="Rechercher un élu, un groupe, un texte de loi…"
+				class="w-full bg-bg border border-border-soft rounded-full pl-9 pr-12 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent/60 transition-all"
+				aria-label="Recherche globale"
+				aria-controls="global-search-results"
+				autocomplete="off"
+			/>
+			<kbd
+				class="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-fg-muted bg-border-soft/40 border border-border-soft rounded px-1.5 py-0.5 font-mono pointer-events-none hidden sm:block"
+			>
+				⌘K
+			</kbd>
+		{/if}
 	</div>
 
 	{#if isOpen}
 		<div
+			bind:this={resultsEl}
 			id="global-search-results"
-			class="absolute top-full left-0 right-0 mt-2 bg-surface border border-border-soft rounded-xl shadow-2xl overflow-hidden z-50 max-h-[70vh] overflow-y-auto"
+			role="listbox"
+			aria-label="Résultats de recherche"
+			class="absolute top-full left-0 right-0 z-50 max-h-[70vh] overflow-y-auto overflow-hidden bg-surface {isHero
+				? 'search-hero-panel mt-3'
+				: 'mt-2 rounded-xl border border-border-soft shadow-2xl'}"
 		>
 			{#if isLoading && totalCount === 0}
 				<div class="p-4 text-sm text-fg-muted text-center">
@@ -249,31 +297,25 @@
 					Aucun résultat pour <span class="font-semibold text-fg">{query}</span>.
 				</div>
 			{:else}
-				{#if results.personnes.length > 0}
+				{#if results.elus.length > 0}
 					<div
 						class="px-3 py-2 text-[10px] uppercase tracking-widest text-fg-muted bg-bg/50"
 					>
-						Personnes
+						Élus
 					</div>
-					{#each results.personnes as p, i (p.id)}
+					{#each results.elus as e, i (e.eluId)}
 						{@const flatIdx = i}
-						{@const circoLast = p.mandats.at(-1)?.circonscription ?? null}
 						<button
 							type="button"
-							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
-							flatIdx
-								? 'bg-accent/10'
-								: 'hover:bg-border-soft/30'}"
+							role="option"
+							aria-selected={activeIndex === flatIdx}
+							class="search-row"
+							class:search-row-active={activeIndex === flatIdx}
 							onmouseenter={() => (activeIndex = flatIdx)}
-							onclick={() =>
-								selectItem({
-									kind: 'personne',
-									href: lookupEluUrlCarriereForPaId(p.id) ?? '/elus/',
-									data: p
-								})}
+							onclick={() => selectItem({ kind: 'elu', href: e.href, data: e })}
 						>
 							<img
-								src={p.identite.photoUrl}
+								src={e.photoUrl}
 								alt=""
 								class="w-8 h-8 rounded-full object-cover bg-border-soft flex-shrink-0"
 								loading="lazy"
@@ -281,69 +323,21 @@
 							/>
 							<div class="min-w-0 flex-1">
 								<div class="text-sm font-semibold truncate">
-									{@html highlightMatch(`${p.identite.prenom} ${p.identite.nom}`, query)}
+									{@html highlightMatch(`${e.prenom} ${e.nom}`, query)}
 								</div>
 								<div class="flex items-center gap-1.5 text-[10px] text-fg-muted">
-									{#if p.groupePrincipal}
+									{#if e.groupeLibelleAbrege}
 										<span
-											class="w-1.5 h-1.5 rounded-full"
-											style="background-color: {p.groupePrincipal.couleur}"
+											class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+											style="background-color: {e.groupeCouleur ?? 'var(--fg-muted)'}"
 										></span>
-										<span>{p.groupePrincipal.libelleAbrege}</span>
+										<span>{e.groupeLibelleAbrege}</span>
+										<span>·</span>
 									{/if}
-									{#if circoLast}
-										<span>· {circoLast.dep}</span>
+									<span>{chambreLabelElu(e.categorie)}</span>
+									{#if e.categorie !== 'bicameral'}
+										<span>· {e.enExercice ? 'En exercice' : 'Ancien·ne'}</span>
 									{/if}
-									<span>· {p.carriere.legislatures.map((l) => `${l}ᵉ`).join('+')}</span>
-								</div>
-							</div>
-						</button>
-					{/each}
-				{/if}
-
-				{#if results.senateurs.length > 0}
-					<div
-						class="px-3 py-2 text-[10px] uppercase tracking-widest text-fg-muted bg-bg/50"
-					>
-						Sénateurs
-					</div>
-					{#each results.senateurs as s, i (s.id)}
-						{@const flatIdx = results.personnes.length + i}
-						<button
-							type="button"
-							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
-							flatIdx
-								? 'bg-accent/10'
-								: 'hover:bg-border-soft/30'}"
-							onmouseenter={() => (activeIndex = flatIdx)}
-							onclick={() =>
-								selectItem({
-									kind: 'senateur',
-									href: lookupEluUrlCarriereForMatricule(s.id) ?? '/elus/',
-									data: s
-								})}
-						>
-							<img
-								src={s.identite.photoUrl}
-								alt=""
-								class="w-8 h-8 rounded-full object-cover bg-border-soft flex-shrink-0"
-								loading="lazy"
-								referrerpolicy="no-referrer"
-							/>
-							<div class="min-w-0 flex-1">
-								<div class="text-sm font-semibold truncate">
-									{@html highlightMatch(`${s.identite.prenom} ${s.identite.nom}`, query)}
-								</div>
-								<div class="flex items-center gap-1.5 text-[10px] text-fg-muted">
-									{#if s.groupePrincipal}
-										<span
-											class="w-1.5 h-1.5 rounded-full"
-											style="background-color: {s.groupePrincipal.couleur}"
-										></span>
-										<span>{s.groupePrincipal.libelleAbrege}</span>
-									{/if}
-									<span>· {s.identite.etat === 'ACTIF' ? 'En exercice' : 'Ancien'}</span>
-									<span>· Sénat</span>
 								</div>
 							</div>
 						</button>
@@ -354,23 +348,18 @@
 					<div
 						class="px-3 py-2 text-[10px] uppercase tracking-widest text-fg-muted bg-bg/50"
 					>
-						Groupes (AN)
+						Groupes
 					</div>
-					{#each results.groupes as g, i (g.legislature + ':' + g.id)}
-						{@const flatIdx = results.personnes.length + results.senateurs.length + i}
+					{#each results.groupes as g, i (g.key)}
+						{@const flatIdx = results.elus.length + i}
 						<button
 							type="button"
-							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
-							flatIdx
-								? 'bg-accent/10'
-								: 'hover:bg-border-soft/30'}"
+							role="option"
+							aria-selected={activeIndex === flatIdx}
+							class="search-row"
+							class:search-row-active={activeIndex === flatIdx}
 							onmouseenter={() => (activeIndex = flatIdx)}
-							onclick={() =>
-								selectItem({
-									kind: 'groupe',
-									href: `/assemblee/groupes/${g.legislature}/${g.id}/`,
-									data: g
-								})}
+							onclick={() => selectItem({ kind: 'groupe', href: g.href, data: g })}
 						>
 							<div
 								class="w-8 h-8 rounded-md flex items-center justify-center title-display text-[10px] flex-shrink-0"
@@ -383,57 +372,8 @@
 									{@html highlightMatch(g.libelle, query)}
 								</div>
 								<div class="text-[10px] text-fg-muted">
-									{g.libelleAbrege} · {g.legislature}<sup>e</sup> lég. · {g.effectifFin} député{g.effectifFin >
-									1
-										? 's'
-										: ''}
-								</div>
-							</div>
-						</button>
-					{/each}
-				{/if}
-
-				{#if results.groupesSenat.length > 0}
-					<div
-						class="px-3 py-2 text-[10px] uppercase tracking-widest text-fg-muted bg-bg/50"
-					>
-						Groupes (Sénat)
-					</div>
-					{#each results.groupesSenat as g, i (g.code + ':' + g.triennat)}
-						{@const flatIdx =
-							results.personnes.length +
-							results.senateurs.length +
-							results.groupes.length +
-							i}
-						<button
-							type="button"
-							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
-							flatIdx
-								? 'bg-accent/10'
-								: 'hover:bg-border-soft/30'}"
-							onmouseenter={() => (activeIndex = flatIdx)}
-							onclick={() =>
-								selectItem({
-									kind: 'groupeSenat',
-									href: `/senat/triennats/${g.triennat}/`,
-									data: g
-								})}
-						>
-							<div
-								class="w-8 h-8 rounded-md flex items-center justify-center title-display text-[10px] flex-shrink-0"
-								style="background-color: {g.couleur}; color: white;"
-							>
-								{g.libelleAbrege.slice(0, 4)}
-							</div>
-							<div class="min-w-0 flex-1">
-								<div class="text-sm font-semibold truncate">
-									{@html highlightMatch(g.libelle, query)}
-								</div>
-								<div class="text-[10px] text-fg-muted">
-									{g.libelleAbrege} · Sénat · triennat {g.triennat} · {g.effectifFin} sénateur{g.effectifFin >
-									1
-										? 's'
-										: ''}
+									{g.libelleAbrege} · {g.chambre === 'AN' ? 'AN' : 'Sénat'} · {g.contexte} · {g.effectif}
+									{g.chambre === 'AN' ? 'député·e' : 'sénateur·rice'}{g.effectif > 1 ? 's' : ''}
 								</div>
 							</div>
 						</button>
@@ -447,18 +387,13 @@
 						Textes législatifs
 					</div>
 					{#each results.textes as t, i (t.id)}
-						{@const flatIdx =
-							results.personnes.length +
-							results.senateurs.length +
-							results.groupes.length +
-							results.groupesSenat.length +
-							i}
+						{@const flatIdx = results.elus.length + results.groupes.length + i}
 						<button
 							type="button"
-							class="w-full px-3 py-2 flex items-center gap-3 text-left transition-colors {activeIndex ===
-							flatIdx
-								? 'bg-accent/10'
-								: 'hover:bg-border-soft/30'}"
+							role="option"
+							aria-selected={activeIndex === flatIdx}
+							class="search-row"
+							class:search-row-active={activeIndex === flatIdx}
 							onmouseenter={() => (activeIndex = flatIdx)}
 							onclick={() =>
 								selectItem({
@@ -512,3 +447,91 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	/* ── Rangée de résultat : curseur clavier/souris franc ──────────────── */
+	.search-row {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.5rem 0.75rem;
+		text-align: left;
+		border-left: 3px solid transparent;
+		transition:
+			background-color 100ms ease-out,
+			border-color 100ms ease-out;
+	}
+	/* La ligne « active » (flèches ↑↓ OU survol souris) : aplat jaune franc
+	   + barre gauche. Le fond `--accent` est le MÊME jaune en Light et Dark,
+	   donc le texte doit TOUJOURS être `--accent-fg` (noir) — sinon le nom
+	   principal hérite de `--fg` (blanc en dark) = illisible sur jaune. */
+	.search-row-active {
+		background: var(--accent);
+		border-left-color: var(--border);
+		color: var(--accent-fg);
+	}
+	.search-row-active :global(.text-fg-muted),
+	.search-row-active :global(.text-link),
+	.search-row-active :global(.text-vote-pour),
+	.search-row-active :global(.text-vote-contre) {
+		color: var(--accent-fg);
+	}
+	/* Terme recherché surligné : pas de bloc plein (illisible en dark),
+	   juste gras + souligné en couleur d'accent du texte. */
+	:global(.search-hl) {
+		background: transparent;
+		color: var(--link);
+		font-weight: 700;
+		text-decoration: underline;
+		text-decoration-thickness: 2px;
+		text-underline-offset: 2px;
+	}
+	/* Sur la ligne active (aplat jaune), le terme reste lisible en noir. */
+	.search-row-active :global(.search-hl) {
+		color: var(--accent-fg);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.search-row {
+			transition: none;
+		}
+	}
+
+	/* ── Variante `hero` (home) : grande barre brutaliste ───────────────── */
+	.search-hero {
+		background: var(--surface);
+		border: 3px solid var(--border);
+		box-shadow: 4px 4px 0 0 var(--shadow-color);
+		border-radius: 0;
+		font-weight: 500;
+		color: var(--fg);
+		transition:
+			box-shadow 120ms ease-out,
+			transform 120ms ease-out;
+	}
+	.search-hero::placeholder {
+		color: var(--fg-muted);
+	}
+	.search-hero:focus {
+		outline: none;
+		box-shadow: 6px 6px 0 0 var(--accent);
+	}
+	.search-hero-kbd {
+		font-family: monospace;
+		color: var(--fg-muted);
+		background: var(--surface-2);
+		border: 2px solid var(--border);
+		border-radius: 0;
+		pointer-events: none;
+	}
+	.search-hero-panel {
+		border: 3px solid var(--border);
+		border-radius: 0;
+		box-shadow: 6px 6px 0 0 var(--shadow-color);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.search-hero {
+			transition: none;
+		}
+	}
+</style>
