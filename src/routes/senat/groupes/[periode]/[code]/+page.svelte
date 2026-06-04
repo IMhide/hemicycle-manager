@@ -11,6 +11,7 @@
 	import InfoTip from '$lib/components/InfoTip.svelte';
 	import { goto } from '$app/navigation';
 	import { lookupEluUrlForMatriculeTriennat } from '$lib/elus';
+	import { readableTextOn } from '$lib/contrast-text';
 	import type { Senateur, MandatSenat, TriennatStats } from '$lib/types';
 
 	let { data } = $props();
@@ -147,37 +148,52 @@
 <svelte:window onmousemove={trackCursor} />
 
 <section class="max-w-7xl mx-auto px-6 py-8 space-y-6">
-	<a
-		href="/senat/triennats/{data.triennat}/"
-		class="text-sm text-fg-muted hover:text-link inline-flex items-center gap-1"
-	>
-		← Triennat {data.triennat}
-	</a>
+	<div class="flex items-center gap-4 text-sm">
+		<a
+			href="/senat/groupes/"
+			class="text-fg-muted hover:text-link inline-flex items-center gap-1"
+		>
+			← Tous les groupes
+		</a>
+		<a
+			href="/senat/triennats/{data.triennat}/"
+			class="text-fg-muted hover:text-link inline-flex items-center gap-1"
+		>
+			Triennat {data.triennat}
+		</a>
+	</div>
 
-	<div class="card p-6" style="border-left: 4px solid {data.groupe.couleur}">
+	<div class="card p-6" style="border-left: 6px solid {data.groupe.couleur}">
 		<div class="flex items-start justify-between gap-4 mb-3">
-			<div class="min-w-0 flex-1">
-				<div class="text-xs uppercase tracking-widest text-fg-muted mb-1">
-					Triennat {data.triennat} · {data.groupe.libelleAbrege}
-				</div>
-				<h1
-					class="text-xl sm:text-2xl leading-snug font-semibold"
-					style="color: {data.groupe.couleur}"
+			<div class="flex items-center gap-4 min-w-0 flex-1">
+				<div
+					class="w-14 h-14 flex-shrink-0 flex items-center justify-center title-display text-xl"
+					style="background-color: {data.groupe.couleur}; color: {readableTextOn(
+						data.groupe.couleur
+					)}; border: 2px solid var(--border);"
 				>
-					{data.groupe.libelle}
-				</h1>
-				{#if president}
-					<div class="text-xs text-fg-muted mt-2">
-						Président·e :
-						<a
-							href={lookupEluUrlForMatriculeTriennat(president.id, data.triennat) ?? '/elus/'}
-							class="hover:text-link"
-						>
-							{president.identite.prenom}
-							{president.identite.nom}
-						</a>
+					{data.groupe.libelleAbrege.slice(0, 4)}
+				</div>
+				<div class="min-w-0">
+					<div class="text-xs uppercase tracking-widest text-fg-muted mb-1">
+						Triennat {data.triennat} · {data.groupe.libelleAbrege}
 					</div>
-				{/if}
+					<h1 class="title-display text-2xl sm:text-3xl leading-tight">
+						{data.groupe.libelle}
+					</h1>
+					{#if president}
+						<div class="text-xs text-fg-muted mt-2">
+							Président·e :
+							<a
+								href={lookupEluUrlForMatriculeTriennat(president.id, data.triennat) ?? '/elus/'}
+								class="hover:text-link"
+							>
+								{president.identite.prenom}
+								{president.identite.nom}
+							</a>
+						</div>
+					{/if}
+				</div>
 			</div>
 		</div>
 		<div class="grid grid-cols-3 gap-4 text-sm mt-4 pt-3 border-t border-border-soft/40">

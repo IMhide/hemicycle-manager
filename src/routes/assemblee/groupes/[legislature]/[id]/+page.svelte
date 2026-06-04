@@ -10,6 +10,7 @@
 	import InfoTip from '$lib/components/InfoTip.svelte';
 	import { POLITICAL_ORDER } from '$lib/political-order';
 	import { lookupEluUrlForPaIdLeg } from '$lib/elus';
+	import { readableTextOn } from '$lib/contrast-text';
 	import type { Personne, Mandat } from '$lib/types';
 
 	let { data } = $props();
@@ -125,15 +126,14 @@
 		← Tous les groupes
 	</a>
 
-	<div
-		class="card p-6 relative overflow-hidden"
-		style="background: linear-gradient(120deg, {data.groupe.couleur}22 0%, transparent 60%), #1e293b;"
-	>
+	<div class="card p-6 relative overflow-hidden" style="border-left: 6px solid {data.groupe.couleur}">
 		<div class="flex items-start justify-between gap-6 flex-wrap">
 			<div class="flex items-center gap-4 min-w-0">
 				<div
-					class="w-14 h-14 rounded-xl flex-shrink-0 flex items-center justify-center title-display text-xl"
-					style="background-color: {data.groupe.couleur}; color: white;"
+					class="w-14 h-14 flex-shrink-0 flex items-center justify-center title-display text-xl"
+					style="background-color: {data.groupe.couleur}; color: {readableTextOn(
+						data.groupe.couleur
+					)}; border: 2px solid var(--border);"
 				>
 					{data.groupe.libelleAbrege.slice(0, 4)}
 				</div>

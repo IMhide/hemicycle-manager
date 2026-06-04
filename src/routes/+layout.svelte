@@ -90,6 +90,7 @@
 					</span>
 					<a href="/senat" class={subnavClass(pathname === '/senat/')}>Hémicycle</a>
 					<a href="/senat/senateurs" class={subnavClass(pathname.startsWith('/senat/senateurs'))}>Sénateurs</a>
+					<a href="/senat/groupes" class={subnavClass(pathname.startsWith('/senat/groupes'))}>Groupes</a>
 					<a href="/senat/triennats" class={subnavClass(pathname.startsWith('/senat/triennats'))}>Triennats</a>
 					<a href="/senat/scrutins" class={subnavClass(pathname.startsWith('/senat/scrutins'))}>Scrutins</a>
 					<a href="/senat/classements" class={subnavClass(pathname.startsWith('/senat/classements'))}>Classement</a>
