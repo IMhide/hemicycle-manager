@@ -166,12 +166,12 @@
 							<div class="font-semibold flex items-center gap-1.5">
 								{#if s.chambre === 'AN'}
 									<span class="text-[10px] px-1.5 py-0.5 rounded bg-border-soft/40 text-fg-muted">
-										🏛️ AN
+										AN
 									</span>
 									{s.legislature}<sup>e</sup> législature
 								{:else}
 									<span class="text-[10px] px-1.5 py-0.5 rounded bg-border-soft/40 text-fg-muted">
-										🏛️ Sénat
+										Sénat
 									</span>
 									Triennat {s.triennat}
 								{/if}

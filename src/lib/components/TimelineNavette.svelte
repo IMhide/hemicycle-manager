@@ -29,13 +29,15 @@
 	}
 
 	function chambreClass(c: TimelineChambre): string {
-		// Bleu AN / rouge Sénat / violet CMP / amber CC / vert promulgation
-		if (c === 'AN') return 'bg-blue-500/15 text-blue-300 border-blue-500/40';
-		if (c === 'SEN') return 'bg-red-500/15 text-red-300 border-red-500/40';
-		if (c === 'CMP') return 'bg-purple-500/15 text-purple-300 border-purple-500/40';
-		if (c === 'CC') return 'bg-amber-500/15 text-amber-300 border-amber-500/40';
-		if (c === 'JO') return 'bg-vote-pour/15 text-vote-pour border-vote-pour/40';
-		return 'bg-border-soft/50 text-fg border-border-soft';
+		// Aplats francs (DS §2) : fond plein -600, texte blanc, bordure brutaliste.
+		// Contraste AA garanti en Light comme en Dark (texte blanc sur -600).
+		// Bleu AN / rouge Sénat / violet CMP / amber CC / vert promulgation.
+		if (c === 'AN') return 'bg-blue-600 text-white border-border';
+		if (c === 'SEN') return 'bg-red-600 text-white border-border';
+		if (c === 'CMP') return 'bg-purple-600 text-white border-border';
+		if (c === 'CC') return 'bg-amber-700 text-white border-border';
+		if (c === 'JO') return 'bg-vote-pour text-white border-border';
+		return 'bg-surface-2 text-fg border-border';
 	}
 
 	/** Si l'acte a un scrutinUid, on construit l'URL vers la fiche scrutin. */
@@ -82,31 +84,31 @@
 					{#if href}
 						<a
 							{href}
-							class="rounded-md border px-3 py-2 text-center min-w-[140px] hover:scale-[1.03] transition-transform {chambreClass(
+							class="border px-3 py-2 text-center min-w-[140px] hover:scale-[1.03] transition-transform {chambreClass(
 								a.chambre
 							)}"
 							title="Cliquer pour voir le scrutin {a.scrutinUid}"
 						>
 							<div class="text-base leading-none mb-1">{picto(a)}</div>
-							<div class="text-[10px] uppercase tracking-wider opacity-90 leading-tight">
+							<div class="text-[10px] uppercase tracking-wider leading-tight">
 								{a.label}
 							</div>
 							<div class="text-xs font-medium mt-0.5">{formatDate(a.date)}</div>
 						</a>
 					{:else}
 						<div
-							class="rounded-md border px-3 py-2 text-center min-w-[140px] {chambreClass(a.chambre)}"
+							class="border px-3 py-2 text-center min-w-[140px] {chambreClass(a.chambre)}"
 							title={suffix
 								? `${a.label} — ${suffix} (aucun scrutin nominal n'a été déclenché)`
 								: a.label}
 						>
 							<div class="text-base leading-none mb-1">{picto(a)}</div>
-							<div class="text-[10px] uppercase tracking-wider opacity-90 leading-tight">
+							<div class="text-[10px] uppercase tracking-wider leading-tight">
 								{a.label}
 							</div>
 							<div class="text-xs font-medium mt-0.5">{formatDate(a.date)}</div>
 							{#if suffix}
-								<div class="text-[10px] italic opacity-80 mt-0.5 leading-tight">
+								<div class="text-[10px] italic opacity-90 mt-0.5 leading-tight">
 									{suffix}
 								</div>
 							{/if}

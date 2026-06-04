@@ -58,7 +58,7 @@
 	<div class="flex items-center gap-2 flex-shrink-0">
 		{#if isFronde}
 			<span
-				class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-rose-400/15 text-rose-300 border border-rose-400/30"
+				class="text-[10px] uppercase font-bold px-1.5 py-0.5 bg-rose-400 text-[#0a0a0a] border-2 border-border"
 				title="Vote opposé à la majorité du groupe"
 			>
 				🔥 FRONDE

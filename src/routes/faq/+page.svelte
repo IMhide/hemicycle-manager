@@ -16,7 +16,6 @@
 	type Section = {
 		id: string;
 		title: string;
-		emoji: string;
 		intro?: string;
 		items: QA[];
 	};
@@ -28,7 +27,6 @@
 		{
 			id: 'principes',
 			title: 'Le projet en 3 phrases',
-			emoji: '🎯',
 			items: [
 				{
 					id: 'cest-quoi',
@@ -53,7 +51,6 @@
 		{
 			id: 'overall',
 			title: 'Le score Overall (la note FIFA)',
-			emoji: '🎮',
 			intro: 'C\'est le gros chiffre orange en haut à gauche de chaque carte de député. Voilà comment il marche.',
 			items: [
 				{
@@ -95,7 +92,6 @@
 		{
 			id: 'classements',
 			title: 'Le Championnat & Les Coupes',
-			emoji: '🏆',
 			intro: 'Les classements de PolitiDex marchent comme une saison de football : un grand championnat (l\'Overall) et plusieurs coupes thématiques.',
 			items: [
 				{
@@ -118,11 +114,11 @@
 					question: 'Comment vous découpez les 5 blocs politiques ?',
 					answer: `<p>On utilise les scores du <a class="underline hover:text-link" target="_blank" rel="noopener" href="https://www.chesdata.eu/2024-chapel-hill-expert-survey-ches">Chapel Hill Expert Survey 2024</a>, un dataset académique qui note les partis européens sur l'axe gauche-droite (de 0 à 10) :</p>
 <ul class="list-disc pl-6 mt-2 space-y-1 text-xs">
-	<li>🚩 <b>Extrême gauche</b> : [0&nbsp;–&nbsp;2.5[</li>
-	<li>🌹 <b>Gauche</b> : [2.5&nbsp;–&nbsp;4.5[</li>
-	<li>🟡 <b>Centre</b> : [4.5&nbsp;–&nbsp;6.5[</li>
-	<li>🔵 <b>Droite</b> : [6.5&nbsp;–&nbsp;8[</li>
-	<li>⚓ <b>Extrême droite</b> : [8&nbsp;–&nbsp;10]</li>
+	<li><b>Extrême gauche</b> : [0&nbsp;–&nbsp;2.5[</li>
+	<li><b>Gauche</b> : [2.5&nbsp;–&nbsp;4.5[</li>
+	<li><b>Centre</b> : [4.5&nbsp;–&nbsp;6.5[</li>
+	<li><b>Droite</b> : [6.5&nbsp;–&nbsp;8[</li>
+	<li><b>Extrême droite</b> : [8&nbsp;–&nbsp;10]</li>
 </ul>
 <p class="mt-3">Les bornes sont arbitraires (on aurait pu prendre 2.0 / 4.0 / 6.0 / 8.0). Les groupes sans score CHES (NI, LIOT…) sont rangés à part dans "Non-inscrits". Cf ${ADR(7, 'political-order')}.</p>`
 				},
@@ -136,7 +132,6 @@
 		{
 			id: 'metriques',
 			title: 'Les autres métriques',
-			emoji: '📊',
 			items: [
 				{
 					id: 'presence',
@@ -166,7 +161,6 @@
 		{
 			id: 'badges',
 			title: 'Les badges',
-			emoji: '🏅',
 			intro: 'On distribue des badges pour saluer des comportements remarquables (positifs ou négatifs). Tous calculés automatiquement à partir des données.',
 			items: [
 				{
@@ -195,7 +189,6 @@
 		{
 			id: 'modele',
 			title: 'Le modèle "une personne = une fiche"',
-			emoji: '🪪',
 			items: [
 				{
 					id: 'fusion-identite',
@@ -213,7 +206,6 @@
 		{
 			id: 'senat',
 			title: 'Le Sénat (Phase 3)',
-			emoji: '🏛️',
 			intro: 'Le Sénat couvre les 3 triennats de l\'ère Macron (2017-2020 → 2023-2026), à parité avec les 3 législatures AN (15ᵉ, 16ᵉ, 17ᵉ). Quelques particularités à connaître.',
 			items: [
 				{
@@ -261,7 +253,6 @@
 		{
 			id: 'elu-carriere',
 			title: 'La fiche Élu cross-chambre',
-			emoji: '🗂️',
 			intro: 'Le hub /elus/[id] est l\'unique point d\'entrée pour consulter le détail d\'une personne. Voici comment marche la vue Carrière, le badge Bicaméral et la moyenne simple.',
 			items: [
 				{
@@ -305,7 +296,6 @@
 		{
 			id: 'meta',
 			title: 'Méta',
-			emoji: '🛠',
 			items: [
 				{
 					id: 'open-source',
@@ -363,7 +353,6 @@
 			{#each sections as section (section.id)}
 				<li>
 					<a href="#{section.id}" class="hover:text-link transition-colors">
-						<span aria-hidden="true">{section.emoji}</span>
 						{section.title}
 					</a>
 				</li>
@@ -373,8 +362,7 @@
 
 	{#each sections as section (section.id)}
 		<div id={section.id} class="mb-10 scroll-mt-20">
-			<h2 class="title-display text-3xl mb-2 flex items-center gap-2">
-				<span aria-hidden="true">{section.emoji}</span>
+			<h2 class="title-display text-3xl mb-2">
 				{section.title}
 			</h2>
 			{#if section.intro}

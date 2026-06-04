@@ -361,14 +361,13 @@
 
 		<!-- Onglets sous-vues du Championnat -->
 		<div class="flex flex-wrap gap-2 mb-4">
-			{#each [{ id: 'deputes', label: 'Top députés', emoji: '👤' }, { id: 'groupes', label: 'Top groupes', emoji: '🎽' }, { id: 'blocs', label: 'Top blocs', emoji: '🗺️' }] as v (v.id)}
+			{#each [{ id: 'deputes', label: 'Top députés' }, { id: 'groupes', label: 'Top groupes' }, { id: 'blocs', label: 'Top blocs' }] as v (v.id)}
 				<button
-					class="card px-4 py-2 flex items-center gap-2 transition-colors {champView === v.id
+					class="card px-4 py-2 transition-colors {champView === v.id
 						? 'border-accent ring-1 ring-accent/40'
 						: 'hover:border-accent/60'}"
 					onclick={() => setChampView(v.id as ChampView)}
 				>
-					<span aria-hidden="true">{v.emoji}</span>
 					<span class="font-semibold">{v.label}</span>
 				</button>
 			{/each}

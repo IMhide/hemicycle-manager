@@ -162,7 +162,7 @@
 						referrerpolicy="no-referrer"
 					/>
 					<div>
-						<div class="text-[10px] uppercase tracking-widest text-fg-muted">⭐ Président</div>
+						<div class="text-[10px] uppercase tracking-widest text-fg-muted">Président</div>
 						<div class="text-sm font-semibold">
 							{president.identite.prenom}
 							{president.identite.nom}

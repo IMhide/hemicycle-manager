@@ -66,10 +66,10 @@
 			{personne.identite.prenom} {personne.identite.nom}
 			{#if isPresident}
 				<span
-					class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30"
+					class="text-[10px] font-bold px-1.5 py-0.5 bg-amber-400 text-[#0a0a0a] border-2 border-border"
 					title="Président du groupe"
 				>
-					⭐ Président
+					Président
 				</span>
 			{/if}
 		</div>
