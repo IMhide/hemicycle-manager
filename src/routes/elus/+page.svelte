@@ -168,7 +168,7 @@
 					{#each visible as e (e.id)}
 						{@const cat = eluCategorie(e)}
 						{@const grp = dernierGroupe(e)}
-						<a href="/elus/{e.id}?tab=carriere" class="vignette">
+						<a href="/elus/{e.slug}?tab=carriere" class="vignette">
 							<!-- Liseré famille politique (signal CHES) -->
 							<span class="vignette-bande" style="background: {grp?.couleur ?? 'var(--border-soft)'};" aria-hidden="true"></span>
 							<img
