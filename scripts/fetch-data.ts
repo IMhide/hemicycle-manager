@@ -53,6 +53,11 @@ import {
 import { parseDossiersDir, type DossierAN } from './lib/dossiers-an.ts';
 import { aggregeTextesAN, type ScrutinPourAgreg } from './lib/textes-an.ts';
 import { buildActeursNoms, writeActeursNoms } from './lib/acteurs-noms.ts';
+import {
+	scrutinMetaIndex,
+	denormaliseHistorique,
+	recentScrutinsParLegislature
+} from './lib/projections.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'static', 'data');
@@ -1273,6 +1278,13 @@ async function main() {
 	await writeFile(join(OUT_DIR, 'scrutins-index.json'), JSON.stringify(allScrutinsIndex));
 	console.log(`  ✓ scrutins-index.json (${allScrutinsIndex.length} scrutins)`);
 
+	// Projection « récents » pour la home (cf ADR 0041) — évite d'inliner les
+	// 6,1 Mo de l'index complet pour n'afficher que ~8 scrutins par législature.
+	const refDate = new Date().toISOString().slice(0, 10);
+	const scrutinsRecent = recentScrutinsParLegislature(allScrutinsIndex, refDate);
+	await writeFile(join(OUT_DIR, 'scrutins-recent.json'), JSON.stringify(scrutinsRecent));
+	console.log(`  ✓ scrutins-recent.json (${scrutinsRecent.length} scrutins récents)`);
+
 	await writeFile(join(OUT_DIR, 'textes.json'), JSON.stringify(textes));
 	console.log(`  ✓ textes.json (${textes.length} textes)`);
 
@@ -1291,13 +1303,19 @@ async function main() {
 	}
 	console.log(`  ✓ scrutins/{uid}.json (${written} fichiers)`);
 
+	// Dénormalisation (cf ADR 0041, option A — tuple enrichi) : on injecte la
+	// meta du scrutin (titre/date/sort/texteId/compteurs) en 5e position de
+	// chaque tuple, pour que la fiche élu affiche l'historique SANS charger
+	// `scrutins-index.json` (6,1 Mo) — condition au prerender des fiches.
+	const metaIdx = scrutinMetaIndex(allScrutinsIndex);
 	let histWritten = 0;
 	for (const [paId, list] of historiques) {
-		await writeFile(join(OUT_DIR, 'historique', `${paId}.json`), JSON.stringify(list));
+		const denorm = denormaliseHistorique(list, metaIdx);
+		await writeFile(join(OUT_DIR, 'historique', `${paId}.json`), JSON.stringify(denorm));
 		histWritten++;
 		if (histWritten % 200 === 0) console.log(`    … historiques ${histWritten}/${historiques.size}`);
 	}
-	console.log(`  ✓ historique/{paId}.json (${histWritten} fichiers)`);
+	console.log(`  ✓ historique/{paId}.json (${histWritten} fichiers, dénormalisés)`);
 
 	const meta: BuildMeta = {
 		generatedAt: new Date().toISOString(),

@@ -218,9 +218,27 @@ export interface ScrutinDetail extends ScrutinIndex {
 // Historiques compacts (cf ADR 0012)
 // ────────────────────────────────────────────────────────────────────────────
 
-/** Compact: [scrutinUid, position, isFronde 0|1, legislature]
- *  legislature ajoutée Phase 1 pour permettre le filtrage sans cross-ref index. */
-export type VoteHistoryItem = [string, VotePosition, 0 | 1, number];
+/** Métadonnées du scrutin dénormalisées DANS l'historique (cf ADR 0041).
+ *  Permet à la fiche élu d'afficher l'historique SANS charger
+ *  `scrutins-index.json` (6,1 Mo). Projetées au pipeline depuis ScrutinIndex. */
+export interface VoteHistoryScrutinMeta {
+	titre: string;
+	date: string;
+	sort: string;
+	texteId: string | null;
+	pour: number;
+	contre: number;
+	abstention: number;
+}
+
+/** Compact: [scrutinUid, position, isFronde 0|1, legislature, meta?]
+ *  - legislature : ajoutée Phase 1 pour filtrer sans cross-ref index.
+ *  - meta : 5e élément dénormalisé (ADR 0041) — présent dans les fichiers
+ *    `historique/{paId}.json` générés, pour éviter de charger l'index global.
+ *    Optionnel dans le type pour rétro-compat (ancien format à 4 éléments). */
+export type VoteHistoryItem =
+	| [string, VotePosition, 0 | 1, number]
+	| [string, VotePosition, 0 | 1, number, VoteHistoryScrutinMeta];
 
 // ────────────────────────────────────────────────────────────────────────────
 // Textes législatifs (cf ADR à venir)

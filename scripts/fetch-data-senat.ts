@@ -66,6 +66,11 @@ import {
 } from './lib/groupes-familles.ts';
 import { buildDossierSenatFromRow, type DossierSenat } from './lib/dosleg-textes.ts';
 import { aggregeTextesSenat, type ScrutinSenatPourAgreg } from './lib/textes-senat.ts';
+import {
+	scrutinMetaIndex,
+	denormaliseHistorique,
+	recentScrutinsParGroupe
+} from './lib/projections.ts';
 import type { TexteSenat } from '../src/lib/types.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -364,6 +369,15 @@ async function main() {
 	await writeFile(join(OUT_DIR, 'scrutins-index.json'), JSON.stringify(scrutinsIndex));
 	console.log(`  ✓ scrutins-index.json (${scrutinsIndex.length} scrutins)`);
 
+	// Projection « récents » pour la home Sénat (cf ADR 0041) — groupée par
+	// session (sesann), analogue à la projection AN groupée par législature.
+	const refDateSenat = new Date().toISOString().slice(0, 10);
+	const scrutinsRecentSenat = recentScrutinsParGroupe(scrutinsIndex, refDateSenat, {
+		groupKey: (s) => s.sesann
+	});
+	await writeFile(join(OUT_DIR, 'scrutins-recent.json'), JSON.stringify(scrutinsRecentSenat));
+	console.log(`  ✓ scrutins-recent.json (${scrutinsRecentSenat.length} scrutins récents)`);
+
 	await writeFile(join(OUT_DIR, 'textes.json'), JSON.stringify(textesSenat));
 	console.log(`  ✓ textes.json (${textesSenat.length} textes Sénat, ${enrichisCount} enrichis)`);
 
@@ -381,9 +395,14 @@ async function main() {
 	}
 	console.log(`  ✓ scrutins/{uid}.json (${scrutinWritten} fichiers)`);
 
+	// Dénormalisation (cf ADR 0041, option A) : meta scrutin en 5e position du
+	// tuple, pour que la fiche élu affiche l'historique Sénat sans charger
+	// l'index global. Symétrique au pipeline AN.
+	const metaIdxSenat = scrutinMetaIndex(scrutinsIndex);
 	let histWritten = 0;
 	for (const [matricule, hist] of historiques) {
-		await writeFile(join(OUT_DIR, 'historique', `${matricule}.json`), JSON.stringify(hist));
+		const denorm = denormaliseHistorique(hist, metaIdxSenat);
+		await writeFile(join(OUT_DIR, 'historique', `${matricule}.json`), JSON.stringify(denorm));
 		histWritten++;
 		if (histWritten % 500 === 0)
 			console.log(`    … historiques ${histWritten}/${historiques.size}`);
