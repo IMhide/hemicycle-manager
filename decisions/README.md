@@ -4,9 +4,9 @@
 
 Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque décision est un fichier dédié au format [ADR](https://adr.github.io). Pour ajouter une décision : créer `decisions/NNNN-slug.md` avec la trame de `TEMPLATE.md`, puis lancer `npm run decisions:index`.
 
-**40 décisions** consignées.
+**42 décisions** consignées.
 
-**Tags** : `data`(20) · `senat`(10) · `sémantique`(9) · `ux`(8) · `métriques`(6) · `scope`(6) · `pipeline`(6) · `déploiement`(4) · `identité`(4) · `multi-chambre`(4) · `sourcing`(3) · `build`(3) · `roadmap`(3) · `modèle`(3) · `routes`(3) · `badges`(3) · `sources`(3) · `navette`(3) · `pipeline-data`(2) · `hémicycle`(2) · `layout`(2) · `gouvernance`(2) · `groupes`(2) · `etalab`(2) · `overall`(2) · `AN`(2) · `cross-chambre`(2) · `a11y`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `phase-1`(1) · `ches`(1) · `multi-legislature`(1) · `performance`(1) · `métrique`(1) · `exemplarité`(1) · `v1`(1) · `à-revisiter`(1) · `granularite-temporelle`(1) · `classements`(1) · `parite-an`(1) · `ere-macron`(1) · `robustesse`(1) · `an`(1) · `agrégation`(1) · `scrutins`(1) · `textes`(1) · `timeline`(1) · `ADR-companion-de-0036`(1) · `dossiers`(1) · `recherche`(1) · `design`(1) · `contraste`(1) · `qualité`(1)
+**Tags** : `data`(20) · `senat`(10) · `sémantique`(9) · `ux`(8) · `métriques`(6) · `scope`(6) · `pipeline`(6) · `déploiement`(4) · `identité`(4) · `multi-chambre`(4) · `sourcing`(3) · `build`(3) · `roadmap`(3) · `modèle`(3) · `routes`(3) · `badges`(3) · `sources`(3) · `navette`(3) · `pipeline-data`(2) · `hémicycle`(2) · `layout`(2) · `gouvernance`(2) · `groupes`(2) · `etalab`(2) · `performance`(2) · `overall`(2) · `AN`(2) · `cross-chambre`(2) · `a11y`(2) · `seo`(2) · `sveltekit`(2) · `stack`(1) · `frontend`(1) · `infrastructure`(1) · `repo`(1) · `équité`(1) · `gradient politique`(1) · `méthodologie`(1) · `licence`(1) · `runtime`(1) · `dépendances`(1) · `docker`(1) · `debug`(1) · `perf`(1) · `format`(1) · `open-source`(1) · `processus`(1) · `produit`(1) · `branding`(1) · `phase-1`(1) · `ches`(1) · `multi-legislature`(1) · `métrique`(1) · `exemplarité`(1) · `v1`(1) · `à-revisiter`(1) · `granularite-temporelle`(1) · `classements`(1) · `parite-an`(1) · `ere-macron`(1) · `robustesse`(1) · `an`(1) · `agrégation`(1) · `scrutins`(1) · `textes`(1) · `timeline`(1) · `ADR-companion-de-0036`(1) · `dossiers`(1) · `recherche`(1) · `design`(1) · `contraste`(1) · `qualité`(1) · `geo`(1) · `rendu`(1) · `ssg`(1) · `prerender`(1) · `urls`(1) · `slugs`(1) · `routing`(1) · `recherche-nom`(1)
 
 ## Index chronologique
 
@@ -52,6 +52,8 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 | 0038 | [Un dump dossiers Etalab par législature (pas seulement le 17ᵉ)](0038-dump-dossiers-an-par-legislature.md) | ✅ accepté | `data` `pipeline` `AN` `dossiers` `navette` | 2026-05-25 |
 | 0039 | [Recherche globale unifiée cross-chambre (Élus + Groupes)](0039-recherche-globale-unifiee-cross-chambre.md) | ✅ accepté | `recherche` `cross-chambre` `ux` `sémantique` `a11y` | 2026-06-04 |
 | 0040 | [Accessibilité & contraste : exigence de premier ordre](0040-accessibilite-contraste-exigence.md) | ✅ accepté | `a11y` `design` `contraste` `ux` `qualité` | 2026-06-04 |
+| 0041 | [Prerender SPA → SSG : pages détail en HTML statique via `entries()`](0041-prerender-ssg-entries.md) | 🟡 proposé | `seo` `geo` `rendu` `ssg` `prerender` `sveltekit` `performance` | 2026-06-08 |
+| 0042 | [URLs lisibles (slugs) pour élus, groupes et textes](0042-slugs-urls-lisibles.md) | 🟡 proposé | `seo` `urls` `slugs` `routing` `sveltekit` `recherche-nom` | 2026-06-08 |
 
 ## Résumés
 
@@ -294,3 +296,15 @@ Cette mémoire intra-repo recense les décisions structurantes du projet. Chaque
 > Le contraste et la lisibilité sont une exigence non négociable, vérifiée à
 
 📄 [Lire la décision complète](0040-accessibilite-contraste-exigence.md)
+
+### 0041 — Prerender SPA → SSG : pages détail en HTML statique via `entries()`
+
+> On prérend en HTML statique (SSG) toutes les pages à cardinalité finie —
+
+📄 [Lire la décision complète](0041-prerender-ssg-entries.md)
+
+### 0042 — URLs lisibles (slugs) pour élus, groupes et textes
+
+> On adresse les fiches par un slug lisible plutôt que par un id opaque, avec
+
+📄 [Lire la décision complète](0042-slugs-urls-lisibles.md)
