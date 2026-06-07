@@ -22,8 +22,8 @@ export const ssr = false;
 
 export const load: PageLoad = async ({ fetch, params }) => {
 	const manifest = await loadElusManifest(fetch);
-	const elu = manifest.elus.find((e) => e.id === params.id);
-	if (!elu) throw new Error(`Élu ${params.id} introuvable`);
+	const elu = manifest.elus.find((e) => e.slug === params.slug);
+	if (!elu) throw new Error(`Élu ${params.slug} introuvable`);
 
 	// Toujours charger les méta (légères) — utiles pour TriennatTabs et libellés.
 	const [legislatures, triennats] = await Promise.all([
