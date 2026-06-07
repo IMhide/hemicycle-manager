@@ -19,6 +19,7 @@
  */
 
 import { createHash } from 'node:crypto';
+import { slugify, assignSlugs } from './slug.ts';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types d'entrée — sous-ensemble structurel des types AN/Sénat (`src/lib/types.ts`)
@@ -158,6 +159,7 @@ export interface EluRadar {
 
 export interface Elu {
 	id: string; // elu_<8 hex>
+	slug: string; // URL lisible `prenom-nom` (+ suffixe si collision), cf ADR 0042
 	prenom: string;
 	nom: string;
 	civ: string;
@@ -474,6 +476,16 @@ export function buildElusManifest(
 		return a.prenom.localeCompare(b.prenom, 'fr');
 	});
 
+	// Slugs lisibles (cf ADR 0042) — 2e passe, après que tous les élus existent,
+	// pour détecter les collisions globalement. Base = `prenom-nom` ; suffixe
+	// désambiguïsant stable = paId/matricule (uniquement en collision réelle, p.
+	// ex. les 2 « jean-louis-masson »).
+	const slugs = assignSlugs(elus, {
+		base: (e) => slugify(`${e.prenom} ${e.nom}`),
+		disambiguator: (e) => e.paId ?? e.matricule ?? e.id
+	});
+	for (const elu of elus) elu.slug = slugs.get(elu.id)!;
+
 	return {
 		generatedAt: new Date().toISOString(),
 		count: elus.length,
@@ -611,6 +623,7 @@ function bucketToElu(
 
 	return {
 		id,
+		slug: '', // assigné en 2e passe (collision globale), cf assignSlugs plus bas
 		prenom: ident.prenom,
 		nom: ident.nom,
 		civ: ident.civ,

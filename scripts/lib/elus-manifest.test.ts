@@ -330,6 +330,55 @@ describe('buildElusManifest — match strict', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// buildElusManifest — slugs lisibles (cf ADR 0042)
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('buildElusManifest — slugs (ADR 0042)', () => {
+	test('slug = prenom-nom sans collision', () => {
+		const out = buildElusManifest(
+			[makePersonne({ id: 'PA1', prenom: 'Stéphane', nom: 'Peu', dateNaissance: '1962-07-24' })],
+			[],
+			EMPTY_OVERRIDES
+		);
+		assert.equal(out.elus[0].slug, 'stephane-peu');
+	});
+
+	test('collision prenom-nom → les deux désambiguïsés par suffixe stable, slugs uniques', () => {
+		// Reproduit le cas réel jean-louis-masson : 2 personnes distinctes
+		// (dates de naissance différentes → pas de fusion).
+		const out = buildElusManifest(
+			[
+				makePersonne({ id: 'PA10', prenom: 'Jean-Louis', nom: 'Masson', dateNaissance: '1954-02-05' }),
+				makePersonne({ id: 'PA11', prenom: 'Jean-Louis', nom: 'Masson', dateNaissance: '1947-03-25' })
+			],
+			[],
+			EMPTY_OVERRIDES
+		);
+		assert.equal(out.elus.length, 2);
+		const bySlug = out.elus.map((e) => e.slug);
+		// Aucun ne garde le slug nu, tous préfixés, et distincts.
+		assert.ok(bySlug.every((s) => s.startsWith('jean-louis-masson-')));
+		assert.equal(new Set(bySlug).size, 2);
+	});
+
+	test('tous les slugs du manifest sont uniques et non vides', () => {
+		const out = buildElusManifest(
+			[
+				makePersonne({ id: 'PA1', prenom: 'Jean', nom: 'Dupont', dateNaissance: '1970-01-01' }),
+				makePersonne({ id: 'PA2', prenom: 'Marie', nom: 'Curie', dateNaissance: '1980-02-02' })
+			],
+			[
+				makeSenateur({ id: '00001A', prenom: 'Paul', nom: 'Durand', dateNaissance: '1960-03-03' })
+			],
+			EMPTY_OVERRIDES
+		);
+		const slugs = out.elus.map((e) => e.slug);
+		assert.ok(slugs.every((s) => s.length > 0), 'aucun slug vide');
+		assert.equal(new Set(slugs).size, slugs.length, 'collision de slug');
+	});
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 // buildElusManifest — matching ambigu
 // ────────────────────────────────────────────────────────────────────────────
 
