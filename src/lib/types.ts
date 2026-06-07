@@ -671,6 +671,8 @@ export interface TexteUnifieChambreRef {
 export interface TexteUnifie {
 	/** Id canonique stable : id AN si présent, sinon id Sénat. Cf ADR 0036. */
 	id: string;
+	/** URL lisible : préfixe titre + suffixe d'id (haché si signature). ADR 0042. */
+	slug: string;
 	/** Titre canonique court (AN prioritaire, fallback titre Sénat nettoyé). */
 	titre: string;
 	/** Type éditorial (AN prioritaire, sinon projection Sénat). */

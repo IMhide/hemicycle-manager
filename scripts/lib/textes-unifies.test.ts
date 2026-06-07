@@ -397,3 +397,36 @@ describe('fusionneTextesUnifies — bicaméralité refondue (ADR 0037)', () => {
 		assert.equal(result[0].timelineNavette[0].code, 'AN1-DEPOT');
 	});
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// slug lisible (cf ADR 0042)
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('fusionneTextesUnifies — slug (ADR 0042)', () => {
+	test('slug = préfixe titre + id pour un id URL-safe (DLR…)', () => {
+		const an = textAN('DLR5L17N51175', { titre: 'Proposition de loi sur les inondations' });
+		const result = fusionneTextesUnifies([an], []);
+		assert.equal(result[0].slug, 'proposition-de-loi-sur-les-inondations-DLR5L17N51175');
+	});
+
+	test('id signature long → slug court haché (sig-<hash>), borné', () => {
+		const sigId =
+			'sig-2021|projet-loi|adopte par l assemblee nationale apres engagement de la procedure acceleree ratifiant une ordonnance tres longue';
+		const an = textAN(sigId, { titre: 'Projet de loi ratifiant une ordonnance' });
+		const result = fusionneTextesUnifies([an], []);
+		assert.ok(result[0].slug.length <= 80, `slug ${result[0].slug.length} > 80`);
+		assert.ok(!/[|\s]/.test(result[0].slug), 'aucun | ni espace');
+	});
+
+	test('slugs uniques sur un lot mêlant titres identiques', () => {
+		const result = fusionneTextesUnifies(
+			[
+				textAN('PLF-2024', { titre: 'Projet de loi de finances' }),
+				textAN('PLF-2025', { titre: 'Projet de loi de finances' })
+			],
+			[]
+		);
+		const slugs = result.map((t) => t.slug);
+		assert.equal(new Set(slugs).size, slugs.length, 'collision de slug');
+	});
+});

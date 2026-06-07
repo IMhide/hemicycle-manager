@@ -23,6 +23,7 @@ import type {
 	TimelineActe
 } from '../../src/lib/types.ts';
 import { hasSenatActe } from './timeline-navette.ts';
+import { texteSlug } from './slug.ts';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types d'entrée
@@ -240,6 +241,7 @@ function buildUnifie(an: TexteAnInput | null, sen: TexteSenatInput | null): Text
 
 	return {
 		id,
+		slug: texteSlug(titre, id), // URL lisible, cf ADR 0042
 		titre,
 		type,
 		typeLibelle,
