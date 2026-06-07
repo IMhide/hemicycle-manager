@@ -70,6 +70,12 @@ export function loadScrutinsIndex(fetchFn: typeof fetch) {
 	return fetchJson<ScrutinIndex[]>(fetchFn, '/scrutins-index.json');
 }
 
+/** Scrutins récents (N derniers/législature) pour la home — projection légère
+ *  (~30-50 Ko) au lieu de l'index complet (6,1 Mo). Cf ADR 0041. */
+export function loadScrutinsRecent(fetchFn: typeof fetch) {
+	return fetchJson<ScrutinIndex[]>(fetchFn, '/scrutins-recent.json');
+}
+
 export function loadScrutinDetail(fetchFn: typeof fetch, uid: string) {
 	return fetchJson<ScrutinDetail>(fetchFn, `/scrutins/${uid}.json`);
 }
@@ -167,6 +173,12 @@ export function loadSessions(fetchFn: typeof fetch) {
 
 export function loadScrutinsSenatIndex(fetchFn: typeof fetch) {
 	return fetchJsonSenat<ScrutinSenatIndex[]>(fetchFn, '/scrutins-index.json');
+}
+
+/** Scrutins Sénat récents (N derniers/session) pour la home — projection légère
+ *  au lieu de l'index complet (~1 Mo). Cf ADR 0041. */
+export function loadScrutinsSenatRecent(fetchFn: typeof fetch) {
+	return fetchJsonSenat<ScrutinSenatIndex[]>(fetchFn, '/scrutins-recent.json');
 }
 
 export function loadScrutinSenatDetail(fetchFn: typeof fetch, uid: string) {
