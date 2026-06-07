@@ -105,6 +105,34 @@ export async function loadTexteUnifie(
 	return all.find((t) => t.id === id) ?? null;
 }
 
+/** Résout un TexteUnifie par son slug URL (cf ADR 0042). Route `/textes/[slug]`. */
+export async function loadTexteUnifieBySlug(
+	fetchFn: typeof fetch,
+	slug: string
+): Promise<TexteUnifie | null> {
+	const all = await loadTextesUnifies(fetchFn);
+	return all.find((t) => t.slug === slug) ?? null;
+}
+
+/**
+ * Construit un résolveur `texteId natif → slug` (cf ADR 0042). Un lien depuis un
+ * scrutin ou un groupe de vote ne dispose que d'un texteId brut (id canonique,
+ * id AN, ou id Sénat) ; ce résolveur le mappe vers le slug de la fiche unifiée.
+ * Renvoie une fonction synchrone après chargement du manifest.
+ */
+export async function loadTexteSlugResolver(
+	fetchFn: typeof fetch
+): Promise<(texteId: string) => string | null> {
+	const all = await loadTextesUnifies(fetchFn);
+	const byId = new Map<string, string>();
+	for (const t of all) {
+		byId.set(t.id, t.slug); // id canonique (AN si présent, sinon Sénat)
+		if (t.an) byId.set(t.an.texteId, t.slug);
+		if (t.senat) byId.set(t.senat.texteId, t.slug);
+	}
+	return (texteId: string) => byId.get(texteId) ?? null;
+}
+
 // ─────────────────── Acteurs (noms uniquement) ───────────────────
 // Manifest léger contenant le nom de TOUS les acteurs Etalab (députés,
 // sénateurs, ministres, etc.) pour afficher les initiateurs de textes

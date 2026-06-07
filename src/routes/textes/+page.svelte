@@ -137,7 +137,7 @@
 	<div class="space-y-2">
 		{#each visible as t (t.id)}
 			<a
-				href="/textes/{encodeURIComponent(t.id)}"
+				href="/textes/{t.slug}"
 				class="card block p-4 hover:border-accent transition-colors"
 			>
 				<div class="flex items-start justify-between gap-3">
