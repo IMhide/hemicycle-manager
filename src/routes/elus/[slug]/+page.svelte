@@ -546,7 +546,8 @@
 									</button>
 									{#if hasTextePage}
 										<a
-											href="/textes/{encodeURIComponent(g.texteId!)}"
+											href="/textes/{data.texteSlugById[g.texteId!] ??
+												encodeURIComponent(g.texteId!)}"
 											class="absolute top-2 right-3 text-[10px] uppercase tracking-wider text-fg-muted hover:text-link"
 										>
 											Voir texte →

@@ -1,7 +1,8 @@
 import type { PageLoad } from './$types';
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import {
-	loadTexteUnifie,
+	loadTexteUnifieBySlug,
+	loadTextesUnifies,
 	loadScrutinsIndex,
 	loadScrutinsSenatIndex,
 	loadPersonnes,
@@ -14,18 +15,19 @@ export const prerender = false;
 export const ssr = false;
 
 export const load: PageLoad = async ({ fetch, params }) => {
-	const id = decodeURIComponent(params.id);
-	const texte = await loadTexteUnifie(fetch, id);
+	const slug = decodeURIComponent(params.slug);
+	const texte = await loadTexteUnifieBySlug(fetch, slug);
 	if (!texte) {
-		// Tentative fallback : id Sénat (loicod) renvoie vers un TexteUnifie dont
-		// l'id canonique est l'id AN. On cherche l'unifie qui contient ce loicod.
-		const { loadTextesUnifies } = await import('$lib/data');
+		// Rétro-compat / liens entrants par id brut (canonique, AN ou Sénat) :
+		// on résout l'unifié et on redirige vers son slug canonique (cf ADR 0042).
 		const all = await loadTextesUnifies(fetch);
-		const bySenatId = all.find((t) => t.senat?.texteId === id);
-		if (bySenatId) {
-			throw error(307, `/textes/${encodeURIComponent(bySenatId.id)}`);
+		const byId = all.find(
+			(t) => t.id === slug || t.an?.texteId === slug || t.senat?.texteId === slug
+		);
+		if (byId) {
+			throw redirect(307, `/textes/${byId.slug}`);
 		}
-		throw error(404, `Texte ${id} introuvable`);
+		throw error(404, `Texte ${slug} introuvable`);
 	}
 
 	// Charge en parallèle : les détails AN et Sénat selon disponibilité

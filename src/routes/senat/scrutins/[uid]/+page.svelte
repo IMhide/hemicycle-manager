@@ -180,7 +180,8 @@
 				<h1 class="text-xl sm:text-2xl leading-snug font-semibold">{detail.titre}</h1>
 				{#if data.texte}
 					<a
-						href="/textes/{encodeURIComponent(data.texte.versionAutreChambre?.texteAnId ?? data.texte.id)}"
+						href="/textes/{data.texteSlug ??
+							encodeURIComponent(data.texte.versionAutreChambre?.texteAnId ?? data.texte.id)}"
 						class="mt-3 inline-flex items-center gap-2 text-xs text-fg-muted hover:text-link group"
 						title="Voir tous les scrutins de ce texte"
 					>

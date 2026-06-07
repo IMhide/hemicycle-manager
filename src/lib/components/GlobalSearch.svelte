@@ -49,7 +49,7 @@
 		for (const e of results.elus) out.push({ kind: 'elu', href: e.href, data: e });
 		for (const g of results.groupes) out.push({ kind: 'groupe', href: g.href, data: g });
 		for (const t of results.textes)
-			out.push({ kind: 'texte', href: `/textes/${encodeURIComponent(t.id)}`, data: t });
+			out.push({ kind: 'texte', href: `/textes/${t.slug}`, data: t });
 		return out;
 	});
 
@@ -398,7 +398,7 @@
 							onclick={() =>
 								selectItem({
 									kind: 'texte',
-									href: `/textes/${encodeURIComponent(t.id)}`,
+									href: `/textes/${t.slug}`,
 									data: t
 								})}
 						>

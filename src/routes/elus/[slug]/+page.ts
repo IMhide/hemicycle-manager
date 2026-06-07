@@ -10,7 +10,8 @@ import {
 	loadTriennats,
 	loadHistoriqueSenat,
 	loadScrutinsSenatIndex,
-	loadTextes
+	loadTextes,
+	loadTexteSlugResolver
 } from '$lib/data';
 import { loadElusManifest } from '$lib/elus';
 import type { TriennatId } from '$lib/triennats';
@@ -70,6 +71,15 @@ export const load: PageLoad = async ({ fetch, params }) => {
 		}
 	}
 
+	// Map texteId (AN) → slug de la fiche unifiée, pour les liens « Voir texte »
+	// des groupes de vote (cf ADR 0042). Construit depuis les textes AN chargés.
+	const resolveSlug = await loadTexteSlugResolver(fetch);
+	const texteSlugById: Record<string, string> = {};
+	for (const t of textesAN) {
+		const slug = resolveSlug(t.id);
+		if (slug) texteSlugById[t.id] = slug;
+	}
+
 	return {
 		elu,
 		legislatures,
@@ -82,6 +92,7 @@ export const load: PageLoad = async ({ fetch, params }) => {
 		senateur,
 		groupesSenat,
 		historiqueSenat,
-		scrutinsIndexSenat
+		scrutinsIndexSenat,
+		texteSlugById
 	};
 };
