@@ -35,7 +35,7 @@ function scrutin(over: Partial<ScrutinIndex> & { uid: string }): ScrutinIndex {
 describe('denormaliseHistorique', () => {
 	test('ajoute la meta du scrutin en 5e position', () => {
 		const idx = scrutinMetaIndex([
-			scrutin({ uid: 'V1', titre: 'Article 10', date: '2026-05-22', sort: 'adopté', texteId: 'DLR1', pour: 45, contre: 21, abstention: 8 })
+			scrutin({ uid: 'V1', numero: 10, titre: 'Article 10', date: '2026-05-22', sort: 'adopté', texteId: 'DLR1', pour: 45, contre: 21, abstention: 8 })
 		]);
 		const hist: VoteHistoryItem[] = [['V1', 'pour', 0, 17]];
 		const out = denormaliseHistorique(hist, idx);
@@ -45,6 +45,7 @@ describe('denormaliseHistorique', () => {
 			titre: 'Article 10',
 			date: '2026-05-22',
 			sort: 'adopté',
+			numero: 10,
 			texteId: 'DLR1',
 			pour: 45,
 			contre: 21,
@@ -66,12 +67,21 @@ describe('denormaliseHistorique', () => {
 		assert.equal(out[0].length, 4);
 	});
 
-	test('la meta ne contient PAS demandeur ni numero (champs lourds/inutiles)', () => {
+	test('la meta porte numero mais PAS demandeur (champ lourd/inutile)', () => {
 		const idx = scrutinMetaIndex([scrutin({ uid: 'V3', demandeur: 'un très long demandeur…', numero: 6899 })]);
 		const out = denormaliseHistorique([['V3', 'pour', 0, 17]], idx);
 		const meta = out[0][4]! as Record<string, unknown>;
-		assert.ok(!('demandeur' in meta));
-		assert.ok(!('numero' in meta));
+		assert.ok(!('demandeur' in meta), 'demandeur exclu (verbeux)');
+		assert.equal(meta.numero, 6899, 'numero présent (affiché n°XXXX)');
+	});
+
+	test('Sénat : scrnum est normalisé vers numero dans la meta', () => {
+		// ScrutinSenatIndex n'a pas `numero` mais `scrnum`.
+		const idx = scrutinMetaIndex([
+			{ uid: '2024-58', titre: 'T', date: '2024-01-01', sort: 'adopté', texteId: null, pour: 1, contre: 0, abstention: 0, scrnum: 58 }
+		]);
+		const out = denormaliseHistorique([['2024-58', 'pour', 0, 2024]], idx);
+		assert.equal((out[0][4]! as { numero: number }).numero, 58);
 	});
 });
 

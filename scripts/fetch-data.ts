@@ -52,6 +52,7 @@ import {
 } from './lib/groupes-familles.ts';
 import { parseDossiersDir, type DossierAN } from './lib/dossiers-an.ts';
 import { aggregeTextesAN, type ScrutinPourAgreg } from './lib/textes-an.ts';
+import { findScrutinFinalUidForTexte } from '../src/lib/vote-final.ts';
 import { buildActeursNoms, writeActeursNoms } from './lib/acteurs-noms.ts';
 import {
 	scrutinMetaIndex,
@@ -1201,6 +1202,24 @@ async function main() {
 	}
 	for (const detail of allScrutinsDetails.values()) {
 		detail.texteId = scrutinToTexte.get(detail.uid) ?? null;
+	}
+
+	// Précalcul du "vote final" par texte (cf ADR 0041) : le scrutin qui scelle
+	// le sort du texte. Calculé ici (l'index complet est disponible au build)
+	// pour que la fiche élu n'ait PAS à charger scrutins-index.json (6,1 Mo).
+	{
+		const scrutinByUid = new Map(allScrutinsIndex.map((s) => [s.uid, s]));
+		let nbVoteFinal = 0;
+		for (const t of textes) {
+			const scrutinsDuTexte = t.scrutins
+				.map((uid) => scrutinByUid.get(uid))
+				.filter((s): s is ScrutinIndex => !!s);
+			const finalUid = findScrutinFinalUidForTexte(t.timelineNavette, scrutinsDuTexte);
+			const sc = finalUid ? scrutinByUid.get(finalUid) : undefined;
+			t.voteFinal = sc ? { uid: sc.uid, numero: sc.numero, sort: sc.sort } : null;
+			if (t.voteFinal) nbVoteFinal++;
+		}
+		console.log(`    → ${nbVoteFinal}/${textes.length} textes avec vote final identifié`);
 	}
 
 	// Finalisation des stats puis rangs, badges et overalls mandat par législature
