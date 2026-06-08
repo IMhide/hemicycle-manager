@@ -14,10 +14,20 @@
 	 * fiches `/assemblee/deputes/[id]` et `/senat/senateurs/[matricule]` (qui seront
 	 * supprimées en PR #F).
 	 */
-	import type { Mandat, Groupe, GroupeSenat, MandatSenat, VotePosition } from '$lib/types';
+	import type {
+		Mandat,
+		Groupe,
+		GroupeSenat,
+		MandatSenat,
+		VotePosition,
+		ScrutinIndex,
+		ScrutinSenatIndex,
+		VoteHistoryScrutinMeta
+	} from '$lib/types';
 	import type { TriennatId } from '$lib/triennats';
 	import { isTriennatId } from '$lib/triennats';
 	import { page } from '$app/stores';
+	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 
 	import EluCard from '$lib/components/EluCard.svelte';
@@ -29,7 +39,6 @@
 	import VoteHistoryItem from '$lib/components/VoteHistoryItem.svelte';
 	import VoteHistoryItemSenat from '$lib/components/VoteHistoryItemSenat.svelte';
 	import TimelineCarriere from '$lib/components/TimelineCarriere.svelte';
-	import { findScrutinFinalUidForTexte } from '$lib/vote-final';
 
 	let { data } = $props();
 
@@ -61,7 +70,12 @@
 		return { kind: 'carriere' };
 	}
 
-	const selected = $derived<SelectedTab>(parseTab($page.url.searchParams.get('tab')));
+	// La page est prérendue (SSG, cf ADR 0041) : `url.searchParams` est interdit
+	// au prerender/SSR. On défaut sur "Carrière" côté serveur, et on lit `?tab=`
+	// uniquement dans le navigateur (l'onglet est un état purement client).
+	const selected = $derived<SelectedTab>(
+		browser ? parseTab($page.url.searchParams.get('tab')) : { kind: 'carriere' }
+	);
 
 	function selectTab(tab: SelectedTab) {
 		const url = new URL($page.url);
@@ -141,7 +155,7 @@
 	type HistoryItem =
 		| {
 				chambre: 'AN';
-				scrutin: NonNullable<typeof data.scrutinsIndexAN>[number];
+				scrutin: ScrutinIndex;
 				position: VotePosition;
 				isFronde: boolean;
 				date: string;
@@ -149,47 +163,66 @@
 		  }
 		| {
 				chambre: 'SENAT';
-				scrutin: NonNullable<typeof data.scrutinsIndexSenat>[number];
+				scrutin: ScrutinSenatIndex;
 				position: VotePosition;
 				isFronde: boolean;
 				date: string;
 				sesann: number;
 		  };
 
-	const scrutinByUidAN = $derived.by(() => {
-		const m = new Map<string, (typeof data.scrutinsIndexAN)[number]>();
-		for (const s of data.scrutinsIndexAN) m.set(s.uid, s);
-		return m;
-	});
-	const scrutinByUidSenat = $derived.by(() => {
-		const m = new Map<string, (typeof data.scrutinsIndexSenat)[number]>();
-		for (const s of data.scrutinsIndexSenat) m.set(s.uid, s);
-		return m;
-	});
-
+	// Historique reconstruit depuis la meta dénormalisée portée par chaque tuple
+	// (5e élément, cf ADR 0041) — plus besoin de charger l'index global des
+	// scrutins (6,1 Mo). L'objet `scrutin` affichable est reconstruit depuis
+	// l'uid (élément 0) + la meta ; `numero` mappe sur `scrnum` côté Sénat.
 	const historyMerged = $derived.by((): HistoryItem[] => {
 		const list: HistoryItem[] = [];
-		for (const [uid, position, isFronde, legislature] of data.historiqueAN) {
-			const sc = scrutinByUidAN.get(uid);
-			if (!sc) continue;
+		for (const item of data.historiqueAN) {
+			const [uid, position, isFronde, legislature] = item;
+			const meta = item[4] as VoteHistoryScrutinMeta | undefined;
+			if (!meta) continue;
 			list.push({
 				chambre: 'AN',
-				scrutin: sc,
+				scrutin: {
+					uid,
+					legislature,
+					numero: meta.numero,
+					date: meta.date,
+					titre: meta.titre,
+					sort: meta.sort,
+					pour: meta.pour,
+					contre: meta.contre,
+					abstention: meta.abstention,
+					demandeur: null,
+					texteId: meta.texteId
+				},
 				position,
 				isFronde: isFronde === 1,
-				date: sc.date,
+				date: meta.date,
 				legislature
 			});
 		}
-		for (const [uid, position, isFronde, sesann] of data.historiqueSenat) {
-			const sc = scrutinByUidSenat.get(uid);
-			if (!sc) continue;
+		for (const item of data.historiqueSenat) {
+			const [uid, position, isFronde, sesann] = item;
+			const meta = item[4] as VoteHistoryScrutinMeta | undefined;
+			if (!meta) continue;
 			list.push({
 				chambre: 'SENAT',
-				scrutin: sc,
+				scrutin: {
+					uid,
+					sesann,
+					scrnum: meta.numero,
+					date: meta.date,
+					titre: meta.titre,
+					sort: meta.sort,
+					pour: meta.pour,
+					contre: meta.contre,
+					abstention: meta.abstention,
+					nonVotant: 0,
+					texteId: meta.texteId
+				},
 				position,
 				isFronde: isFronde === 1,
-				date: sc.date,
+				date: meta.date,
 				sesann
 			});
 		}
@@ -298,8 +331,9 @@
 			/** Sort officiel du texte (adopté / rejeté / etc.) si connu via le
 			 *  scrutin final, sinon null. */
 			sortFinal: string | null;
-			/** ScrutinIndex du vote final (existe même quand l'élu n'a pas voté). */
-			scrutinFinal: (typeof data.scrutinsIndexAN)[number] | null;
+			/** Vote final précalculé au pipeline (cf ADR 0041) — existe même quand
+			 *  l'élu n'a pas voté ce scrutin. */
+			scrutinFinal: { uid: string; numero: number; sort: string } | null;
 		}
 		const map = new Map<string, GroupeTexte>();
 		for (const h of filteredHistory) {
@@ -315,18 +349,12 @@
 						: 'Hors texte législatif (motions, procédure…)';
 				let voteFinal: HistoryItem | null = null;
 				let sortFinal: string | null = null;
-				let scrutinFinal: (typeof data.scrutinsIndexAN)[number] | null = null;
-				if (texte) {
-					// Résout les ScrutinIndex du texte pour le fallback titre-based
-					const scrutinsDuTexte = texte.scrutins
-						.map((uid) => scrutinByUidAN.get(uid))
-						.filter((s): s is (typeof data.scrutinsIndexAN)[number] => !!s);
-					const finalUid = findScrutinFinalUidForTexte(texte.timelineNavette, scrutinsDuTexte);
-					if (finalUid) {
-						voteFinal = anHistoryByUid.get(finalUid) ?? null;
-						scrutinFinal = scrutinByUidAN.get(finalUid) ?? null;
-						sortFinal = scrutinFinal?.sort ?? null;
-					}
+				// Vote final précalculé au pipeline (cf ADR 0041) — plus de cross-ref
+				// avec l'index global des scrutins.
+				const scrutinFinal = texte?.voteFinal ?? null;
+				if (scrutinFinal) {
+					voteFinal = anHistoryByUid.get(scrutinFinal.uid) ?? null;
+					sortFinal = scrutinFinal.sort;
 				}
 				g = {
 					texteId,

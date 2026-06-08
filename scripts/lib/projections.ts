@@ -18,7 +18,9 @@ import type {
 	VoteHistoryScrutinMeta
 } from '../../src/lib/types.ts';
 
-/** Champs minimaux d'un scrutin (AN ou Sénat) pour la projection meta. */
+/** Champs minimaux d'un scrutin (AN ou Sénat) pour la projection meta.
+ *  Le numéro de scrutin s'appelle `numero` côté AN et `scrnum` côté Sénat ;
+ *  on accepte les deux et on normalise vers `numero` dans la meta. */
 type ScrutinMetaSource = {
 	uid: string;
 	titre: string;
@@ -28,11 +30,12 @@ type ScrutinMetaSource = {
 	pour: number;
 	contre: number;
 	abstention: number;
+	numero?: number;
+	scrnum?: number;
 };
 
 /** Construit l'index `uid → meta scrutin` (champs d'affichage uniquement).
- *  Chamber-agnostic : marche pour ScrutinIndex (AN) comme ScrutinSenatIndex,
- *  qui exposent tous deux les champs de `ScrutinMetaSource`. */
+ *  Chamber-agnostic : marche pour ScrutinIndex (AN) comme ScrutinSenatIndex. */
 export function scrutinMetaIndex(
 	scrutins: ScrutinMetaSource[]
 ): Map<string, VoteHistoryScrutinMeta> {
@@ -42,6 +45,7 @@ export function scrutinMetaIndex(
 			titre: s.titre,
 			date: s.date,
 			sort: s.sort,
+			numero: s.numero ?? s.scrnum ?? 0,
 			texteId: s.texteId,
 			pour: s.pour,
 			contre: s.contre,

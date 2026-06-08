@@ -220,11 +220,15 @@ export interface ScrutinDetail extends ScrutinIndex {
 
 /** Métadonnées du scrutin dénormalisées DANS l'historique (cf ADR 0041).
  *  Permet à la fiche élu d'afficher l'historique SANS charger
- *  `scrutins-index.json` (6,1 Mo). Projetées au pipeline depuis ScrutinIndex. */
+ *  `scrutins-index.json` (6,1 Mo). Projetées au pipeline depuis ScrutinIndex.
+ *  `numero` = numéro du scrutin (scrnum côté Sénat) ; l'`uid` reste l'élément 0
+ *  du tuple. Avec ces champs + l'uid, la fiche reconstruit l'objet scrutin
+ *  affichable sans l'index global. */
 export interface VoteHistoryScrutinMeta {
 	titre: string;
 	date: string;
 	sort: string;
+	numero: number;
 	texteId: string | null;
 	pour: number;
 	contre: number;
@@ -310,6 +314,11 @@ export interface Texte {
 	 *  de l'arbre `actesLegislatifs` du dump dossiers AN (cf ADR 0037).
 	 *  Vide pour les textes signature (non enrichis). */
 	timelineNavette: TimelineActe[];
+	/** Scrutin "vote final" du texte (lecture définitive / CMP / vote solennel),
+	 *  précalculé au pipeline (cf ADR 0041) pour que la fiche élu n'ait pas à
+	 *  charger l'index global des scrutins. null = pas de vote final identifiable
+	 *  (vote à main levée, ou texte non enrichi). */
+	voteFinal: { uid: string; numero: number; sort: string } | null;
 }
 
 /** Phase navette retenue pour l'UI, dérivée du `codeActe` Etalab. */
@@ -541,9 +550,13 @@ export interface ScrutinSenatDetail extends ScrutinSenatIndex {
 	frondeurs: string[];
 }
 
-/** Compact: [scrutinUid, position, isFronde 0|1, sesann]
- *  Symétrique au tuple AN (cf ADR 0012). */
-export type VoteHistoryItemSenat = [string, VotePosition, 0 | 1, number];
+/** Compact: [scrutinUid, position, isFronde 0|1, sesann, meta?]
+ *  Symétrique au tuple AN (cf ADR 0012). La meta (5e élément, ADR 0041) est
+ *  dénormalisée dans `senat/historique/{matricule}.json` pour éviter de charger
+ *  l'index global. Optionnelle pour rétro-compat. */
+export type VoteHistoryItemSenat =
+	| [string, VotePosition, 0 | 1, number]
+	| [string, VotePosition, 0 | 1, number, VoteHistoryScrutinMeta];
 
 export interface BuildMetaSenat {
 	generatedAt: string;

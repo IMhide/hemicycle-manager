@@ -1,25 +1,38 @@
-import type { PageLoad } from './$types';
+import type { PageLoad, EntryGenerator } from './$types';
 import {
 	loadPersonne,
 	loadGroupes,
 	loadHistorique,
-	loadScrutinsIndex,
 	loadLegislatures,
 	loadSenateur,
 	loadGroupesSenat,
 	loadTriennats,
 	loadHistoriqueSenat,
-	loadScrutinsSenatIndex,
 	loadTextes,
 	loadTexteSlugResolver
 } from '$lib/data';
 import { loadElusManifest } from '$lib/elus';
 import type { TriennatId } from '$lib/triennats';
 
-// SPA mode : la fiche Élu charge le manifest + les données AN et/ou Sénat
-// nécessaires côté client. Trop volumineux pour prerender chaque eluId.
-export const prerender = false;
-export const ssr = false;
+// Prerender SSG (cf ADR 0041) : une page HTML statique par élu, énumérée depuis
+// le manifest. L'historique de vote est lu depuis sa forme dénormalisée
+// (meta 5e élément) et le vote final depuis textes.json précalculé — donc plus
+// besoin de charger scrutins-index.json (6,1 Mo) dans chaque page.
+export const prerender = true;
+export const ssr = true;
+
+// Énumère les slugs à prérendre. Tolère un manifest vide (placeholder CI →
+// 0 page, build vert).
+export const entries: EntryGenerator = async () => {
+	try {
+		const fs = await import('node:fs/promises');
+		const raw = await fs.readFile('static/data/elus.json', 'utf-8');
+		const { elus } = JSON.parse(raw) as { elus?: { slug: string }[] };
+		return (elus ?? []).map((e) => ({ slug: e.slug }));
+	} catch {
+		return [];
+	}
+};
 
 export const load: PageLoad = async ({ fetch, params }) => {
 	const manifest = await loadElusManifest(fetch);
@@ -32,30 +45,27 @@ export const load: PageLoad = async ({ fetch, params }) => {
 		loadTriennats(fetch)
 	]);
 
-	// Côté AN : Personne + groupes + historique + scrutins-index + textes si l'élu y a un mandat.
+	// Côté AN : Personne + groupes + historique (dénormalisé) + textes si mandat AN.
 	let personne = null;
 	let groupesAN: Awaited<ReturnType<typeof loadGroupes>> = [];
 	let historiqueAN: Awaited<ReturnType<typeof loadHistorique>> = [];
-	let scrutinsIndexAN: Awaited<ReturnType<typeof loadScrutinsIndex>> = [];
 	let textesAN: Awaited<ReturnType<typeof loadTextes>> = [];
 	if (elu.paId) {
 		personne = await loadPersonne(fetch, elu.paId);
 		if (personne) {
 			const groupesByLeg = await Promise.all(legislatures.map((l) => loadGroupes(fetch, l.num)));
 			groupesAN = groupesByLeg.flat();
-			[historiqueAN, scrutinsIndexAN, textesAN] = await Promise.all([
+			[historiqueAN, textesAN] = await Promise.all([
 				loadHistorique(fetch, elu.paId).catch(() => []),
-				loadScrutinsIndex(fetch),
 				loadTextes(fetch).catch(() => [])
 			]);
 		}
 	}
 
-	// Côté Sénat : Senateur + groupes des triennats touchés + historique + scrutins-index.
+	// Côté Sénat : Senateur + groupes des triennats touchés + historique dénormalisé.
 	let senateur = null;
 	let groupesSenat: Awaited<ReturnType<typeof loadGroupesSenat>> = [];
 	let historiqueSenat: Awaited<ReturnType<typeof loadHistoriqueSenat>> = [];
-	let scrutinsIndexSenat: Awaited<ReturnType<typeof loadScrutinsSenatIndex>> = [];
 	if (elu.matricule) {
 		senateur = await loadSenateur(fetch, elu.matricule);
 		if (senateur) {
@@ -64,10 +74,7 @@ export const load: PageLoad = async ({ fetch, params }) => {
 				triennatsTouches.map((t) => loadGroupesSenat(fetch, t))
 			);
 			groupesSenat = groupesByTriennat.flat();
-			[historiqueSenat, scrutinsIndexSenat] = await Promise.all([
-				loadHistoriqueSenat(fetch, elu.matricule).catch(() => []),
-				loadScrutinsSenatIndex(fetch)
-			]);
+			historiqueSenat = await loadHistoriqueSenat(fetch, elu.matricule).catch(() => []);
 		}
 	}
 
@@ -87,12 +94,10 @@ export const load: PageLoad = async ({ fetch, params }) => {
 		personne,
 		groupesAN,
 		historiqueAN,
-		scrutinsIndexAN,
 		textesAN,
 		senateur,
 		groupesSenat,
 		historiqueSenat,
-		scrutinsIndexSenat,
 		texteSlugById
 	};
 };
