@@ -678,6 +678,21 @@ export type TexteUnifieEtat =
 /** Référence légère vers un texte spécifique d'une chambre (sous-objet
  *  de `TexteUnifie`). Conserve l'id natif côté chambre et les compteurs
  *  utilisés par les colonnes de la fiche unifiée `/textes/[id]`. */
+/** Scrutin nominal projeté DANS la fiche unifiée (cf ADR 0041). Permet à
+ *  `/textes/[slug]` d'afficher la liste des scrutins SANS charger l'index global
+ *  `scrutins-index.json` (6,6 Mo AN + ~1 Mo Sénat) — condition au prerender SSG.
+ *  `numero` = numéro AN (`numero`) ou Sénat (`scrnum`), unifié ici. */
+export interface TexteUnifieScrutin {
+	uid: string;
+	numero: number;
+	date: string;
+	titre: string;
+	sort: string;
+	pour: number;
+	contre: number;
+	abstention: number;
+}
+
 export interface TexteUnifieChambreRef {
 	/** id natif côté chambre (DLR…/sig-… côté AN, loicod côté Sénat). */
 	texteId: string;
@@ -686,6 +701,12 @@ export interface TexteUnifieChambreRef {
 	dateFin: string;
 	nbScrutins: number;
 	sortFinal: string;
+	/** Nb de votes solennels (AN seulement ; 0 côté Sénat). */
+	nbVotesSolennels: number;
+	/** Triennat de rattachement (Sénat seulement ; null côté AN). */
+	triennat: string | null;
+	/** Scrutins nominaux de CE texte dans cette chambre, inlinés (cf ADR 0041). */
+	scrutins: TexteUnifieScrutin[];
 }
 
 /** Objet `TexteUnifie` — un texte législatif vu cross-chambre.
