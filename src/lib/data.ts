@@ -25,7 +25,8 @@ import type {
 	BuildMetaSenat,
 	VoteHistoryItemSenat,
 	TexteSenat,
-	TexteUnifie
+	TexteUnifie,
+	TexteUnifieLite
 } from './types';
 import type { TriennatId } from './triennats';
 
@@ -95,6 +96,12 @@ export async function loadTexte(fetchFn: typeof fetch, id: string): Promise<Text
 
 export function loadTextesUnifies(fetchFn: typeof fetch) {
 	return fetchJson<TexteUnifie[]>(fetchFn, '/textes-unifies.json');
+}
+
+/** Projection « lite » pour la LISTE `/textes` (cf ADR 0041) — sans scrutins
+ *  inlinés ni timeline. Évite d'inliner le manifest complet au prerender. */
+export function loadTextesUnifiesLite(fetchFn: typeof fetch) {
+	return fetchJson<TexteUnifieLite[]>(fetchFn, '/textes-unifies-lite.json');
 }
 
 export async function loadTexteUnifie(

@@ -30,7 +30,11 @@ import {
 	type TexteAnPourMatch,
 	type TexteSenatPourMatch
 } from './lib/textes-cross-chambre.ts';
-import { fusionneTextesUnifies, type ScrutinIndexLite } from './lib/textes-unifies.ts';
+import {
+	fusionneTextesUnifies,
+	projeteTexteUnifieLite,
+	type ScrutinIndexLite
+} from './lib/textes-unifies.ts';
 import { resolveScrutinUid, type ScrutinSolennelIndex } from './lib/timeline-navette.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -248,6 +252,15 @@ async function main() {
 	console.log(
 		`  ✓ textes-unifies.json (${textesUnifies.length} textes : ${bicameraux} bicam, ${anSeul} AN-seul, ${senSeul} Sénat-seul)`
 	);
+
+	// Projection « lite » pour la LISTE /textes (cf ADR 0041) — drop scrutins
+	// inlinés + timeline + initiateurs → HTML prérendu minimal de la page liste.
+	const textesUnifiesLite = textesUnifies.map(projeteTexteUnifieLite);
+	await writeFile(
+		join(OUT_DIR_AN, 'textes-unifies-lite.json'),
+		JSON.stringify(textesUnifiesLite)
+	);
+	console.log(`  ✓ textes-unifies-lite.json (${textesUnifiesLite.length} textes, liste)`);
 
 	// ── Stats finales ─────────────────────────────────────────────────────────
 	const couvAN = ((anToSenat.size / textesAN.length) * 100).toFixed(1);

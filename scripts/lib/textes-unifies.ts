@@ -16,6 +16,7 @@
 
 import type {
 	TexteUnifie,
+	TexteUnifieLite,
 	TexteUnifieEtat,
 	TexteUnifieChambreRef,
 	TexteUnifieScrutin,
@@ -336,4 +337,26 @@ export function fusionneTextesUnifies(
 	result.sort((a, b) => (a.dateDebut < b.dateDebut ? 1 : a.dateDebut > b.dateDebut ? -1 : 0));
 
 	return result;
+}
+
+/** Projette un `TexteUnifie` en `TexteUnifieLite` pour la LISTE `/textes`
+ *  (cf ADR 0041). Drop des tableaux lourds (scrutins inlinés, timeline,
+ *  initiateurs) et des champs détail non lus par la liste. */
+export function projeteTexteUnifieLite(t: TexteUnifie): TexteUnifieLite {
+	return {
+		id: t.id,
+		slug: t.slug,
+		titre: t.titre,
+		type: t.type,
+		typeLibelle: t.typeLibelle,
+		etat: t.etat,
+		numeroLoi: t.numeroLoi,
+		datePromulgation: t.datePromulgation,
+		dateDebut: t.dateDebut,
+		dateFin: t.dateFin,
+		nbScrutins: t.nbScrutins,
+		bicameral: t.bicameral,
+		an: t.an ? { nbScrutins: t.an.nbScrutins } : null,
+		senat: t.senat ? { nbScrutins: t.senat.nbScrutins } : null
+	};
 }
