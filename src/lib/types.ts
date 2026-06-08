@@ -763,3 +763,26 @@ export interface TexteUnifie {
 	 *  Vide pour les textes Sénat-seul ou non enrichis. */
 	timelineNavette: TimelineActe[];
 }
+
+/** Projection « lite » d'un `TexteUnifie` pour la LISTE `/textes` (cf ADR 0041).
+ *  La liste ne lit que des champs scalaires + la présence/`nbScrutins` de chaque
+ *  chambre. On retire les tableaux lourds (`scrutins[]` inlinés A3c,
+ *  `timelineNavette[]`, `initiateurs[]`) et les champs détail (`procedureLibelle`,
+ *  `urlJO`, `senatUrl`) → HTML prérendu minimal pour la page liste. */
+export interface TexteUnifieLite {
+	id: string;
+	slug: string;
+	titre: string;
+	type: TexteType;
+	typeLibelle: string;
+	etat: TexteUnifieEtat;
+	numeroLoi: string | null;
+	datePromulgation: string | null;
+	dateDebut: string;
+	dateFin: string;
+	nbScrutins: number;
+	bicameral: boolean;
+	/** Présence + nb de scrutins de la chambre (suffit aux filtres/affichage liste). */
+	an: { nbScrutins: number } | null;
+	senat: { nbScrutins: number } | null;
+}

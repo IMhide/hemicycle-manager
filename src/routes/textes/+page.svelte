@@ -14,8 +14,6 @@
 	 * déjà cette propriété sans induire en erreur.
 	 */
 
-	import type { TexteUnifie } from '$lib/types';
-
 	let { data } = $props();
 
 	let search = $state('');
@@ -72,7 +70,7 @@
 	// Stats globales
 	const stats = $derived.by(() => {
 		const total = data.textes.length;
-		const promul = data.textes.filter((t: TexteUnifie) => t.etat === 'promulgue').length;
+		const promul = data.textes.filter((t) => t.etat === 'promulgue').length;
 		return { total, promul };
 	});
 </script>

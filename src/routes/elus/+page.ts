@@ -1,10 +1,11 @@
 import type { PageLoad } from './$types';
 import { loadElusManifest } from '$lib/elus';
 
-// SPA mode : la liste cross-chambre lit `elus.json` côté client (1.1 MB
-// raisonnable, mais on évite de prerender le JSON dans le HTML pour 1856 élus).
-export const prerender = false;
-export const ssr = false;
+// Prerendu (cf ADR 0041) : la liste cross-chambre rend son HTML statique. Le
+// manifest `elus.json` est déjà chargé UNE FOIS par +layout.ts (cache module
+// partagé) — pas de réinline de 1.1 Mo par page. Tri/filtre client après
+// hydratation.
+export const prerender = true;
 
 export const load: PageLoad = async ({ fetch }) => {
 	const manifest = await loadElusManifest(fetch);

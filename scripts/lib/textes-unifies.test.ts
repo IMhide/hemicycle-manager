@@ -18,7 +18,12 @@
 import { test, describe } from 'node:test';
 import { strict as assert } from 'node:assert';
 
-import { fusionneTextesUnifies, type TexteAnInput, type TexteSenatInput } from './textes-unifies.ts';
+import {
+	fusionneTextesUnifies,
+	projeteTexteUnifieLite,
+	type TexteAnInput,
+	type TexteSenatInput
+} from './textes-unifies.ts';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -506,5 +511,59 @@ describe('fusionneTextesUnifies — scrutins inlinés (ADR 0041)', () => {
 		const an = textAN('DLR-D', { scrutins: ['u1'] });
 		const result = fusionneTextesUnifies([an], []);
 		assert.deepEqual(result[0].an!.scrutins, []);
+	});
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Projection lite pour la liste (cf ADR 0041)
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('projeteTexteUnifieLite (ADR 0041)', () => {
+	test('conserve les champs scalaires lus par la liste', () => {
+		const an = textAN('DLR-L', { titre: 'Loi X', nbScrutins: 7 });
+		const full = fusionneTextesUnifies([an], [], new Map(), new Map())[0];
+		const lite = projeteTexteUnifieLite(full);
+		assert.equal(lite.id, full.id);
+		assert.equal(lite.slug, full.slug);
+		assert.equal(lite.titre, 'Loi X');
+		assert.equal(lite.type, full.type);
+		assert.equal(lite.typeLibelle, full.typeLibelle);
+		assert.equal(lite.etat, full.etat);
+		assert.equal(lite.nbScrutins, 7);
+		assert.equal(lite.bicameral, full.bicameral);
+	});
+
+	test('réduit an/senat à { nbScrutins } | null', () => {
+		const an = textAN('DLR-R', {
+			nbScrutins: 4,
+			versionAutreChambre: { texteSenatId: 'R2', matchedVia: 'slug' }
+		});
+		const sen = textSenat('R2', {
+			nbScrutins: 2,
+			versionAutreChambre: { texteAnId: 'DLR-R', matchedVia: 'slug' }
+		});
+		const full = fusionneTextesUnifies([an], [sen])[0];
+		const lite = projeteTexteUnifieLite(full);
+		assert.deepEqual(lite.an, { nbScrutins: 4 });
+		assert.deepEqual(lite.senat, { nbScrutins: 2 });
+	});
+
+	test('ne fait fuiter aucun champ lourd (scrutins, timeline, initiateurs)', () => {
+		const an = textAN('DLR-H', { scrutins: ['u1'], initiateurs: ['PA1'] });
+		const idx = new Map([['u1', scrutinLite('u1', 1)]]);
+		const full = fusionneTextesUnifies([an], [], idx, new Map())[0];
+		const lite = projeteTexteUnifieLite(full);
+		const keys = Object.keys(lite);
+		assert.ok(!keys.includes('timelineNavette'), 'timelineNavette ne doit pas fuiter');
+		assert.ok(!keys.includes('initiateurs'), 'initiateurs ne doit pas fuiter');
+		assert.ok(!keys.includes('procedureLibelle'), 'procedureLibelle ne doit pas fuiter');
+		assert.ok(!('scrutins' in (lite.an ?? {})), 'an.scrutins ne doit pas fuiter');
+	});
+
+	test('mono-chambre Sénat → an null', () => {
+		const full = fusionneTextesUnifies([], [textSenat('88888', { nbScrutins: 3 })])[0];
+		const lite = projeteTexteUnifieLite(full);
+		assert.equal(lite.an, null);
+		assert.deepEqual(lite.senat, { nbScrutins: 3 });
 	});
 });
