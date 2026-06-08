@@ -45,6 +45,7 @@ function textAN(
 		senatUrl: null,
 		versionAutreChambre: null,
 		timelineNavette: [],
+		scrutins: [],
 		...overrides
 	};
 }
@@ -66,7 +67,22 @@ function textSenat(id: string, overrides: Partial<TexteSenatInput> = {}): TexteS
 		nbScrutins: 3,
 		enrichiDosleg: true,
 		versionAutreChambre: null,
+		scrutins: [],
 		...overrides
+	};
+}
+
+/** Index scrutins léger inline-test (uid → projection). */
+function scrutinLite(uid: string, numero: number, sort = 'adopté') {
+	return {
+		uid,
+		numero,
+		date: '2024-01-10',
+		titre: `Scrutin ${numero}`,
+		sort,
+		pour: 100,
+		contre: 50,
+		abstention: 10
 	};
 }
 
@@ -428,5 +444,67 @@ describe('fusionneTextesUnifies — slug (ADR 0042)', () => {
 		);
 		const slugs = result.map((t) => t.slug);
 		assert.equal(new Set(slugs).size, slugs.length, 'collision de slug');
+	});
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Scrutins inlinés + champs chambre (cf ADR 0041)
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('fusionneTextesUnifies — scrutins inlinés (ADR 0041)', () => {
+	test('scrutins AN projetés depuis l\'index, dans l\'ordre du texte', () => {
+		const an = textAN('DLR-S', { scrutins: ['u2', 'u1'] });
+		const idx = new Map([
+			['u1', scrutinLite('u1', 1)],
+			['u2', scrutinLite('u2', 2)]
+		]);
+		const result = fusionneTextesUnifies([an], [], idx, new Map());
+		assert.deepEqual(
+			result[0].an!.scrutins.map((s) => s.uid),
+			['u2', 'u1'],
+			'ordre du texte préservé'
+		);
+		assert.equal(result[0].an!.scrutins[0].numero, 2);
+	});
+
+	test('uid absent de l\'index est ignoré (pas de trou null)', () => {
+		const an = textAN('DLR-S2', { scrutins: ['u1', 'absent', 'u3'] });
+		const idx = new Map([
+			['u1', scrutinLite('u1', 1)],
+			['u3', scrutinLite('u3', 3)]
+		]);
+		const result = fusionneTextesUnifies([an], [], idx, new Map());
+		assert.equal(result[0].an!.scrutins.length, 2);
+		assert.ok(result[0].an!.scrutins.every((s) => s));
+	});
+
+	test('scrutins Sénat projetés depuis l\'index Sénat (numero = scrnum unifié)', () => {
+		const sen = textSenat('99999', { scrutins: ['2024-58'] });
+		const idxSen = new Map([['2024-58', scrutinLite('2024-58', 58)]]);
+		const result = fusionneTextesUnifies([], [sen], new Map(), idxSen);
+		assert.equal(result[0].senat!.scrutins.length, 1);
+		assert.equal(result[0].senat!.scrutins[0].numero, 58);
+	});
+
+	test('champs chambre : nbVotesSolennels (AN), triennat (Sénat), valeurs neutres en miroir', () => {
+		const an = textAN('DLR-M', {
+			nbVotesSolennels: 3,
+			versionAutreChambre: { texteSenatId: 'M2', matchedVia: 'slug' }
+		});
+		const sen = textSenat('M2', {
+			triennat: '2020-2023',
+			versionAutreChambre: { texteAnId: 'DLR-M', matchedVia: 'slug' }
+		});
+		const result = fusionneTextesUnifies([an], [sen]);
+		assert.equal(result[0].an!.nbVotesSolennels, 3);
+		assert.equal(result[0].an!.triennat, null, 'AN n\'a pas de triennat');
+		assert.equal(result[0].senat!.triennat, '2020-2023');
+		assert.equal(result[0].senat!.nbVotesSolennels, 0, 'Sénat n\'a pas de votes solennels');
+	});
+
+	test('index par défaut (non fourni) → scrutins vides, pas de crash', () => {
+		const an = textAN('DLR-D', { scrutins: ['u1'] });
+		const result = fusionneTextesUnifies([an], []);
+		assert.deepEqual(result[0].an!.scrutins, []);
 	});
 });

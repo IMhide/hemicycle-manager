@@ -30,7 +30,7 @@ import {
 	type TexteAnPourMatch,
 	type TexteSenatPourMatch
 } from './lib/textes-cross-chambre.ts';
-import { fusionneTextesUnifies } from './lib/textes-unifies.ts';
+import { fusionneTextesUnifies, type ScrutinIndexLite } from './lib/textes-unifies.ts';
 import { resolveScrutinUid, type ScrutinSolennelIndex } from './lib/timeline-navette.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -163,6 +163,40 @@ async function main() {
 
 	// ── Manifest unifié TexteUnifie[] (N3.d, cf ADR 0036) ─────────────────────
 	console.log('\n  Construction du manifest unifié /textes/…');
+	// Index scrutins légers (uid → projection) pour inliner les scrutins d'un
+	// texte dans sa fiche unifiée (cf ADR 0041) → la route /textes/[slug] n'a
+	// plus besoin de charger les index globaux au prerender. `numero` unifié :
+	// `numero` côté AN, `scrnum` côté Sénat.
+	const scrutinsIndexANlite: ScrutinIndexLite = new Map(
+		scrutinsAN.map((s) => [
+			s.uid,
+			{
+				uid: s.uid,
+				numero: s.numero,
+				date: s.date,
+				titre: s.titre,
+				sort: s.sort,
+				pour: s.pour,
+				contre: s.contre,
+				abstention: s.abstention
+			}
+		])
+	);
+	const scrutinsIndexSenatLite: ScrutinIndexLite = new Map(
+		scrutinsSEN.map((s) => [
+			s.uid,
+			{
+				uid: s.uid,
+				numero: s.scrnum,
+				date: s.date,
+				titre: s.titre,
+				sort: s.sort,
+				pour: s.pour,
+				contre: s.contre,
+				abstention: s.abstention
+			}
+		])
+	);
 	const textesUnifies: TexteUnifie[] = fusionneTextesUnifies(
 		textesAN.map((t) => ({
 			id: t.id,
@@ -180,7 +214,8 @@ async function main() {
 			enrichiDossiersAN: t.enrichiDossiersAN,
 			senatUrl: t.senatUrl,
 			versionAutreChambre: t.versionAutreChambre,
-			timelineNavette: t.timelineNavette
+			timelineNavette: t.timelineNavette,
+			scrutins: t.scrutins
 		})),
 		textesSenat.map((t) => ({
 			id: t.id,
@@ -197,8 +232,11 @@ async function main() {
 			sortFinal: t.sortFinal,
 			nbScrutins: t.nbScrutins,
 			enrichiDosleg: t.enrichiDosleg,
-			versionAutreChambre: t.versionAutreChambre
-		}))
+			versionAutreChambre: t.versionAutreChambre,
+			scrutins: t.scrutins
+		})),
+		scrutinsIndexANlite,
+		scrutinsIndexSenatLite
 	);
 	await writeFile(
 		join(OUT_DIR_AN, 'textes-unifies.json'),

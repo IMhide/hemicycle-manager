@@ -7,27 +7,17 @@
 	 * pédagogique "Pas examiné au Sénat / à l'AN".
 	 */
 	import { lookupEluUrlForPaIdLeg } from '$lib/elus';
-	import type {
-		Personne,
-		ScrutinIndex,
-		ScrutinSenatIndex,
-		ActeurNom
-	} from '$lib/types';
+	import type { ActeurNom } from '$lib/types';
 	import TimelineNavette from '$lib/components/TimelineNavette.svelte';
 
 	let { data } = $props();
 
 	const t = $derived(data.texte);
-	const anTexte = $derived(data.anTexte);
-	const senatTexte = $derived(data.senatTexte);
-	const scrutinsAN = $derived(data.scrutinsAN as ScrutinIndex[]);
-	const scrutinsSenat = $derived(data.scrutinsSenat as ScrutinSenatIndex[]);
+	// Les scrutins sont inlinés dans le TexteUnifie au pipeline (cf ADR 0041) —
+	// projection légère, `numero` unifié (numero AN / scrnum Sénat).
+	const scrutinsAN = $derived(t.an?.scrutins ?? []);
+	const scrutinsSenat = $derived(t.senat?.scrutins ?? []);
 
-	const personneById = $derived.by(() => {
-		const m = new Map<string, Personne>();
-		for (const p of data.personnes) m.set(p.id, p);
-		return m;
-	});
 	const acteurNomById = $derived.by(() => {
 		const m = new Map<string, ActeurNom>();
 		for (const a of data.acteursNoms) m.set(a.id, a);
@@ -191,14 +181,21 @@
 			<div class="text-sm text-fg-muted pt-2 border-t border-border-soft">
 				<span class="text-fg-muted">À l'initiative de </span>
 				{#each t.initiateurs as paId, i}
-					{@const personne = personneById.get(paId)}
 					{@const acteur = acteurNomById.get(paId)}
-					{#if personne && t.an}
-						<a
-							href={lookupEluUrlForPaIdLeg(paId, t.an.texteId.startsWith('DLR5L17') ? 17 : t.an.texteId.startsWith('DLR5L16') ? 16 : 15)}
-							class="text-link hover:underline"
-						>
-							{personne.identite.prenom} {personne.identite.nom}
+					{@const eluUrl =
+						t.an
+							? lookupEluUrlForPaIdLeg(
+									paId,
+									t.an.texteId.startsWith('DLR5L17')
+										? 17
+										: t.an.texteId.startsWith('DLR5L16')
+											? 16
+											: 15
+								)
+							: null}
+					{#if acteur && eluUrl}
+						<a href={eluUrl} class="text-link hover:underline">
+							{acteur.prenom} {acteur.nom}
 						</a>
 					{:else if acteur}
 						<span class="text-fg" title="Acteur non-député">
@@ -225,14 +222,14 @@
 				Assemblée nationale
 			</h2>
 
-			{#if t.an && anTexte}
+			{#if t.an}
 				<div class="grid grid-cols-3 gap-2">
 					<div class="text-center bg-bg/40 rounded-md py-2">
-						<div class="text-xl font-semibold">{anTexte.nbScrutins}</div>
+						<div class="text-xl font-semibold">{t.an.nbScrutins}</div>
 						<div class="text-[10px] uppercase tracking-wider text-fg-muted">Scrutins</div>
 					</div>
 					<div class="text-center bg-bg/40 rounded-md py-2">
-						<div class="text-xl font-semibold">{anTexte.nbVotesSolennels}</div>
+						<div class="text-xl font-semibold">{t.an.nbVotesSolennels}</div>
 						<div class="text-[10px] uppercase tracking-wider text-fg-muted">Solennels</div>
 					</div>
 					<div class="text-center bg-bg/40 rounded-md py-2">
@@ -330,14 +327,14 @@
 				Sénat
 			</h2>
 
-			{#if t.senat && senatTexte}
+			{#if t.senat}
 				<div class="grid grid-cols-3 gap-2">
 					<div class="text-center bg-bg/40 rounded-md py-2">
-						<div class="text-xl font-semibold">{senatTexte.nbScrutins}</div>
+						<div class="text-xl font-semibold">{t.senat.nbScrutins}</div>
 						<div class="text-[10px] uppercase tracking-wider text-fg-muted">Scrutins</div>
 					</div>
 					<div class="text-center bg-bg/40 rounded-md py-2">
-						<div class="text-xl font-semibold">{senatTexte.triennat}</div>
+						<div class="text-xl font-semibold">{t.senat.triennat}</div>
 						<div class="text-[10px] uppercase tracking-wider text-fg-muted">Triennat</div>
 					</div>
 					<div class="text-center bg-bg/40 rounded-md py-2">
@@ -360,7 +357,7 @@
 									<div class="flex items-start justify-between gap-2">
 										<div class="min-w-0 flex-1">
 											<div class="text-fg-muted">
-												n°{s.scrnum} · {formatDate(s.date)}
+												n°{s.numero} · {formatDate(s.date)}
 											</div>
 											<div class="leading-snug mt-0.5">{shortTitre(s.titre)}</div>
 											<div class="text-fg-muted mt-1">
@@ -398,7 +395,7 @@
 								<div class="flex items-start justify-between gap-2">
 									<div class="min-w-0 flex-1">
 										<div class="text-[10px] text-fg-muted">
-											n°{s.scrnum} · {formatDate(s.date)}
+											n°{s.numero} · {formatDate(s.date)}
 										</div>
 										<div class="text-xs leading-snug truncate">{s.titre}</div>
 									</div>
