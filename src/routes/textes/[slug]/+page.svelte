@@ -9,10 +9,14 @@
 	import { lookupEluUrlForPaIdLeg } from '$lib/elus';
 	import type { ActeurNom } from '$lib/types';
 	import TimelineNavette from '$lib/components/TimelineNavette.svelte';
+	import JsonLd from '$lib/components/JsonLd.svelte';
+	import { buildLegislationLd } from '$lib/jsonld';
 
 	let { data } = $props();
 
 	const t = $derived(data.texte);
+	// JSON-LD Legislation + sameAs Légifrance/Sénat (cf ADR 0045).
+	const legislationLd = $derived(buildLegislationLd(t));
 	// Les scrutins sont inlinés dans le TexteUnifie au pipeline (cf ADR 0041) —
 	// projection légère, `numero` unifié (numero AN / scrnum Sénat).
 	const scrutinsAN = $derived(t.an?.scrutins ?? []);
@@ -82,6 +86,8 @@
 	<title>{metaTitle}</title>
 	<meta property="og:title" content={metaTitle} />
 </svelte:head>
+
+<JsonLd data={legislationLd} />
 
 <section class="max-w-7xl mx-auto px-6 py-8 space-y-6">
 	<a
