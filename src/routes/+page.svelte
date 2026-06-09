@@ -9,6 +9,12 @@
 -->
 <script lang="ts">
 	import GlobalSearch from '$lib/components/GlobalSearch.svelte';
+	import JsonLd from '$lib/components/JsonLd.svelte';
+	import { buildWebsiteLd, buildOrganizationLd, buildDatasetLd } from '$lib/jsonld';
+
+	// JSON-LD home (cf ADR 0045) : WebSite + Organization + Dataset (licence
+	// Etalab, couverture ère Macron) — peut gagner Google Dataset Search.
+	const homeLd = [buildWebsiteLd(), buildOrganizationLd(), buildDatasetLd()];
 
 	let searchEl: GlobalSearch;
 
@@ -34,6 +40,8 @@
 		content="Fiches Football Manager des députés et sénateurs français. Open data, open source."
 	/>
 </svelte:head>
+
+<JsonLd data={homeLd} />
 
 <section class="mx-auto max-w-6xl px-6 py-10 sm:py-16">
 	<!-- ── 1. HERO + RECHERCHE (la CTA première) ───────────────────────── -->
