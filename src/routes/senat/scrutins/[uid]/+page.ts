@@ -7,6 +7,7 @@ import {
 	loadTexteSenat,
 	loadTexteSlugResolver
 } from '$lib/data';
+import { SITE_URL } from '$lib/sitemap';
 import { triennatOfDate } from '$lib/triennats';
 
 export const prerender = false;
@@ -29,5 +30,7 @@ export const load: PageLoad = async ({ fetch, params }) => {
 	const texteSlug = texte
 		? resolveSlug(texte.versionAutreChambre?.texteAnId ?? texte.id)
 		: null;
-	return { detail, groupes, index, senateurs, texte, texteSlug };
+	// Canonical vers la fiche texte parente (cf ADR 0043) — lu par le +layout.
+	const canonicalOverride = texteSlug ? `${SITE_URL}/textes/${texteSlug}/` : undefined;
+	return { detail, groupes, index, senateurs, texte, texteSlug, canonicalOverride };
 };

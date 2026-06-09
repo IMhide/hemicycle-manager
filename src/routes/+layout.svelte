@@ -11,7 +11,14 @@
 	const isSenat = $derived(pathname.startsWith('/senat'));
 
 	const SITE_URL = 'https://politidex.fr';
-	const canonical = $derived(SITE_URL + pathname);
+	// Canonical auto-référent par défaut. Une page peut le surcharger en
+	// exposant `canonicalOverride` dans son load() (ex. un scrutin canonicalisé
+	// vers son texte parent, cf ADR 0043) → on n'émet alors PAS de self-canonical
+	// pour éviter deux <link rel="canonical"> conflictuels.
+	const canonicalOverride = $derived(
+		($page.data as { canonicalOverride?: string }).canonicalOverride ?? null
+	);
+	const canonical = $derived(canonicalOverride ?? SITE_URL + pathname);
 
 	/** Bouton de nav principale (header). Actif = fond jaune brutaliste. */
 	function navClass(active: boolean): string {
