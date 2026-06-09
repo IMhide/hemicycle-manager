@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+
+# Crawlers IA explicitement bienvenus — PolitiDex est un bien public construit
+# sur l'open data Etalab (cf ADR 0044). On encourage la citation.
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://politidex.fr/sitemap.xml
