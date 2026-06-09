@@ -112,7 +112,7 @@
 </script>
 
 <svelte:head>
-	<title>Sénat — PolitiDex</title>
+	<title>Hémicycle du Sénat — votes des sénateurs · PolitiDex</title>
 </svelte:head>
 
 <svelte:window onmousemove={trackCursor} />

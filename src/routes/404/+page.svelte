@@ -11,7 +11,6 @@
 <svelte:head>
 	<title>Page introuvable (404) — PolitiDex</title>
 	<meta name="robots" content="noindex" />
-	<meta name="description" content="Cette page n'existe pas ou plus sur PolitiDex." />
 </svelte:head>
 
 <section class="mx-auto max-w-2xl px-6 py-16 sm:py-24 text-center">

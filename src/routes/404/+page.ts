@@ -7,5 +7,5 @@ export const prerender = true;
 export const ssr = true;
 
 export const load: PageLoad = () => {
-	return {};
+	return { description: "Cette page n'existe pas ou plus sur PolitiDex." };
 };

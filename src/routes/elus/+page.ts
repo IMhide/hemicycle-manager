@@ -9,5 +9,9 @@ export const prerender = true;
 
 export const load: PageLoad = async ({ fetch }) => {
 	const manifest = await loadElusManifest(fetch);
-	return { manifest };
+	return {
+		manifest,
+		description:
+			"Cherchez parmi tous les députés et sénateurs de l'ère Macron. Chaque fiche réunit votes, présence, loyauté et parcours cross-chambre Assemblée nationale / Sénat."
+	};
 };

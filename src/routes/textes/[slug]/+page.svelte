@@ -72,10 +72,15 @@
 		const adoptes = scrutinsSenat.filter((s) => /adopté/i.test(s.sort)).length;
 		return scrutinsSenat.length === 0 ? 0 : Math.round((adoptes * 100) / scrutinsSenat.length);
 	});
+
+	// Méta SEO orientée intention (cf ADR 0043, H6) calculée au load()
+	// (data.metaTitle / data.description). La description est émise par le +layout.
+	const metaTitle = $derived(data.metaTitle);
 </script>
 
 <svelte:head>
-	<title>{t.titre} — PolitiDex</title>
+	<title>{metaTitle}</title>
+	<meta property="og:title" content={metaTitle} />
 </svelte:head>
 
 <section class="max-w-7xl mx-auto px-6 py-8 space-y-6">

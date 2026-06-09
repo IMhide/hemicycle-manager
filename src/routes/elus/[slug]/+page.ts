@@ -39,6 +39,32 @@ export const load: PageLoad = async ({ fetch, params }) => {
 	const elu = manifest.elus.find((e) => e.slug === params.slug);
 	if (!elu) throw new Error(`Élu ${params.slug} introuvable`);
 
+	// Description SEO orientée intention (cf ADR 0043, H6) — émise par le +layout
+	// via data.description. Nomme la personne, son rôle et son groupe pour ranker
+	// sur « comment a voté {nom} » (cf plan SEO §0bis).
+	const fem = elu.sexe === 'F';
+	const aAN = elu.mandats.some((m) => m.chambre === 'AN');
+	const aSenat = elu.mandats.some((m) => m.chambre === 'SENAT');
+	const role =
+		aAN && aSenat
+			? fem
+				? 'députée et sénatrice'
+				: 'député et sénateur'
+			: aSenat
+				? fem
+					? 'sénatrice'
+					: 'sénateur'
+				: fem
+					? 'députée'
+					: 'député';
+	const groupeAbrege = elu.mandats.at(-1)?.groupeLibelleAbrege ?? null;
+	const roleGroupe = groupeAbrege ? `${role} ${groupeAbrege}` : role;
+	const metaTitle = `${elu.prenom} ${elu.nom}, ${roleGroupe} — votes & parcours · PolitiDex`;
+	const description =
+		`Comment a voté ${elu.prenom} ${elu.nom} (${roleGroupe}) : taux de présence, ` +
+		`participation, loyauté et frondes, scrutin par scrutin. Parcours cross-chambre ` +
+		`Assemblée nationale / Sénat sur PolitiDex.`;
+
 	// Toujours charger les méta (légères) — utiles pour TriennatTabs et libellés.
 	const [legislatures, triennats] = await Promise.all([
 		loadLegislatures(fetch),
@@ -89,6 +115,8 @@ export const load: PageLoad = async ({ fetch, params }) => {
 
 	return {
 		elu,
+		metaTitle,
+		description,
 		legislatures,
 		triennats,
 		personne,
