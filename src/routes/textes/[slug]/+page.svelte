@@ -123,6 +123,8 @@
 						? 's'
 						: ''}
 				</div>
+				<!-- Résumé NL factuel (cf ADR 0043, PR C) — issue + navette en clair. -->
+				<p class="mt-3 max-w-2xl text-sm leading-relaxed text-fg">{data.pageSummary}</p>
 				{#if t.urlJO || t.senatUrl}
 					<div class="mt-2 flex flex-wrap gap-3">
 						{#if t.urlJO}
