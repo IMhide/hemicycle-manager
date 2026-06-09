@@ -46,6 +46,11 @@
 	const personne = $derived(data.personne);
 	const senateur = $derived(data.senateur);
 
+	// Méta SEO orientée intention (cf ADR 0043, H6) : titre + description calculés
+	// au load() (data.metaTitle / data.description), pour ranker sur « comment a
+	// voté {nom} » (cf plan SEO §0bis). La description est émise par le +layout.
+	const metaTitle = $derived(data.metaTitle);
+
 	// ──────────────────────────────────────────────────────────────────
 	// Tab actif (lu depuis ?tab=...)
 	// ──────────────────────────────────────────────────────────────────
@@ -421,7 +426,8 @@
 </script>
 
 <svelte:head>
-	<title>{elu.prenom} {elu.nom} — PolitiDex</title>
+	<title>{metaTitle}</title>
+	<meta property="og:title" content={metaTitle} />
 </svelte:head>
 
 <section class="max-w-7xl mx-auto px-6 py-6">

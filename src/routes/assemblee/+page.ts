@@ -30,6 +30,8 @@ export const load: PageLoad = async ({ fetch }) => {
 		meta,
 		legislatures,
 		legCourante,
-		nbTextes: meta.counts.textes
+		nbTextes: meta.counts.textes,
+		description:
+			"L'hémicycle interactif de l'Assemblée nationale : survolez chaque siège pour voir la fiche du député, son groupe, sa présence et ses votes. 15ᵉ, 16ᵉ et 17ᵉ législatures."
 	};
 };

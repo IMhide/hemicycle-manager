@@ -9,5 +9,9 @@ export const prerender = true;
 
 export const load: PageLoad = async ({ fetch }) => {
 	const manifest = await loadElusManifest(fetch);
-	return { manifest };
+	return {
+		manifest,
+		description:
+			'Le classement ludique des élus français par score Overall (participation, volume de votes, présence). Députés et sénateurs comparés cross-chambre sur PolitiDex.'
+	};
 };
