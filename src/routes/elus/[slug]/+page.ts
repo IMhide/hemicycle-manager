@@ -65,6 +65,27 @@ export const load: PageLoad = async ({ fetch, params }) => {
 		`participation, loyauté et frondes, scrutin par scrutin. Parcours cross-chambre ` +
 		`Assemblée nationale / Sénat sur PolitiDex.`;
 
+	// Résumé NL visible (cf ADR 0043, PR C) : le <p> factuel sous le <h1>, qui
+	// nomme la personne, son rôle et ses chiffres clés de carrière. Construit
+	// depuis le manifest (carrière, toujours dispo au prerender) — le contenu
+	// exact que Google met en avant et que les IA citent (cf plan SEO §0bis).
+	const pct = (v: number) => `${Math.round(v * 100)} %`;
+	const anneeDebut = elu.mandats
+		.map((m) => m.debut)
+		.filter(Boolean)
+		.sort()[0]
+		?.slice(0, 4);
+	const nbMandats = elu.mandats.length;
+	const pageSummary =
+		`${elu.prenom} ${elu.nom} est ${roleGroupe}${anneeDebut ? ` depuis ${anneeDebut}` : ''}. ` +
+		`Sur l'ensemble de sa carrière (${nbMandats} mandat${nbMandats > 1 ? 's' : ''}) : ` +
+		`taux de présence ${pct(elu.radarCarriere.presence)}, ` +
+		`participation ${pct(elu.radarCarriere.participation)}, ` +
+		`loyauté ${pct(elu.radarCarriere.loyaute)}. ` +
+		`Score Overall : ${elu.overallCarriere}/99.`;
+	const pageTitle = `${elu.prenom} ${elu.nom}`;
+	const pageSubtitle = roleGroupe.charAt(0).toUpperCase() + roleGroupe.slice(1);
+
 	// Toujours charger les méta (légères) — utiles pour TriennatTabs et libellés.
 	const [legislatures, triennats] = await Promise.all([
 		loadLegislatures(fetch),
@@ -117,6 +138,9 @@ export const load: PageLoad = async ({ fetch, params }) => {
 		elu,
 		metaTitle,
 		description,
+		pageTitle,
+		pageSubtitle,
+		pageSummary,
 		legislatures,
 		triennats,
 		personne,

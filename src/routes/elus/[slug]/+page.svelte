@@ -36,6 +36,7 @@
 	import MandatSelecteur from '$lib/components/MandatSelecteur.svelte';
 	import type { SelectedTab } from '$lib/components/MandatSelecteur.svelte';
 	import RetourButton from '$lib/components/RetourButton.svelte';
+	import FactSummary from '$lib/components/FactSummary.svelte';
 	import VoteHistoryItem from '$lib/components/VoteHistoryItem.svelte';
 	import VoteHistoryItemSenat from '$lib/components/VoteHistoryItemSenat.svelte';
 	import TimelineCarriere from '$lib/components/TimelineCarriere.svelte';
@@ -434,6 +435,10 @@
 	<div class="mb-4">
 		<RetourButton />
 	</div>
+
+	<!-- Titre principal (h1) + résumé NL factuel (cf ADR 0043, PR C). Posé au
+	     niveau page → un seul h1 quel que soit l'onglet (carrière/AN/Sénat). -->
+	<FactSummary title={data.pageTitle} subtitle={data.pageSubtitle} summary={data.pageSummary} />
 
 	<!-- Sélecteur de mandat unique : Carrière + AN-{leg}* + Sénat-{triennat}* -->
 	<div class="mb-6">
