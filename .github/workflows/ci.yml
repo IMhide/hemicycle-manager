@@ -36,6 +36,8 @@ jobs:
           mkdir -p static/data/scrutins static/data/historique static/data/groupes
           echo '[]' > static/data/personnes.json
           echo '[]' > static/data/scrutins-index.json
+          # Projection « scrutins récents » (ADR 0041) lue par /assemblee.
+          echo '[]' > static/data/scrutins-recent.json
           echo '[{"num":15,"dateDebut":"2017-06-21","dateFin":"2022-06-21","nbPersonnes":0,"nbScrutins":0},{"num":16,"dateDebut":"2022-06-22","dateFin":"2024-06-09","nbPersonnes":0,"nbScrutins":0},{"num":17,"dateDebut":"2024-07-08","dateFin":null,"nbPersonnes":0,"nbScrutins":0}]' > static/data/legislatures.json
           echo '[]' > static/data/groupes/15.json
           echo '[]' > static/data/groupes/16.json
@@ -51,6 +53,8 @@ jobs:
           mkdir -p static/data/senat/scrutins static/data/senat/historique static/data/senat/groupes
           echo '[]' > static/data/senat/senateurs.json
           echo '[]' > static/data/senat/scrutins-index.json
+          # Projection « scrutins récents » Sénat (ADR 0041) lue par /senat.
+          echo '[]' > static/data/senat/scrutins-recent.json
           echo '[{"sesann":2024,"libelle":"2024-2025","dateDebut":"2024-10-01","dateFin":"2025-09-30","nbSenateursActifs":0,"nbScrutins":0}]' > static/data/senat/sessions.json
           echo '[{"id":"2017-2020","libelle":"2017-2020","dateDebut":"2017-09-24","dateFin":"2020-09-27","enCours":false,"sessions":[2017,2018,2019],"nbSenateursActifs":0,"nbScrutins":0},{"id":"2020-2023","libelle":"2020-2023","dateDebut":"2020-09-27","dateFin":"2023-09-24","enCours":false,"sessions":[2020,2021,2022],"nbSenateursActifs":0,"nbScrutins":0},{"id":"2023-2026","libelle":"2023-2026","dateDebut":"2023-09-24","dateFin":"2026-09-27","enCours":true,"sessions":[2023,2024,2025],"nbSenateursActifs":0,"nbScrutins":0}]' > static/data/senat/triennats.json
           echo '[]' > static/data/senat/groupes/2017-2020.json
@@ -67,6 +71,8 @@ jobs:
           # vide pour permettre le build de /textes/ et /textes/[id]. Rempli par
           # `npm run data:build:cross` en pipeline réel.
           echo '[]' > static/data/textes-unifies.json
+          # Projection « lite » des textes unifiés (ADR 0041) lue par la liste /textes.
+          echo '[]' > static/data/textes-unifies-lite.json
 
       - name: Sync SvelteKit
         run: npx svelte-kit sync
