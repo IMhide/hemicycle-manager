@@ -40,12 +40,18 @@
 	import VoteHistoryItem from '$lib/components/VoteHistoryItem.svelte';
 	import VoteHistoryItemSenat from '$lib/components/VoteHistoryItemSenat.svelte';
 	import TimelineCarriere from '$lib/components/TimelineCarriere.svelte';
+	import JsonLd from '$lib/components/JsonLd.svelte';
+	import { buildPersonLd } from '$lib/jsonld';
 
 	let { data } = $props();
 
 	const elu = $derived(data.elu);
 	const personne = $derived(data.personne);
 	const senateur = $derived(data.senateur);
+
+	// JSON-LD Person + sameAs officiel AN/Sénat (cf ADR 0045) — relie la fiche à
+	// l'entité que Google connaît déjà, levier pour ranker sur le nom (§0bis).
+	const personLd = $derived(buildPersonLd(elu));
 
 	// Méta SEO orientée intention (cf ADR 0043, H6) : titre + description calculés
 	// au load() (data.metaTitle / data.description), pour ranker sur « comment a
@@ -430,6 +436,8 @@
 	<title>{metaTitle}</title>
 	<meta property="og:title" content={metaTitle} />
 </svelte:head>
+
+<JsonLd data={personLd} />
 
 <section class="max-w-7xl mx-auto px-6 py-6">
 	<div class="mb-4">
