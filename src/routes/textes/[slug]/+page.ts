@@ -73,10 +73,45 @@ export const load: PageLoad = async ({ fetch, params }) => {
 				: `Texte ${etatLabel}.`
 		} Qui a voté quoi sur PolitiDex.`;
 
+	// Résumé NL visible (cf ADR 0043, PR C) : le <p> factuel sous le titre, qui
+	// nomme le texte, son issue et sa navette. Contenu mis en avant par Google /
+	// cité par les IA (cf plan SEO §0bis).
+	const fmtDate = (iso: string) =>
+		new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+	// Vote décisif AN (« l'ensemble ») si présent dans les scrutins inlinés.
+	const voteEnsembleAN = (texte.an?.scrutins ?? []).find((s) =>
+		/^l[' ]ensemble\b/i.test(s.titre)
+	);
+	const chambres =
+		texte.an && texte.senat
+			? "l'Assemblée nationale et le Sénat"
+			: texte.an
+				? "l'Assemblée nationale"
+				: 'le Sénat';
+	let issue: string;
+	if (texte.etat === 'promulgue') {
+		issue =
+			`a été promulgué${texte.numeroLoi ? ` (loi n° ${texte.numeroLoi})` : ''}` +
+			`${texte.datePromulgation ? `, au Journal officiel du ${fmtDate(texte.datePromulgation)}` : ''}`;
+	} else if (texte.etat === 'rejete') {
+		issue = 'a été rejeté';
+	} else if (texte.etat === 'caduc' || texte.etat === 'retire' || texte.etat === 'fusionne') {
+		issue = `est ${etatLabel}`;
+	} else {
+		issue = 'poursuit la navette parlementaire';
+	}
+	const voteDetail = voteEnsembleAN
+		? ` Le vote sur l'ensemble à l'Assemblée : ${voteEnsembleAN.pour} pour, ${voteEnsembleAN.contre} contre, ${voteEnsembleAN.abstention} abstention${voteEnsembleAN.abstention > 1 ? 's' : ''}.`
+		: '';
+	const pageSummary =
+		`« ${texte.titre} » ${issue}. Examiné par ${chambres}, ce texte a fait l'objet de ` +
+		`${texte.nbScrutins} scrutin${texte.nbScrutins > 1 ? 's' : ''} nominaux.${voteDetail}`;
+
 	return {
 		texte,
 		acteursNoms,
 		metaTitle,
-		description
+		description,
+		pageSummary
 	};
 };
