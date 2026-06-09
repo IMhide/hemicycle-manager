@@ -27,5 +27,14 @@ export const load: PageLoad = async ({ fetch }) => {
 		loadMetaSenat(fetch)
 	]);
 
-	return { senateurs, groupes, scrutins, meta, triennats, triennatCourant };
+	return {
+		senateurs,
+		groupes,
+		scrutins,
+		meta,
+		triennats,
+		triennatCourant,
+		description:
+			"L'hémicycle interactif du Sénat (348 sièges) : survolez un siège pour la fiche du sénateur, son groupe et ses votes. Trois triennats de l'ère Macron (2017-2026)."
+	};
 };

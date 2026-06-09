@@ -332,7 +332,6 @@
 
 <svelte:head>
 	<title>FAQ — PolitiDex</title>
-	<meta name="description" content="Comment ça marche ? Toutes les décisions de PolitiDex expliquées en clair." />
 </svelte:head>
 
 <section class="max-w-4xl mx-auto px-6 py-10">

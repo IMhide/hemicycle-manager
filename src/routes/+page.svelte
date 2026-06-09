@@ -25,15 +25,9 @@
 
 <svelte:head>
 	<title>PolitiDex — Le Pokédex des élus nationaux français</title>
-	<meta
-		name="description"
-		content="PolitiDex regroupe les fiches Football Manager des députés et sénateurs français — votes, scrutins, hémicycles, classements. Open data, open source."
-	/>
+	<!-- description + og:description : émises par le +layout via data.description
+	     (cf ADR 0043). Ici on ne pose que les titres OG/Twitter spécifiques. -->
 	<meta property="og:title" content="PolitiDex — Le Pokédex des élus nationaux français" />
-	<meta
-		property="og:description"
-		content="Fiches Football Manager des députés et sénateurs français : votes, scrutins, hémicycles, classements. Open data, open source."
-	/>
 	<meta name="twitter:title" content="PolitiDex — Le Pokédex des élus nationaux français" />
 	<meta
 		name="twitter:description"

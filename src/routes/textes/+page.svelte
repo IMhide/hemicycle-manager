@@ -76,7 +76,7 @@
 </script>
 
 <svelte:head>
-	<title>Textes législatifs — PolitiDex</title>
+	<title>Textes législatifs — lois et propositions, qui a voté quoi · PolitiDex</title>
 </svelte:head>
 
 <section class="max-w-[1536px] mx-auto px-6 py-8 space-y-6">

@@ -110,7 +110,7 @@
 </script>
 
 <svelte:head>
-	<title>PolitiDex — Pokédex des élus français</title>
+	<title>Hémicycle de l'Assemblée nationale — votes des députés · PolitiDex</title>
 </svelte:head>
 
 <svelte:window onmousemove={trackCursor} />

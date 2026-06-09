@@ -107,7 +107,7 @@
 </script>
 
 <svelte:head>
-	<title>Tous les élus — PolitiDex</title>
+	<title>Tous les élus — députés et sénateurs français · PolitiDex</title>
 </svelte:head>
 
 <section class="max-w-[1536px] mx-auto px-6 py-8">

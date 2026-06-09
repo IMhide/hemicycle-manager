@@ -48,8 +48,35 @@ export const load: PageLoad = async ({ fetch, params }) => {
 	// Noms des initiateurs (députés + sénateurs + ministres) — manifest léger.
 	const acteursNoms = await loadActeursNoms(fetch).catch(() => []);
 
+	// Méta SEO orientée intention (cf ADR 0043, H6) — émises par le +layout via
+	// data.metaTitle / data.description.
+	const etatLabel =
+		texte.etat === 'promulgue'
+			? 'promulguée'
+			: texte.etat === 'rejete'
+				? 'rejeté'
+				: texte.etat === 'caduc'
+					? 'caduc'
+					: texte.etat === 'retire'
+						? 'retiré'
+						: texte.etat === 'fusionne'
+							? 'fusionné'
+							: 'en cours de navette';
+	const titreCourt =
+		texte.titre.length > 70 ? texte.titre.slice(0, 67).trim() + '…' : texte.titre;
+	const metaTitle = `${titreCourt} — ${etatLabel} · PolitiDex`;
+	const description =
+		`${texte.titre} : résultat des votes, scrutins AN${texte.senat ? ' et Sénat' : ''} et navette ` +
+		`parlementaire. ${
+			texte.etat === 'promulgue'
+				? `Loi ${texte.numeroLoi ? `n° ${texte.numeroLoi} ` : ''}promulguée.`
+				: `Texte ${etatLabel}.`
+		} Qui a voté quoi sur PolitiDex.`;
+
 	return {
 		texte,
-		acteursNoms
+		acteursNoms,
+		metaTitle,
+		description
 	};
 };

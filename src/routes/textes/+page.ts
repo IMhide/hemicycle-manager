@@ -9,5 +9,9 @@ export const prerender = true;
 
 export const load: PageLoad = async ({ fetch }) => {
 	const textes = await loadTextesUnifiesLite(fetch);
-	return { textes };
+	return {
+		textes,
+		description:
+			"Tous les textes de loi examinés par l'Assemblée nationale et le Sénat : résultat des votes, navette parlementaire et état (promulgué, rejeté, en cours) sur PolitiDex."
+	};
 };

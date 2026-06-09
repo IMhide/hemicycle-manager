@@ -81,7 +81,7 @@
 </script>
 
 <svelte:head>
-	<title>Classement global — PolitiDex</title>
+	<title>Classement des élus — score Overall des députés et sénateurs · PolitiDex</title>
 </svelte:head>
 
 <section class="max-w-5xl mx-auto px-6 py-8">
