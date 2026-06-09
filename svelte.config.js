@@ -21,7 +21,18 @@ const config = {
 			// /elus/[slug] et /textes/[slug] « marquées prérendables » ne sont
 			// jamais atteintes. En build réel (data présente), entries() est non
 			// vide → routes prérendues normalement. Cf ADR 0041.
-			handleUnseenRoutes: 'warn'
+			handleUnseenRoutes: 'warn',
+			// Les endpoints sitemap (cf ADR 0044) ne sont liés depuis aucune page
+			// prérendue → on les déclare explicitement pour que le crawler SSG les
+			// génère (sinon strict:true les manque). `*` conserve la découverte
+			// automatique des routes prérendues. robots.txt est servi statiquement.
+			entries: [
+				'*',
+				'/sitemap.xml',
+				'/sitemap-pages.xml',
+				'/sitemap-elus.xml',
+				'/sitemap-textes.xml'
+			]
 		}
 	}
 };
