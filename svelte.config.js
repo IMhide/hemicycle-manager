@@ -14,7 +14,15 @@ const config = {
 			fallback: '200.html',
 			precompress: false,
 			strict: true
-		})
+		}),
+		prerender: {
+			// Tolère un manifest vide (CI : placeholders `[]` → entries() renvoie []
+			// → 0 page détail). Sans ça, le crawler strict échoue car les routes
+			// /elus/[slug] et /textes/[slug] « marquées prérendables » ne sont
+			// jamais atteintes. En build réel (data présente), entries() est non
+			// vide → routes prérendues normalement. Cf ADR 0041.
+			handleUnseenRoutes: 'warn'
+		}
 	}
 };
 
