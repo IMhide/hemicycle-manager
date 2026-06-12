@@ -6,6 +6,7 @@
 	 */
 	import { readableTextOn } from '$lib/contrast-text';
 	import type { GroupeSenat } from '$lib/types';
+	import { untrack } from 'svelte';
 
 	let { data } = $props();
 
@@ -13,8 +14,12 @@
 		[...data.triennats].sort((a, b) => b.dateDebut.localeCompare(a.dateDebut))
 	);
 
+	// Init = triennat le plus récent. `untrack` : instantané unique de `data`
+	// (statique au prerender), pas une dépendance réactive (state_referenced_locally).
 	let scope = $state(
-		[...data.triennats].sort((a, b) => b.dateDebut.localeCompare(a.dateDebut))[0]?.id ?? ''
+		untrack(
+			() => [...data.triennats].sort((a, b) => b.dateDebut.localeCompare(a.dateDebut))[0]?.id ?? ''
+		)
 	);
 
 	const groupesScope = $derived.by<GroupeSenat[]>(() => {
