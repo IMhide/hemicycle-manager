@@ -1,12 +1,17 @@
 <script lang="ts">
 	import { POLITICAL_ORDER } from '$lib/political-order';
 	import type { Groupe } from '$lib/types';
+	import { untrack } from 'svelte';
 
 	let { data } = $props();
 
 	const legSorted = $derived([...data.legislatures].sort((a, b) => b.num - a.num));
 
-	let scope = $state([...data.legislatures].sort((a, b) => b.num - a.num)[0]?.num ?? 17);
+	// Init = législature la plus récente. `untrack` : instantané unique de `data`
+	// (statique au prerender), pas une dépendance réactive (state_referenced_locally).
+	let scope = $state(
+		untrack(() => [...data.legislatures].sort((a, b) => b.num - a.num)[0]?.num ?? 17)
+	);
 
 	const groupesScope = $derived.by(() => {
 		const idx = data.legislatures.findIndex((l) => l.num === scope);

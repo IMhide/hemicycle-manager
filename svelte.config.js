@@ -1,5 +1,6 @@
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+import { isToleratedPrerenderError } from './src/lib/prerender-policy.js';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -22,16 +23,17 @@ const config = {
 			// jamais atteintes. En build réel (data présente), entries() est non
 			// vide → routes prérendues normalement. Cf ADR 0041.
 			handleUnseenRoutes: 'warn',
-			// Historiques de vote manquants (cf ADR 0041) : un élu présent au
-			// manifest mais sans aucun vote enregistré (ex. ministre/secrétaire
+			// Historiques de vote manquants (cf ADR 0041, PR #33) : un élu présent
+			// au manifest mais sans aucun vote enregistré (ex. ministre/secrétaire
 			// d'État n'ayant siégé que brièvement) n'a pas de fichier
 			// `/data/historique/{paId}.json` — c'est légitime, pas une donnée
 			// manquante. La fiche le gère déjà via `.catch(() => [])`, mais le
 			// crawler SSG remonte tout fetch 404 comme erreur fatale. On l'ignore
 			// pour cette seule famille d'URLs : un élu sans historique ne doit
-			// JAMAIS casser le déploiement complet. Toute autre 404 reste fatale.
+			// JAMAIS casser le déploiement complet. Toute autre erreur reste
+			// fatale. Prédicat extrait + testé : src/lib/prerender-policy.js.
 			handleHttpError: ({ path, referrer, message }) => {
-				if (path.startsWith('/data/historique/')) {
+				if (isToleratedPrerenderError(path)) {
 					console.warn(`Prerender: historique absent, ignoré — ${path} (réf. ${referrer})`);
 					return;
 				}
