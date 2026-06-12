@@ -22,6 +22,21 @@ const config = {
 			// jamais atteintes. En build réel (data présente), entries() est non
 			// vide → routes prérendues normalement. Cf ADR 0041.
 			handleUnseenRoutes: 'warn',
+			// Historiques de vote manquants (cf ADR 0041) : un élu présent au
+			// manifest mais sans aucun vote enregistré (ex. ministre/secrétaire
+			// d'État n'ayant siégé que brièvement) n'a pas de fichier
+			// `/data/historique/{paId}.json` — c'est légitime, pas une donnée
+			// manquante. La fiche le gère déjà via `.catch(() => [])`, mais le
+			// crawler SSG remonte tout fetch 404 comme erreur fatale. On l'ignore
+			// pour cette seule famille d'URLs : un élu sans historique ne doit
+			// JAMAIS casser le déploiement complet. Toute autre 404 reste fatale.
+			handleHttpError: ({ path, referrer, message }) => {
+				if (path.startsWith('/data/historique/')) {
+					console.warn(`Prerender: historique absent, ignoré — ${path} (réf. ${referrer})`);
+					return;
+				}
+				throw new Error(message);
+			},
 			// Les endpoints sitemap (cf ADR 0044) ne sont liés depuis aucune page
 			// prérendue → on les déclare explicitement pour que le crawler SSG les
 			// génère (sinon strict:true les manque). `*` conserve la découverte
