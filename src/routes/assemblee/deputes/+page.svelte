@@ -5,6 +5,8 @@
 	import { POLITICAL_ORDER } from '$lib/political-order';
 	import type { Personne, Mandat, Groupe } from '$lib/types';
 
+	import { untrack } from 'svelte';
+
 	let { data } = $props();
 
 	const BADGES_CARRIERE = [
@@ -34,9 +36,12 @@
 	let badgesSelected = $state<string[]>([]);
 	let visibleCount = $state(60);
 	let onlyPresidents = $state(false);
-	/** null = vue carrière (cross-leg), sinon scope par législature */
+	/** null = vue carrière (cross-leg), sinon scope par législature.
+	 *  Valeur initiale = législature la plus récente. `untrack` car on veut
+	 *  délibérément un instantané unique de `data` (statique au prerender), pas
+	 *  une dépendance réactive — sinon Svelte émet `state_referenced_locally`. */
 	let scopeLeg: number | null = $state(
-		[...data.legislatures].sort((a, b) => b.num - a.num)[0]?.num ?? 17
+		untrack(() => [...data.legislatures].sort((a, b) => b.num - a.num)[0]?.num ?? 17)
 	);
 
 	const groupesById = $derived.by(() => {
