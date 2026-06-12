@@ -5,8 +5,10 @@ import {
 	loadScrutinDetail,
 	loadScrutinsIndex,
 	loadLegislatures,
-	loadTexte
+	loadTexte,
+	loadTexteSlugResolver
 } from '$lib/data';
+import { SITE_URL } from '$lib/sitemap';
 
 export const prerender = false;
 export const ssr = false;
@@ -17,7 +19,23 @@ export const load: PageLoad = async ({ fetch, params }) => {
 	const groupesByLeg = await Promise.all(legislatures.map((l) => loadGroupes(fetch, l.num)));
 	const [personnes, index] = await Promise.all([loadPersonnes(fetch), loadScrutinsIndex(fetch)]);
 	const groupes = groupesByLeg.flat();
-	// Charge le Texte parent si rattaché (cf ADR 0035)
+	// Charge le Texte parent si rattaché (cf ADR 0035) + son slug pour le lien
+	// vers la fiche unifiée (cf ADR 0042).
 	const texte = detail.texteId ? await loadTexte(fetch, detail.texteId) : null;
-	return { personnes, groupes, detail, index, legislatures, texte };
+	const texteSlug = detail.texteId
+		? (await loadTexteSlugResolver(fetch))(detail.texteId)
+		: null;
+	// Canonical vers la fiche texte parente (cf ADR 0043) — lu par le +layout
+	// (un seul <link rel="canonical">). Absent si le scrutin n'a pas de texte.
+	const canonicalOverride = texteSlug ? `${SITE_URL}/textes/${texteSlug}/` : undefined;
+	return {
+		personnes,
+		groupes,
+		detail,
+		index,
+		legislatures,
+		texte,
+		texteSlug,
+		canonicalOverride
+	};
 };

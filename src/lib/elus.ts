@@ -52,6 +52,7 @@ export interface EluRadar {
 
 export interface Elu {
 	id: string; // elu_<8 hex>
+	slug: string; // URL lisible `prenom-nom` (+ suffixe si collision), cf ADR 0042
 	prenom: string;
 	nom: string;
 	civ: string;
@@ -80,15 +81,18 @@ let _cached: EluManifest | null = null;
 let _byPaId = new Map<string, Elu>();
 let _byMatricule = new Map<string, Elu>();
 let _byEluId = new Map<string, Elu>();
+let _bySlug = new Map<string, Elu>();
 
 function rebuildIndexes(manifest: EluManifest) {
 	_byPaId = new Map();
 	_byMatricule = new Map();
 	_byEluId = new Map();
+	_bySlug = new Map();
 	for (const e of manifest.elus) {
 		if (e.paId) _byPaId.set(e.paId, e);
 		if (e.matricule) _byMatricule.set(e.matricule, e);
 		_byEluId.set(e.id, e);
+		_bySlug.set(e.slug, e);
 	}
 }
 
@@ -124,6 +128,11 @@ export function lookupEluByEluId(eluId: string): Elu | null {
 	return _byEluId.get(eluId) ?? null;
 }
 
+/** Lookup par slug URL (cf ADR 0042). Utilisé par la route `/elus/[slug]`. */
+export function lookupEluBySlug(slug: string): Elu | null {
+	return _bySlug.get(slug) ?? null;
+}
+
 /**
  * URL fiche Élu pour un PA-id + une législature (mandat AN). Tombe sur
  * `null` si le manifest n'est pas chargé ou si le PA-id n'a pas d'Elu —
@@ -132,7 +141,7 @@ export function lookupEluByEluId(eluId: string): Elu | null {
 export function lookupEluUrlForPaIdLeg(paId: string, leg: number): string | null {
 	const elu = lookupEluByPaId(paId);
 	if (!elu) return null;
-	return `/elus/${elu.id}?tab=an-${leg}`;
+	return `/elus/${elu.slug}?tab=an-${leg}`;
 }
 
 export function lookupEluUrlForMatriculeTriennat(
@@ -141,26 +150,26 @@ export function lookupEluUrlForMatriculeTriennat(
 ): string | null {
 	const elu = lookupEluByMatricule(matricule);
 	if (!elu) return null;
-	return `/elus/${elu.id}?tab=senat-${periode}`;
+	return `/elus/${elu.slug}?tab=senat-${periode}`;
 }
 
 /** URL Carrière par PA-id (sans législature spécifique). */
 export function lookupEluUrlCarriereForPaId(paId: string): string | null {
 	const elu = lookupEluByPaId(paId);
 	if (!elu) return null;
-	return `/elus/${elu.id}?tab=carriere`;
+	return `/elus/${elu.slug}?tab=carriere`;
 }
 
 export function lookupEluUrlCarriereForMatricule(matricule: string): string | null {
 	const elu = lookupEluByMatricule(matricule);
 	if (!elu) return null;
-	return `/elus/${elu.id}?tab=carriere`;
+	return `/elus/${elu.slug}?tab=carriere`;
 }
 
-/** Charge un Elu par son `eluId`. Retourne `null` si inconnu. */
-export async function loadElu(fetchFn: FetchFn, eluId: string): Promise<Elu | null> {
+/** Charge un Elu par son slug URL (cf ADR 0042). Retourne `null` si inconnu. */
+export async function loadElu(fetchFn: FetchFn, slug: string): Promise<Elu | null> {
 	const manifest = await loadElusManifest(fetchFn);
-	return manifest.elus.find((e) => e.id === eluId) ?? null;
+	return manifest.elus.find((e) => e.slug === slug) ?? null;
 }
 
 /** Trouve l'Elu correspondant à un PA-id AN. */
@@ -181,10 +190,10 @@ export function findEluByMatricule(elus: Elu[], matricule: string): Elu | null {
 export function eluUrlForPaIdLeg(elus: Elu[], paId: string, leg: number): string | null {
 	const elu = findEluByPaId(elus, paId);
 	if (!elu) return null;
-	return `/elus/${elu.id}?tab=an-${leg}`;
+	return `/elus/${elu.slug}?tab=an-${leg}`;
 }
 
-/** Construit l'URL `/elus/[eluId]?tab=senat-{periode}`. */
+/** Construit l'URL `/elus/[slug]?tab=senat-{periode}`. */
 export function eluUrlForMatriculeTriennat(
 	elus: Elu[],
 	matricule: string,
@@ -192,12 +201,12 @@ export function eluUrlForMatriculeTriennat(
 ): string | null {
 	const elu = findEluByMatricule(elus, matricule);
 	if (!elu) return null;
-	return `/elus/${elu.id}?tab=senat-${periode}`;
+	return `/elus/${elu.slug}?tab=senat-${periode}`;
 }
 
-/** URL de base d'un Elu (vue Carrière par défaut). */
-export function eluUrlCarriere(eluId: string): string {
-	return `/elus/${eluId}?tab=carriere`;
+/** URL de base d'un Elu (vue Carrière par défaut). Prend le slug (cf ADR 0042). */
+export function eluUrlCarriere(slug: string): string {
+	return `/elus/${slug}?tab=carriere`;
 }
 
 /** Catégorise un Elu : 'an' (AN seul), 'senat' (Sénat seul), 'bicameral'. */

@@ -11,7 +11,23 @@
 	const isSenat = $derived(pathname.startsWith('/senat'));
 
 	const SITE_URL = 'https://politidex.fr';
-	const canonical = $derived(SITE_URL + pathname);
+	// Canonical auto-référent par défaut. Une page peut le surcharger en
+	// exposant `canonicalOverride` dans son load() (ex. un scrutin canonicalisé
+	// vers son texte parent, cf ADR 0043) → on n'émet alors PAS de self-canonical
+	// pour éviter deux <link rel="canonical"> conflictuels.
+	const canonicalOverride = $derived(
+		($page.data as { canonicalOverride?: string }).canonicalOverride ?? null
+	);
+	const canonical = $derived(canonicalOverride ?? SITE_URL + pathname);
+
+	// Description SEO : pilotée par page via `data.description` (cf ADR 0043, H6).
+	// Un SEUL <meta name="description"> est émis ici (le générique d'app.html a été
+	// retiré pour éviter les doublons). Fallback site-wide si la page n'en fournit pas.
+	const DEFAULT_DESCRIPTION =
+		'PolitiDex — le Pokédex des élus nationaux français : votes, présence, loyauté et parcours des députés et sénateurs, à partir de l’open data Etalab.';
+	const description = $derived(
+		($page.data as { description?: string }).description ?? DEFAULT_DESCRIPTION
+	);
 
 	/** Bouton de nav principale (header). Actif = fond jaune brutaliste. */
 	function navClass(active: boolean): string {
@@ -26,10 +42,12 @@
 
 <svelte:head>
 	<link rel="canonical" href={canonical} />
+	<meta name="description" content={description} />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content={canonical} />
 	<meta property="og:site_name" content="PolitiDex" />
 	<meta property="og:locale" content="fr_FR" />
+	<meta property="og:description" content={description} />
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:domain" content="politidex.fr" />
 	<meta name="twitter:url" content={canonical} />

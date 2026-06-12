@@ -81,7 +81,7 @@
 </script>
 
 <svelte:head>
-	<title>Classement global — PolitiDex</title>
+	<title>Classement des élus — score Overall des députés et sénateurs · PolitiDex</title>
 </svelte:head>
 
 <section class="max-w-5xl mx-auto px-6 py-8">
@@ -124,7 +124,7 @@
 				{@const rang = rangById.get(e.id) ?? 0}
 				{@const pc = podiumColor(rang)}
 				<a
-					href="/elus/{e.id}?tab=carriere"
+					href="/elus/{e.slug}?tab=carriere"
 					class="flex items-center gap-3 px-3 py-2 hover:bg-surface-2 transition-colors"
 				>
 					<div class="w-9 flex-shrink-0 flex justify-center">

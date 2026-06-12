@@ -110,7 +110,7 @@
 </script>
 
 <svelte:head>
-	<title>PolitiDex — Pokédex des élus français</title>
+	<title>Hémicycle de l'Assemblée nationale — votes des députés · PolitiDex</title>
 </svelte:head>
 
 <svelte:window onmousemove={trackCursor} />
@@ -191,7 +191,7 @@
 			<h2 class="title-display text-xl">Scrutins récents</h2>
 			<div class="flex gap-3 text-xs text-fg-muted">
 				<a href="/textes/" class="hover:text-link">
-					Textes ({data.textes.length}) →
+					Textes ({data.nbTextes}) →
 				</a>
 				<a href="/assemblee/scrutins/" class="hover:text-link">
 					Voir tous les scrutins →

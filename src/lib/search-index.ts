@@ -197,7 +197,7 @@ function toEluResult(elu: Elu): SearchEluResult {
 	const dernier = mandatLePlusRecent(elu);
 	return {
 		eluId: elu.id,
-		href: eluUrlCarriere(elu.id),
+		href: eluUrlCarriere(elu.slug),
 		prenom: elu.prenom,
 		nom: elu.nom,
 		photoUrl: elu.photoUrl,

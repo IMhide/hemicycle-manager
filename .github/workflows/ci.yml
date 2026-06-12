@@ -36,6 +36,8 @@ jobs:
           mkdir -p static/data/scrutins static/data/historique static/data/groupes
           echo '[]' > static/data/personnes.json
           echo '[]' > static/data/scrutins-index.json
+          # Projection « scrutins récents » (ADR 0041) lue par /assemblee.
+          echo '[]' > static/data/scrutins-recent.json
           echo '[{"num":15,"dateDebut":"2017-06-21","dateFin":"2022-06-21","nbPersonnes":0,"nbScrutins":0},{"num":16,"dateDebut":"2022-06-22","dateFin":"2024-06-09","nbPersonnes":0,"nbScrutins":0},{"num":17,"dateDebut":"2024-07-08","dateFin":null,"nbPersonnes":0,"nbScrutins":0}]' > static/data/legislatures.json
           echo '[]' > static/data/groupes/15.json
           echo '[]' > static/data/groupes/16.json
@@ -51,6 +53,8 @@ jobs:
           mkdir -p static/data/senat/scrutins static/data/senat/historique static/data/senat/groupes
           echo '[]' > static/data/senat/senateurs.json
           echo '[]' > static/data/senat/scrutins-index.json
+          # Projection « scrutins récents » Sénat (ADR 0041) lue par /senat.
+          echo '[]' > static/data/senat/scrutins-recent.json
           echo '[{"sesann":2024,"libelle":"2024-2025","dateDebut":"2024-10-01","dateFin":"2025-09-30","nbSenateursActifs":0,"nbScrutins":0}]' > static/data/senat/sessions.json
           echo '[{"id":"2017-2020","libelle":"2017-2020","dateDebut":"2017-09-24","dateFin":"2020-09-27","enCours":false,"sessions":[2017,2018,2019],"nbSenateursActifs":0,"nbScrutins":0},{"id":"2020-2023","libelle":"2020-2023","dateDebut":"2020-09-27","dateFin":"2023-09-24","enCours":false,"sessions":[2020,2021,2022],"nbSenateursActifs":0,"nbScrutins":0},{"id":"2023-2026","libelle":"2023-2026","dateDebut":"2023-09-24","dateFin":"2026-09-27","enCours":true,"sessions":[2023,2024,2025],"nbSenateursActifs":0,"nbScrutins":0}]' > static/data/senat/triennats.json
           echo '[]' > static/data/senat/groupes/2017-2020.json
@@ -59,14 +63,18 @@ jobs:
           echo '{"generatedAt":"1970-01-01T00:00:00Z","sessions":[2024],"triennats":["2017-2020","2020-2023","2023-2026"],"counts":{"senateurs":0,"mandats":0,"groupesUniques":0,"sessions":1,"triennats":3,"scrutins":0,"votesNominatifs":0},"sources":{}}' > static/data/senat/meta.json
           # Textes Sénat (PR #22, N3.b) : placeholder vide pour permettre le build.
           echo '[]' > static/data/senat/textes.json
-          # Manifest bicaméral (ADR 0031) : placeholder vide pour permettre le build
-          # avec /elus/* et /classement (PR #D, #E). Le pipeline réel le remplit via
-          # `npm run data:build:elus` après data:fetch:an + data:fetch:senat.
-          echo '{"generatedAt":"1970-01-01T00:00:00Z","count":0,"countBicameral":0,"elus":[],"warnings":[]}' > static/data/elus.json
-          # Manifest textes unifiés cross-chambre (PR #22, ADR 0036) : placeholder
-          # vide pour permettre le build de /textes/ et /textes/[id]. Rempli par
-          # `npm run data:build:cross` en pipeline réel.
-          echo '[]' > static/data/textes-unifies.json
+          # Manifest bicaméral (ADR 0031). On y met UN élu placeholder (AN-only,
+          # paId absent de personnes.json vide → vue carrière null-tolérante) pour
+          # que `entries()` PRÉRENDE réellement /elus/[slug] et valide son build —
+          # sans générer les ~1900 vraies pages. Champs complets (radarCarriere,
+          # paId, sexe…) pour satisfaire FactSummary + JSON-LD (PR C/E). Cf ADR 0041.
+          echo '{"generatedAt":"1970-01-01T00:00:00Z","count":1,"countBicameral":0,"warnings":[],"elus":[{"id":"elu_ci000001","slug":"ci-placeholder","prenom":"CI","nom":"Placeholder","civ":"M.","sexe":"M","dateNaissance":"1970-01-01","photoUrl":"","paId":"PA000000","matricule":null,"mandats":[{"chambre":"AN","legislature":17,"debut":"2024-07-08","fin":null,"overall":50,"groupeId":"PO000000","groupeLibelleAbrege":"CI","groupeCouleur":"#888888","famille":null}],"overallCarriere":50,"radarCarriere":{"presence":0.5,"participation":0.5,"loyaute":0.5,"volume":0.5,"frondes":0.1},"badgesCarriere":[]}]}' > static/data/elus.json
+          # Manifest textes unifiés (PR #22, ADR 0036). UN texte placeholder AN-only
+          # (scrutins inlinés vides, sans initiateur) pour que `entries()` prérende
+          # /textes/[slug] et valide son build. Rempli réellement par data:build:cross.
+          echo '[{"id":"DLR5L17N00000","slug":"texte-ci-placeholder-DLR5L17N00000","titre":"Texte CI placeholder","type":"projet-loi","typeLibelle":"Projet de loi","etat":"en-cours","numeroLoi":null,"datePromulgation":null,"urlJO":null,"senatUrl":null,"initiateurs":[],"procedureLibelle":null,"dateDebut":"2024-07-08","dateFin":"2024-07-08","nbScrutins":0,"bicameral":false,"an":{"texteId":"DLR5L17N00000","titre":"Texte CI placeholder","dateDebut":"2024-07-08","dateFin":"2024-07-08","nbScrutins":0,"sortFinal":"en cours","nbVotesSolennels":0,"triennat":null,"scrutins":[]},"senat":null,"timelineNavette":[]}]' > static/data/textes-unifies.json
+          # Projection « lite » des textes unifiés (ADR 0041) lue par la liste /textes.
+          echo '[{"id":"DLR5L17N00000","slug":"texte-ci-placeholder-DLR5L17N00000","titre":"Texte CI placeholder","type":"projet-loi","typeLibelle":"Projet de loi","etat":"en-cours","numeroLoi":null,"datePromulgation":null,"dateDebut":"2024-07-08","dateFin":"2024-07-08","nbScrutins":0,"bicameral":false,"an":{"nbScrutins":0},"senat":null}]' > static/data/textes-unifies-lite.json
 
       - name: Sync SvelteKit
         run: npx svelte-kit sync

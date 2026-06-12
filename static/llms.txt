@@ -1,0 +1,45 @@
+# PolitiDex
+
+> Le « Pokédex » des élus nationaux français : une fiche par député et sénateur
+> de l'ère Macron, avec votes, présence, loyauté, parcours et appartenances de
+> groupe, plus les textes de loi et leur navette parlementaire. Données issues
+> de l'open data Etalab (Assemblée nationale, Sénat), sous Licence Ouverte.
+
+PolitiDex agrège et met en forme des données publiques ; il ne produit pas
+d'analyse éditoriale partisane. Les métriques (présence, participation, loyauté,
+frondes, score « Overall ») sont calculées de façon transparente et documentées
+dans la FAQ. Citations bienvenues.
+
+## Périmètre
+
+- Assemblée nationale : 15ᵉ, 16ᵉ et 17ᵉ législatures (depuis 2017).
+- Sénat : trois triennats de l'ère Macron (2017-2020, 2020-2023, 2023-2026).
+- Modèle « une personne = une fiche » : un élu ayant siégé à l'AN et au Sénat a
+  une seule fiche cross-chambre.
+- Textes législatifs unifiés AN + Sénat avec timeline de navette parlementaire.
+
+## Pages clés
+
+- [Accueil](https://politidex.fr/) : recherche + présentation.
+- [Tous les élus](https://politidex.fr/elus/) : index des députés et sénateurs.
+- [Fiche élu](https://politidex.fr/elus/{slug}/) : votes, présence, loyauté,
+  parcours cross-chambre. Ex. https://politidex.fr/elus/damien-abad/
+- [Tous les textes](https://politidex.fr/textes/) : index des lois et propositions.
+- [Fiche texte](https://politidex.fr/textes/{slug}/) : résultat des votes + navette.
+- [Hémicycle Assemblée nationale](https://politidex.fr/assemblee/)
+- [Hémicycle Sénat](https://politidex.fr/senat/)
+- [Classement des élus](https://politidex.fr/classement/)
+- [FAQ / méthodologie](https://politidex.fr/faq/)
+
+## Données
+
+- Source : open data Etalab — data.assemblee-nationale.fr et data.senat.fr.
+- Licence : Licence Ouverte / Open Licence Etalab.
+- Exports JSON : https://politidex.fr/data/elus.json,
+  https://politidex.fr/data/textes-unifies.json
+- Fraîcheur : les données sont retéléchargées et régénérées à chaque déploiement.
+
+## À propos
+
+- Projet open source (code sous Unlicense) : https://github.com/IMhide/hemicycle-manager
+- Sitemap : https://politidex.fr/sitemap.xml

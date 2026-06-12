@@ -9,6 +9,12 @@
 -->
 <script lang="ts">
 	import GlobalSearch from '$lib/components/GlobalSearch.svelte';
+	import JsonLd from '$lib/components/JsonLd.svelte';
+	import { buildWebsiteLd, buildOrganizationLd, buildDatasetLd } from '$lib/jsonld';
+
+	// JSON-LD home (cf ADR 0045) : WebSite + Organization + Dataset (licence
+	// Etalab, couverture ère Macron) — peut gagner Google Dataset Search.
+	const homeLd = [buildWebsiteLd(), buildOrganizationLd(), buildDatasetLd()];
 
 	let searchEl: GlobalSearch;
 
@@ -25,21 +31,17 @@
 
 <svelte:head>
 	<title>PolitiDex — Le Pokédex des élus nationaux français</title>
-	<meta
-		name="description"
-		content="PolitiDex regroupe les fiches Football Manager des députés et sénateurs français — votes, scrutins, hémicycles, classements. Open data, open source."
-	/>
+	<!-- description + og:description : émises par le +layout via data.description
+	     (cf ADR 0043). Ici on ne pose que les titres OG/Twitter spécifiques. -->
 	<meta property="og:title" content="PolitiDex — Le Pokédex des élus nationaux français" />
-	<meta
-		property="og:description"
-		content="Fiches Football Manager des députés et sénateurs français : votes, scrutins, hémicycles, classements. Open data, open source."
-	/>
 	<meta name="twitter:title" content="PolitiDex — Le Pokédex des élus nationaux français" />
 	<meta
 		name="twitter:description"
 		content="Fiches Football Manager des députés et sénateurs français. Open data, open source."
 	/>
 </svelte:head>
+
+<JsonLd data={homeLd} />
 
 <section class="mx-auto max-w-6xl px-6 py-10 sm:py-16">
 	<!-- ── 1. HERO + RECHERCHE (la CTA première) ───────────────────────── -->

@@ -218,9 +218,31 @@ export interface ScrutinDetail extends ScrutinIndex {
 // Historiques compacts (cf ADR 0012)
 // ────────────────────────────────────────────────────────────────────────────
 
-/** Compact: [scrutinUid, position, isFronde 0|1, legislature]
- *  legislature ajoutée Phase 1 pour permettre le filtrage sans cross-ref index. */
-export type VoteHistoryItem = [string, VotePosition, 0 | 1, number];
+/** Métadonnées du scrutin dénormalisées DANS l'historique (cf ADR 0041).
+ *  Permet à la fiche élu d'afficher l'historique SANS charger
+ *  `scrutins-index.json` (6,1 Mo). Projetées au pipeline depuis ScrutinIndex.
+ *  `numero` = numéro du scrutin (scrnum côté Sénat) ; l'`uid` reste l'élément 0
+ *  du tuple. Avec ces champs + l'uid, la fiche reconstruit l'objet scrutin
+ *  affichable sans l'index global. */
+export interface VoteHistoryScrutinMeta {
+	titre: string;
+	date: string;
+	sort: string;
+	numero: number;
+	texteId: string | null;
+	pour: number;
+	contre: number;
+	abstention: number;
+}
+
+/** Compact: [scrutinUid, position, isFronde 0|1, legislature, meta?]
+ *  - legislature : ajoutée Phase 1 pour filtrer sans cross-ref index.
+ *  - meta : 5e élément dénormalisé (ADR 0041) — présent dans les fichiers
+ *    `historique/{paId}.json` générés, pour éviter de charger l'index global.
+ *    Optionnel dans le type pour rétro-compat (ancien format à 4 éléments). */
+export type VoteHistoryItem =
+	| [string, VotePosition, 0 | 1, number]
+	| [string, VotePosition, 0 | 1, number, VoteHistoryScrutinMeta];
 
 // ────────────────────────────────────────────────────────────────────────────
 // Textes législatifs (cf ADR à venir)
@@ -292,6 +314,11 @@ export interface Texte {
 	 *  de l'arbre `actesLegislatifs` du dump dossiers AN (cf ADR 0037).
 	 *  Vide pour les textes signature (non enrichis). */
 	timelineNavette: TimelineActe[];
+	/** Scrutin "vote final" du texte (lecture définitive / CMP / vote solennel),
+	 *  précalculé au pipeline (cf ADR 0041) pour que la fiche élu n'ait pas à
+	 *  charger l'index global des scrutins. null = pas de vote final identifiable
+	 *  (vote à main levée, ou texte non enrichi). */
+	voteFinal: { uid: string; numero: number; sort: string } | null;
 }
 
 /** Phase navette retenue pour l'UI, dérivée du `codeActe` Etalab. */
@@ -523,9 +550,13 @@ export interface ScrutinSenatDetail extends ScrutinSenatIndex {
 	frondeurs: string[];
 }
 
-/** Compact: [scrutinUid, position, isFronde 0|1, sesann]
- *  Symétrique au tuple AN (cf ADR 0012). */
-export type VoteHistoryItemSenat = [string, VotePosition, 0 | 1, number];
+/** Compact: [scrutinUid, position, isFronde 0|1, sesann, meta?]
+ *  Symétrique au tuple AN (cf ADR 0012). La meta (5e élément, ADR 0041) est
+ *  dénormalisée dans `senat/historique/{matricule}.json` pour éviter de charger
+ *  l'index global. Optionnelle pour rétro-compat. */
+export type VoteHistoryItemSenat =
+	| [string, VotePosition, 0 | 1, number]
+	| [string, VotePosition, 0 | 1, number, VoteHistoryScrutinMeta];
 
 export interface BuildMetaSenat {
 	generatedAt: string;
@@ -647,6 +678,21 @@ export type TexteUnifieEtat =
 /** Référence légère vers un texte spécifique d'une chambre (sous-objet
  *  de `TexteUnifie`). Conserve l'id natif côté chambre et les compteurs
  *  utilisés par les colonnes de la fiche unifiée `/textes/[id]`. */
+/** Scrutin nominal projeté DANS la fiche unifiée (cf ADR 0041). Permet à
+ *  `/textes/[slug]` d'afficher la liste des scrutins SANS charger l'index global
+ *  `scrutins-index.json` (6,6 Mo AN + ~1 Mo Sénat) — condition au prerender SSG.
+ *  `numero` = numéro AN (`numero`) ou Sénat (`scrnum`), unifié ici. */
+export interface TexteUnifieScrutin {
+	uid: string;
+	numero: number;
+	date: string;
+	titre: string;
+	sort: string;
+	pour: number;
+	contre: number;
+	abstention: number;
+}
+
 export interface TexteUnifieChambreRef {
 	/** id natif côté chambre (DLR…/sig-… côté AN, loicod côté Sénat). */
 	texteId: string;
@@ -655,6 +701,12 @@ export interface TexteUnifieChambreRef {
 	dateFin: string;
 	nbScrutins: number;
 	sortFinal: string;
+	/** Nb de votes solennels (AN seulement ; 0 côté Sénat). */
+	nbVotesSolennels: number;
+	/** Triennat de rattachement (Sénat seulement ; null côté AN). */
+	triennat: string | null;
+	/** Scrutins nominaux de CE texte dans cette chambre, inlinés (cf ADR 0041). */
+	scrutins: TexteUnifieScrutin[];
 }
 
 /** Objet `TexteUnifie` — un texte législatif vu cross-chambre.
@@ -671,6 +723,8 @@ export interface TexteUnifieChambreRef {
 export interface TexteUnifie {
 	/** Id canonique stable : id AN si présent, sinon id Sénat. Cf ADR 0036. */
 	id: string;
+	/** URL lisible : préfixe titre + suffixe d'id (haché si signature). ADR 0042. */
+	slug: string;
 	/** Titre canonique court (AN prioritaire, fallback titre Sénat nettoyé). */
 	titre: string;
 	/** Type éditorial (AN prioritaire, sinon projection Sénat). */
@@ -708,4 +762,27 @@ export interface TexteUnifie {
 	/** Timeline navette propagée depuis le Texte AN sous-jacent (cf ADR 0037).
 	 *  Vide pour les textes Sénat-seul ou non enrichis. */
 	timelineNavette: TimelineActe[];
+}
+
+/** Projection « lite » d'un `TexteUnifie` pour la LISTE `/textes` (cf ADR 0041).
+ *  La liste ne lit que des champs scalaires + la présence/`nbScrutins` de chaque
+ *  chambre. On retire les tableaux lourds (`scrutins[]` inlinés A3c,
+ *  `timelineNavette[]`, `initiateurs[]`) et les champs détail (`procedureLibelle`,
+ *  `urlJO`, `senatUrl`) → HTML prérendu minimal pour la page liste. */
+export interface TexteUnifieLite {
+	id: string;
+	slug: string;
+	titre: string;
+	type: TexteType;
+	typeLibelle: string;
+	etat: TexteUnifieEtat;
+	numeroLoi: string | null;
+	datePromulgation: string | null;
+	dateDebut: string;
+	dateFin: string;
+	nbScrutins: number;
+	bicameral: boolean;
+	/** Présence + nb de scrutins de la chambre (suffit aux filtres/affichage liste). */
+	an: { nbScrutins: number } | null;
+	senat: { nbScrutins: number } | null;
 }

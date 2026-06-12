@@ -131,6 +131,9 @@
 
 <svelte:head>
 	<title>Scrutin n°{detail.numero} — PolitiDex</title>
+	<!-- Anti-index-bloat (cf ADR 0043) : scrutins minces → noindex ; canonical
+	     vers le texte parent géré au +layout via data.canonicalOverride. -->
+	<meta name="robots" content="noindex, follow" />
 </svelte:head>
 
 <section class="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -170,7 +173,7 @@
 		{/if}
 		{#if data.texte}
 			<a
-				href="/textes/{encodeURIComponent(data.texte.id)}"
+				href="/textes/{data.texteSlug ?? encodeURIComponent(data.texte.id)}"
 				class="mt-3 inline-flex items-center gap-2 text-xs text-fg-muted hover:text-link group"
 				title="Voir tous les scrutins de ce texte"
 			>

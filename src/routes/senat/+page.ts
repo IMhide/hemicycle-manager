@@ -2,12 +2,16 @@ import type { PageLoad } from './$types';
 import {
 	loadSenateurs,
 	loadGroupesSenat,
-	loadScrutinsSenatIndex,
+	loadScrutinsSenatRecent,
 	loadTriennats,
 	loadMetaSenat
 } from '$lib/data';
 import type { TriennatId } from '$lib/triennats';
 
+// Allègement (cf ADR 0041) : la home Sénat n'affiche que ~8 scrutins récents du
+// triennat courant. On charge `scrutins-recent.json` (~projection légère) au lieu
+// de `scrutins-index.json` (~1 Mo). `senateurs.json` reste tel quel (le survol lit
+// les stats du sénateur ; projection lite gardée en réserve — Option A, cf plan).
 export const load: PageLoad = async ({ fetch }) => {
 	const triennats = await loadTriennats(fetch);
 	// Triennat courant : celui marqué enCours, sinon le plus récent
@@ -19,9 +23,18 @@ export const load: PageLoad = async ({ fetch }) => {
 	const [senateurs, groupes, scrutins, meta] = await Promise.all([
 		loadSenateurs(fetch),
 		loadGroupesSenat(fetch, triennatCourant),
-		loadScrutinsSenatIndex(fetch),
+		loadScrutinsSenatRecent(fetch),
 		loadMetaSenat(fetch)
 	]);
 
-	return { senateurs, groupes, scrutins, meta, triennats, triennatCourant };
+	return {
+		senateurs,
+		groupes,
+		scrutins,
+		meta,
+		triennats,
+		triennatCourant,
+		description:
+			"L'hémicycle interactif du Sénat (348 sièges) : survolez un siège pour la fiche du sénateur, son groupe et ses votes. Trois triennats de l'ère Macron (2017-2026)."
+	};
 };

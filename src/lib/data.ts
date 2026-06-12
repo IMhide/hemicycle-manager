@@ -25,7 +25,8 @@ import type {
 	BuildMetaSenat,
 	VoteHistoryItemSenat,
 	TexteSenat,
-	TexteUnifie
+	TexteUnifie,
+	TexteUnifieLite
 } from './types';
 import type { TriennatId } from './triennats';
 
@@ -70,6 +71,12 @@ export function loadScrutinsIndex(fetchFn: typeof fetch) {
 	return fetchJson<ScrutinIndex[]>(fetchFn, '/scrutins-index.json');
 }
 
+/** Scrutins récents (N derniers/législature) pour la home — projection légère
+ *  (~30-50 Ko) au lieu de l'index complet (6,1 Mo). Cf ADR 0041. */
+export function loadScrutinsRecent(fetchFn: typeof fetch) {
+	return fetchJson<ScrutinIndex[]>(fetchFn, '/scrutins-recent.json');
+}
+
 export function loadScrutinDetail(fetchFn: typeof fetch, uid: string) {
 	return fetchJson<ScrutinDetail>(fetchFn, `/scrutins/${uid}.json`);
 }
@@ -91,12 +98,46 @@ export function loadTextesUnifies(fetchFn: typeof fetch) {
 	return fetchJson<TexteUnifie[]>(fetchFn, '/textes-unifies.json');
 }
 
+/** Projection « lite » pour la LISTE `/textes` (cf ADR 0041) — sans scrutins
+ *  inlinés ni timeline. Évite d'inliner le manifest complet au prerender. */
+export function loadTextesUnifiesLite(fetchFn: typeof fetch) {
+	return fetchJson<TexteUnifieLite[]>(fetchFn, '/textes-unifies-lite.json');
+}
+
 export async function loadTexteUnifie(
 	fetchFn: typeof fetch,
 	id: string
 ): Promise<TexteUnifie | null> {
 	const all = await loadTextesUnifies(fetchFn);
 	return all.find((t) => t.id === id) ?? null;
+}
+
+/** Résout un TexteUnifie par son slug URL (cf ADR 0042). Route `/textes/[slug]`. */
+export async function loadTexteUnifieBySlug(
+	fetchFn: typeof fetch,
+	slug: string
+): Promise<TexteUnifie | null> {
+	const all = await loadTextesUnifies(fetchFn);
+	return all.find((t) => t.slug === slug) ?? null;
+}
+
+/**
+ * Construit un résolveur `texteId natif → slug` (cf ADR 0042). Un lien depuis un
+ * scrutin ou un groupe de vote ne dispose que d'un texteId brut (id canonique,
+ * id AN, ou id Sénat) ; ce résolveur le mappe vers le slug de la fiche unifiée.
+ * Renvoie une fonction synchrone après chargement du manifest.
+ */
+export async function loadTexteSlugResolver(
+	fetchFn: typeof fetch
+): Promise<(texteId: string) => string | null> {
+	const all = await loadTextesUnifies(fetchFn);
+	const byId = new Map<string, string>();
+	for (const t of all) {
+		byId.set(t.id, t.slug); // id canonique (AN si présent, sinon Sénat)
+		if (t.an) byId.set(t.an.texteId, t.slug);
+		if (t.senat) byId.set(t.senat.texteId, t.slug);
+	}
+	return (texteId: string) => byId.get(texteId) ?? null;
 }
 
 // ─────────────────── Acteurs (noms uniquement) ───────────────────
@@ -167,6 +208,12 @@ export function loadSessions(fetchFn: typeof fetch) {
 
 export function loadScrutinsSenatIndex(fetchFn: typeof fetch) {
 	return fetchJsonSenat<ScrutinSenatIndex[]>(fetchFn, '/scrutins-index.json');
+}
+
+/** Scrutins Sénat récents (N derniers/session) pour la home — projection légère
+ *  au lieu de l'index complet (~1 Mo). Cf ADR 0041. */
+export function loadScrutinsSenatRecent(fetchFn: typeof fetch) {
+	return fetchJsonSenat<ScrutinSenatIndex[]>(fetchFn, '/scrutins-recent.json');
 }
 
 export function loadScrutinSenatDetail(fetchFn: typeof fetch, uid: string) {

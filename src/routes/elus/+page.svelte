@@ -107,7 +107,7 @@
 </script>
 
 <svelte:head>
-	<title>Tous les élus — PolitiDex</title>
+	<title>Tous les élus — députés et sénateurs français · PolitiDex</title>
 </svelte:head>
 
 <section class="max-w-[1536px] mx-auto px-6 py-8">
@@ -168,7 +168,7 @@
 					{#each visible as e (e.id)}
 						{@const cat = eluCategorie(e)}
 						{@const grp = dernierGroupe(e)}
-						<a href="/elus/{e.id}?tab=carriere" class="vignette">
+						<a href="/elus/{e.slug}?tab=carriere" class="vignette">
 							<!-- Liseré famille politique (signal CHES) -->
 							<span class="vignette-bande" style="background: {grp?.couleur ?? 'var(--border-soft)'};" aria-hidden="true"></span>
 							<img

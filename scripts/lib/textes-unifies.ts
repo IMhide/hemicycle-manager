@@ -16,13 +16,36 @@
 
 import type {
 	TexteUnifie,
+	TexteUnifieLite,
 	TexteUnifieEtat,
 	TexteUnifieChambreRef,
+	TexteUnifieScrutin,
 	TexteType,
 	TexteSenatType,
 	TimelineActe
 } from '../../src/lib/types.ts';
 import { hasSenatActe } from './timeline-navette.ts';
+import { texteSlug } from './slug.ts';
+
+// ────────────────────────────────────────────────────────────────────────────
+// Index scrutins (uid → projection légère) pour inliner les scrutins d'un texte
+// dans la fiche unifiée (cf ADR 0041). L'appelant fournit ces maps construites
+// depuis scrutins-index.json (AN) et senat/scrutins-index.json.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Index uid → scrutin projeté, partagé AN/Sénat (numero unifié). */
+export type ScrutinIndexLite = Map<string, TexteUnifieScrutin>;
+
+/** Projette les uids d'un texte en scrutins légers, dans l'ordre, en ignorant
+ *  les uids absents de l'index (rare : scrutin filtré en amont). */
+function projeteScrutins(uids: string[], index: ScrutinIndexLite): TexteUnifieScrutin[] {
+	const out: TexteUnifieScrutin[] = [];
+	for (const uid of uids) {
+		const s = index.get(uid);
+		if (s) out.push(s);
+	}
+	return out;
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types d'entrée
@@ -47,6 +70,8 @@ export interface TexteAnInput {
 	versionAutreChambre: { texteSenatId: string; matchedVia: 'slug' | 'titre' } | null;
 	/** Timeline navette extraite du dump AN (cf ADR 0037). Vide si non enrichi. */
 	timelineNavette: TimelineActe[];
+	/** uids des scrutins nominaux de ce texte (cf ADR 0041, pour l'inlining). */
+	scrutins: string[];
 }
 
 /** Sous-ensemble d'un TexteSenat nécessaire à la fusion. */
@@ -66,6 +91,8 @@ export interface TexteSenatInput {
 	nbScrutins: number;
 	enrichiDosleg: boolean;
 	versionAutreChambre: { texteAnId: string; matchedVia: 'slug' | 'titre' } | null;
+	/** uids des scrutins nominaux de ce texte (cf ADR 0041, pour l'inlining). */
+	scrutins: string[];
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -158,25 +185,31 @@ function deriveEtatUnifie(an: TexteAnInput | null, sen: TexteSenatInput | null):
 // Construction du sous-objet chambreRef
 // ────────────────────────────────────────────────────────────────────────────
 
-function buildAnRef(an: TexteAnInput): TexteUnifieChambreRef {
+function buildAnRef(an: TexteAnInput, scrutinsIndex: ScrutinIndexLite): TexteUnifieChambreRef {
 	return {
 		texteId: an.id,
 		titre: an.titre,
 		dateDebut: an.dateDebut,
 		dateFin: an.dateFin,
 		nbScrutins: an.nbScrutins,
-		sortFinal: an.sortFinal
+		sortFinal: an.sortFinal,
+		nbVotesSolennels: an.nbVotesSolennels,
+		triennat: null,
+		scrutins: projeteScrutins(an.scrutins, scrutinsIndex)
 	};
 }
 
-function buildSenatRef(sen: TexteSenatInput): TexteUnifieChambreRef {
+function buildSenatRef(sen: TexteSenatInput, scrutinsIndex: ScrutinIndexLite): TexteUnifieChambreRef {
 	return {
 		texteId: sen.id,
 		titre: sen.titre,
 		dateDebut: sen.dateDebut,
 		dateFin: sen.dateFin,
 		nbScrutins: sen.nbScrutins,
-		sortFinal: sen.sortFinal
+		sortFinal: sen.sortFinal,
+		nbVotesSolennels: 0,
+		triennat: sen.triennat,
+		scrutins: projeteScrutins(sen.scrutins, scrutinsIndex)
 	};
 }
 
@@ -184,7 +217,12 @@ function buildSenatRef(sen: TexteSenatInput): TexteUnifieChambreRef {
 // Construction d'un TexteUnifie depuis un côté ou les deux
 // ────────────────────────────────────────────────────────────────────────────
 
-function buildUnifie(an: TexteAnInput | null, sen: TexteSenatInput | null): TexteUnifie {
+function buildUnifie(
+	an: TexteAnInput | null,
+	sen: TexteSenatInput | null,
+	scrutinsIndexAN: ScrutinIndexLite,
+	scrutinsIndexSenat: ScrutinIndexLite
+): TexteUnifie {
 	if (!an && !sen) throw new Error('buildUnifie: au moins une chambre doit être présente');
 
 	// Bicaméralité refondue (ADR 0037) : on regarde aussi la timeline navette
@@ -240,6 +278,7 @@ function buildUnifie(an: TexteAnInput | null, sen: TexteSenatInput | null): Text
 
 	return {
 		id,
+		slug: texteSlug(titre, id), // URL lisible, cf ADR 0042
 		titre,
 		type,
 		typeLibelle,
@@ -254,8 +293,8 @@ function buildUnifie(an: TexteAnInput | null, sen: TexteSenatInput | null): Text
 		dateFin,
 		nbScrutins,
 		bicameral,
-		an: an ? buildAnRef(an) : null,
-		senat: sen ? buildSenatRef(sen) : null,
+		an: an ? buildAnRef(an, scrutinsIndexAN) : null,
+		senat: sen ? buildSenatRef(sen, scrutinsIndexSenat) : null,
 		timelineNavette
 	};
 }
@@ -268,7 +307,9 @@ function buildUnifie(an: TexteAnInput | null, sen: TexteSenatInput | null): Text
  *  Cf ADR 0036 pour la sémantique. */
 export function fusionneTextesUnifies(
 	textesAN: TexteAnInput[],
-	textesSenat: TexteSenatInput[]
+	textesSenat: TexteSenatInput[],
+	scrutinsIndexAN: ScrutinIndexLite = new Map(),
+	scrutinsIndexSenat: ScrutinIndexLite = new Map()
 ): TexteUnifie[] {
 	const senatById = new Map(textesSenat.map((t) => [t.id, t]));
 	const senatConsommes = new Set<string>();
@@ -279,21 +320,43 @@ export function fusionneTextesUnifies(
 		const senId = an.versionAutreChambre?.texteSenatId;
 		if (senId && senatById.has(senId)) {
 			const sen = senatById.get(senId)!;
-			result.push(buildUnifie(an, sen));
+			result.push(buildUnifie(an, sen, scrutinsIndexAN, scrutinsIndexSenat));
 			senatConsommes.add(senId);
 		} else {
-			result.push(buildUnifie(an, null));
+			result.push(buildUnifie(an, null, scrutinsIndexAN, scrutinsIndexSenat));
 		}
 	}
 
 	// Étape 2 : tous les TexteSenat non encore consommés
 	for (const sen of textesSenat) {
 		if (senatConsommes.has(sen.id)) continue;
-		result.push(buildUnifie(null, sen));
+		result.push(buildUnifie(null, sen, scrutinsIndexAN, scrutinsIndexSenat));
 	}
 
 	// Tri par dateDebut décroissante (plus récent en premier)
 	result.sort((a, b) => (a.dateDebut < b.dateDebut ? 1 : a.dateDebut > b.dateDebut ? -1 : 0));
 
 	return result;
+}
+
+/** Projette un `TexteUnifie` en `TexteUnifieLite` pour la LISTE `/textes`
+ *  (cf ADR 0041). Drop des tableaux lourds (scrutins inlinés, timeline,
+ *  initiateurs) et des champs détail non lus par la liste. */
+export function projeteTexteUnifieLite(t: TexteUnifie): TexteUnifieLite {
+	return {
+		id: t.id,
+		slug: t.slug,
+		titre: t.titre,
+		type: t.type,
+		typeLibelle: t.typeLibelle,
+		etat: t.etat,
+		numeroLoi: t.numeroLoi,
+		datePromulgation: t.datePromulgation,
+		dateDebut: t.dateDebut,
+		dateFin: t.dateFin,
+		nbScrutins: t.nbScrutins,
+		bicameral: t.bicameral,
+		an: t.an ? { nbScrutins: t.an.nbScrutins } : null,
+		senat: t.senat ? { nbScrutins: t.senat.nbScrutins } : null
+	};
 }
