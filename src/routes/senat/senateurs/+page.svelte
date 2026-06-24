@@ -6,6 +6,8 @@
 	import { type TriennatId } from '$lib/triennats';
 	import type { Senateur, MandatSenat, GroupeSenat, TriennatStats } from '$lib/types';
 
+	import { untrack } from 'svelte';
+
 	let { data } = $props();
 
 	const BADGES_CARRIERE = [
@@ -42,8 +44,10 @@
 	let famillesSelected = $state<string[]>([]);
 	let badgesSelected = $state<string[]>([]);
 	let visibleCount = $state(60);
-	/** null = vue carrière (cross-triennat), sinon scope par triennat. Init = triennat en cours. */
-	let scopeTriennat: TriennatId | null = $state(pickTriennatCourant(data.triennats));
+	/** null = vue carrière (cross-triennat), sinon scope par triennat. Init = triennat
+	 *  en cours. `untrack` : instantané unique de `data` (statique au prerender), pas
+	 *  une dépendance réactive (sinon state_referenced_locally). */
+	let scopeTriennat: TriennatId | null = $state(untrack(() => pickTriennatCourant(data.triennats)));
 
 	const groupesByCode = $derived.by(() => {
 		const m = new Map<string, GroupeSenat>();

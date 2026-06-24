@@ -22,6 +22,7 @@
 	import type { Personne, Mandat, Groupe } from '$lib/types';
 	import { BLOCS, blocOf, type Bloc } from '$lib/political-order';
 	import { lookupEluUrlForPaIdLeg, lookupEluUrlCarriereForPaId } from '$lib/elus';
+	import { untrack } from 'svelte';
 
 	let { data } = $props();
 
@@ -38,8 +39,10 @@
 	let topN = $state(20);
 
 	const legSorted = $derived([...data.legislatures].sort((a, b) => b.num - a.num));
+	// Init = législature la plus récente. `untrack` : instantané unique de `data`
+	// (statique au prerender), pas une dépendance réactive (state_referenced_locally).
 	let scopeLeg: ScopeLeg = $state(
-		[...data.legislatures].sort((a, b) => b.num - a.num)[0]?.num ?? 17
+		untrack(() => [...data.legislatures].sort((a, b) => b.num - a.num)[0]?.num ?? 17)
 	);
 
 	const personneById = $derived.by(() => {
